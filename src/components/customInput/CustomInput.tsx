@@ -73,13 +73,13 @@ export function CustomInput(props: CustomInputProps) {
         onBlur={() => setIsFocused(false)}
         editable={editable}
         style={[{
-          borderColor: isFocused ? theme.white : theme.gray_1,
+   
           borderWidth: 1,
           padding: 12,
           borderRadius: 6,
           width: '100%',
           textAlign: 'center',
-          color: theme.white,
+
           fontSize: font_size.L
         }, containerStyles]}
       />

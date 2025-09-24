@@ -6,6 +6,7 @@ import useAuthStore from '../store/useAuthStore';
 import useThemeStore from '../store/useThemeStore';
 import { StatusBar, View } from 'react-native';
 import { MainTabs } from './tabs';
+import { SplashScreen as CustomSplashScreen, CarouselScreen } from '../screens';
 
 /**
  * Application Navigation Flow
@@ -32,6 +33,7 @@ export default function Navigator() {
   const setUser = useAuthStore((state) => state.setUser);
 
   const [appIsReady, setAppIsReady] = useState(false);
+  const [carouselCompleted, setCarouselCompleted] = useState(false);
 
   useEffect(() => {
     const prepare = async () => {
@@ -70,9 +72,19 @@ export default function Navigator() {
     }
   }, [ appIsReady]);
 
-  // Show loading screen while fonts and app are initializing
+  // Show custom splash screen while fonts and app are initializing
   if (!appIsReady) {
-    return <View style={{ flex: 1, backgroundColor: theme.white }} />;
+    return <CustomSplashScreen />;
+  }
+
+  // Show carousel after splash screen but before main navigation
+  if (!carouselCompleted) {
+    return (
+      <>
+        <StatusBar barStyle={'light-content'} backgroundColor="transparent" translucent />
+        <CarouselScreen onComplete={() => setCarouselCompleted(true)} />
+      </>
+    );
   }
 
   return (
@@ -81,7 +93,7 @@ export default function Navigator() {
         user ? (
           <>
             <StatusBar barStyle={'dark-content'} backgroundColor="transparent" translucent />
-            <View style={{ flex: 1, backgroundColor: theme.white }}>
+            <View style={{ flex: 1 }}>
               <MainTabs />
             </View>
           </>

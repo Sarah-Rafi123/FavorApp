@@ -72,12 +72,12 @@ const createStyles = (theme: ThemeTypes) => StyleSheet.create({
     borderRadius: 34,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: theme.white,
+
   },
   innerContainer: {
     alignItems: 'center',
     padding: 15,
-    backgroundColor: theme.white,
+  
   },
   title: {
     fontSize: 16,

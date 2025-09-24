@@ -48,8 +48,7 @@ interface IconButtonProps {
 export function IconButton(props: IconButtonProps) {
   const theme = useThemeStore((state) => state.theme);
   const {
-    iconName = 'close',
-    iconColor = theme.white,
+
     iconSize = 24,
     onPress,
     outerContainerStyle,

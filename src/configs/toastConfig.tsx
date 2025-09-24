@@ -11,12 +11,12 @@ export const toastConfig = {
 
     return (
       <View style={[styles.container]}>
-        <View style={{ backgroundColor: theme.white, borderRadius: 12, padding: 4, marginRight: 8, alignItems: "center", justifyContent: "center" }}>
+        <View style={{  borderRadius: 12, padding: 4, marginRight: 8, alignItems: "center", justifyContent: "center" }}>
           <Image source={require('../../assets/icon.png')} style={{ height: 40, width: 40, objectFit: 'contain' }} />
         </View>
         <View>
-          <Text style={[styles.title, { color: theme.white }]}>{text1}</Text>
-          <Text style={[styles.subtitle, { color: theme.white, width: '100%' }]}>{text2}</Text>
+          <Text style={[styles.title]}>{text1}</Text>
+          <Text style={[styles.subtitle, { width: '100%' }]}>{text2}</Text>
         </View>
       </View>
     );
@@ -27,8 +27,8 @@ export const toastConfig = {
 
     return (
       <View style={[styles.container, { width: 'auto', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingVertical: 6 }]}>
-        <Text style={[styles.title, { color: theme.white }]}>{text1}</Text>
-        <Text style={[styles.subtitle, { color: theme.white, textAlign: "center" }]}>{text2}</Text>
+        <Text style={[styles.title]}>{text1}</Text>
+        <Text style={[styles.subtitle, { textAlign: "center" }]}>{text2}</Text>
       </View>
     );
   }
@@ -37,7 +37,7 @@ export const toastConfig = {
 const createStyles = (theme: ThemeTypes) => StyleSheet.create({
   container: {
     flexDirection: 'row',
-    backgroundColor: theme.dark_1,
+
     borderRadius: 12,
     paddingVertical: 8,
     paddingHorizontal: 8,
@@ -53,11 +53,9 @@ const createStyles = (theme: ThemeTypes) => StyleSheet.create({
   },
   title: {
     fontSize: font_size.M,
-    color: theme.white,
+
   },
   subtitle: {
-    fontSize: font_size.S,
-    color: theme.gray_2,
     marginBottom: 4,
   }
 });

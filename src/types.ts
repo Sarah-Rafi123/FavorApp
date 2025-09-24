@@ -12,6 +12,7 @@ export type AppRoutes = {
 
   // Root Stack
   'splash-screen': any;
+  'auth-screen': any;
 
   // Home Stack
   'home-screen': any;
