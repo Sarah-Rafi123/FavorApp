@@ -1,0 +1,183 @@
+import React, { useState, useRef, useEffect } from 'react';
+import {
+  View,
+  Text,
+  ImageBackground,
+  TextInput,
+  TouchableOpacity,
+  StatusBar,
+} from 'react-native';
+import { CarouselButton } from '../../components/buttons';
+import { LockIcon } from '../../components/icons';
+import { SuccessModal } from '../../components/overlays/SuccessModal';
+
+interface OtpVerificationScreenProps {
+  onBack: () => void;
+  onVerifySuccess: () => void;
+  email: string;
+}
+
+export function OtpVerificationScreen({ onBack, onVerifySuccess, email }: OtpVerificationScreenProps) {
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [timer, setTimer] = useState(30);
+  const [canResend, setCanResend] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const inputRefs = useRef<TextInput[]>([]);
+
+  // Timer countdown
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTimer((prev) => {
+        if (prev <= 1) {
+          setCanResend(true);
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleOtpChange = (value: string, index: number) => {
+    const newOtp = [...otp];
+    newOtp[index] = value;
+    setOtp(newOtp);
+
+    // Move to next input if value is entered
+    if (value && index < 5) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleKeyPress = (key: string, index: number) => {
+    // Move to previous input on backspace
+    if (key === 'Backspace' && !otp[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleContinue = () => {
+    const otpCode = otp.join('');
+    if (otpCode.length === 6) {
+      // Simulate OTP verification
+      setShowSuccessModal(true);
+    }
+  };
+
+  const handleResendCode = () => {
+    if (canResend) {
+      setTimer(30);
+      setCanResend(false);
+      setOtp(['', '', '', '', '', '']);
+      // Reset timer
+      const interval = setInterval(() => {
+        setTimer((prev) => {
+          if (prev <= 1) {
+            setCanResend(true);
+            clearInterval(interval);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+  };
+
+  const isFormValid = otp.every(digit => digit !== '');
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  return (
+    <ImageBackground 
+      source={require('../../assets/images/Wallpaper.png')} 
+      className="flex-1 w-full h-full"
+      resizeMode="cover"
+    >
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      <View className="flex-1 px-6 pt-20">
+        
+        {/* Back Button */}
+        <TouchableOpacity 
+          onPress={onBack}
+          className="w-10 h-10 rounded-full bg-green-500 items-center justify-center mb-8"
+        >
+          <Text className="text-white text-lg font-bold">←</Text>
+        </TouchableOpacity>
+
+        {/* Lock Icon */}
+        <View className="items-center mb-8 mt-8">
+          <LockIcon />
+        </View>
+
+        {/* Title and Description */}
+        <View className="items-center mb-12">
+          <Text className="text-3xl font-bold text-gray-800 mb-4 text-center">
+            OTP Verification
+          </Text>
+          <Text className="text-base text-gray-600 text-center px-4 leading-6">
+            Enter the OTP Code sent to{'\n'}
+            <Text className="font-semibold text-gray-800">{email}</Text>
+          </Text>
+        </View>
+
+        {/* OTP Input Fields */}
+        <View className="flex-row justify-center mb-8 space-x-3">
+          {otp.map((digit, index) => (
+            <TextInput
+              key={index}
+              ref={(ref) => {
+                if (ref) inputRefs.current[index] = ref;
+              }}
+              className="w-12 h-12 border-2 border-gray-200 rounded-lg text-center text-xl font-semibold bg-transparent"
+              value={digit}
+              onChangeText={(value) => handleOtpChange(value, index)}
+              onKeyPress={({ nativeEvent }) => handleKeyPress(nativeEvent.key, index)}
+              keyboardType="number-pad"
+              maxLength={1}
+              selectTextOnFocus
+            />
+          ))}
+        </View>
+
+        {/* Continue Button */}
+        <View className="mb-8">
+          <CarouselButton
+            title="Continue"
+            onPress={handleContinue}
+            disabled={!isFormValid}
+          />
+        </View>
+
+        {/* Timer and Resend */}
+        <View className="items-center">
+          <Text className="text-2xl font-bold text-gray-800 mb-2">
+            {formatTime(timer)}
+          </Text>
+          <View className="flex-row items-center">
+            <Text className="text-gray-600">Didn't receive OTP code? </Text>
+            <TouchableOpacity onPress={handleResendCode} disabled={!canResend}>
+              <Text className={`font-medium ${canResend ? 'text-gray-800' : 'text-gray-400'}`}>
+                Resend Code
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+      </View>
+
+      <SuccessModal
+        visible={showSuccessModal}
+        onContinue={() => {
+          setShowSuccessModal(false);
+          onVerifySuccess();
+        }}
+      />
+    </ImageBackground>
+  );
+}

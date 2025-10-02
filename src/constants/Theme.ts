@@ -2,13 +2,13 @@
 // // 💡 Modify accordingly
 
 const LIGHT_THEME = {
-  primary: '#C70039 ',
+  primary: '#44A27B',
 
   dark_1: '#0A1B2A',
   dark_2: '#4E5969',
   dark_3: '#031625',
 
-  gray_1: '#FF5C1A',
+  gray_1: '#44A27B',
   gray_2: '#979797',
   gray_3: '#E9E9EA',
   gray_4: '#FAFAFA',
@@ -20,13 +20,13 @@ const LIGHT_THEME = {
 }
 
 const DARK_THEME = {
-  primary: '#C70039 ',
+  primary: '#44A27B',
 
   dark_1: '#0A1B2A',
   dark_2: '#4E5969',
   dark_3: '#031625',
 
-  gray_1: '#FF5C1A',
+  gray_1: '#44A27B',
   gray_2: '#979797',
   gray_3: '#E9E9EA',
   gray_4: '#FAFAFA',

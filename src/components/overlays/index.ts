@@ -1,1 +1,4 @@
-export * from "./Overlay";  
+export * from "./Overlay";
+export * from "./SuccessModal";
+export * from "./ProfileModal";
+export * from "./LogoutModal";  

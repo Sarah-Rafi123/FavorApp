@@ -8,24 +8,36 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/Wallpaper.png",
-      "resizeMode": "cover",
+      "image": "./assets/logo.png",
+      "resizeMode": "contain",
       "backgroundColor": "#A5D6A7"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.bobeveleth.tsarn"
+      "bundleIdentifier": "com.bobeveleth.tsarn",
+      "config": {
+        "googleMapsApiKey": "AIzaSyB2pEBY-1YNiSv_8n1xHye2mDbcd1r5xLY"
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.bobeveleth.tsarn"
+      "package": "com.bobeveleth.tsarn",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyB2pEBY-1YNiSv_8n1xHye2mDbcd1r5xLY"
+        }
+      }
     },
     "web": {
       "bundler": "metro",
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-font",
+      "expo-location"
+    ]
   }
 }

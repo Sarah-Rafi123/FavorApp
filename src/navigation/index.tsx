@@ -5,8 +5,8 @@ import * as SplashScreen from 'expo-splash-screen';
 import useAuthStore from '../store/useAuthStore';
 import useThemeStore from '../store/useThemeStore';
 import { StatusBar, View } from 'react-native';
-import { MainTabs } from './tabs';
 import { SplashScreen as CustomSplashScreen, CarouselScreen } from '../screens';
+import { MainTabs } from './tabs/MainTabs';
 
 /**
  * Application Navigation Flow
@@ -40,13 +40,13 @@ export default function Navigator() {
       try {
         // const token = await retrieveTokenSecurely();
         // if (token) {
-          setTimeout(() => {
-            setUser({
-              id: '1',
-              firstName: 'John', 
-              email: 'john@example.com'
-            });
-          }, 3000);
+        //   setTimeout(() => {
+        //     setUser({
+        //       id: '1',
+        //       firstName: 'John', 
+        //       email: 'john@example.com'
+        //     });
+        //   }, 3000);
         // }
       } catch (e) {
         // await removeTokenSecurely();
@@ -93,7 +93,7 @@ export default function Navigator() {
         user ? (
           <>
             <StatusBar barStyle={'dark-content'} backgroundColor="transparent" translucent />
-            <View style={{ flex: 1 }}>
+            <View className="flex-1">
               <MainTabs />
             </View>
           </>

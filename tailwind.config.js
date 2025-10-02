@@ -55,6 +55,21 @@ module.exports = {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
         },
+        green: {
+          50: '#f0f9ff',
+          100: '#e0f2fe', 
+          200: '#bae6fd',
+          300: '#7dd3fc',
+          400: '#38bdf8',
+          500: '#44A27B', // Your custom green
+          600: '#3b8f69',
+          700: '#327d57',
+          800: '#296b45',
+          900: '#205833',
+        },
+        brand: {
+          500: '#44A27B', // Your custom green as brand color
+        },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
           foreground: "hsl(var(--secondary-foreground))",

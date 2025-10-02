@@ -1,7 +1,5 @@
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, ViewStyle, TextStyle } from 'react-native'
+import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native'
 import React from 'react'
-import useThemeStore from '../../store/useThemeStore';
-import { ThemeTypes } from  '../../constants';
 
 /**
  * CustomButton provides a standardized button component with customizable styles and loading state.
@@ -29,59 +27,34 @@ interface CustomButtonProps {
   title?: string;
   onPress?: () => void;
   disabled?: boolean;
-  outerContainerStyle?: ViewStyle;
-  innerContainerStyle?: ViewStyle;
-  titleStyle?: TextStyle;
   loading?: boolean;
-  loaderColor?: string;
+  className?: string;
 }
 
 export function CustomButton(props: CustomButtonProps) {
-  const theme = useThemeStore((state) => state.theme);
-  const styles = createStyles(theme);
-
   const {
     title,
     onPress,
     disabled = false,
-    outerContainerStyle = {},
-    innerContainerStyle = {},
-    titleStyle = {},
     loading = false,
-    loaderColor = theme.primary
+    className = ""
   } = props;
 
-
   return (
-    <TouchableOpacity onPress={onPress} style={[styles.outerContainer, outerContainerStyle]} disabled={disabled}>
-      <View style={[styles.innerContainer, innerContainerStyle]}>
+    <TouchableOpacity 
+      onPress={onPress} 
+      disabled={disabled}
+      className={`bg-green-500 rounded-full border overflow-hidden ${disabled ? 'opacity-50' : ''} ${className}`}
+    >
+      <View className="items-center px-6 py-4">
         {
           loading ?
-            <ActivityIndicator color={loaderColor} />
+            <ActivityIndicator color="white" />
             :
-            <Text style={[styles.title, titleStyle]}>{title}</Text>
+            <Text className="text-base text-white font-medium">{title}</Text>
         }
       </View>
     </TouchableOpacity>
   )
 }
 
-const createStyles = (theme: ThemeTypes) => StyleSheet.create({
-  outerContainer: {
-    // flex: 1,
-    borderRadius: 34,
-    overflow: 'hidden',
-    borderWidth: 1,
-
-  },
-  innerContainer: {
-    alignItems: 'center',
-    padding: 15,
-  
-  },
-  title: {
-    fontSize: 16,
-    color: theme.dark_1,
-  }
-
-});

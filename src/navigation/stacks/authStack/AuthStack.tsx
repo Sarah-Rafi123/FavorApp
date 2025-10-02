@@ -1,24 +1,125 @@
+import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
-import { AuthScreen } from '../../../screens';
+import { AuthScreen, ForgotPasswordScreen, OtpVerificationScreen, NewPasswordScreen, SignupOtpScreen, CreateProfileScreen, LocationPermissionScreen } from '../../../screens';
 import { AppRoutes } from '../../../types';
 
 const Stack = createStackNavigator<AppRoutes>();
 
+import useAuthStore from '../../../store/useAuthStore';
+
 export function AuthStack() {
+  const setUser = useAuthStore((state) => state.setUser);
+
   const handleLogin = () => {
-    // This will be handled by the AuthScreen component
-    // The user state update will trigger navigation change
+    // Set user state to trigger navigation to MainTabs
+    setUser({
+      id: '1',
+      firstName: 'John',
+      email: 'user@example.com',
+    });
   };
 
   return (
-    <Stack.Navigator>
+    <Stack.Navigator initialRouteName="auth-screen">
       <Stack.Screen
         name="auth-screen"
         options={{
           headerShown: false,
         }}
       >
-        {() => <AuthScreen onLogin={handleLogin} />}
+        {({ navigation }) => (
+          <AuthScreen 
+            onLogin={handleLogin}
+            onForgotPassword={() => navigation.navigate('forgot-password-screen')}
+            onSignup={(email: string) => navigation.navigate('signup-otp-screen', { email })}
+          />
+        )}
+      </Stack.Screen>
+      
+      <Stack.Screen
+        name="forgot-password-screen"
+        options={{
+          headerShown: false,
+        }}
+      >
+        {({ navigation }) => (
+          <ForgotPasswordScreen 
+            onBackToLogin={() => navigation.navigate('auth-screen')}
+            onContinue={(email: string) => {
+              navigation.navigate('otp-verification-screen', { email });
+            }}
+          />
+        )}
+      </Stack.Screen>
+
+      <Stack.Screen
+        name="otp-verification-screen"
+        options={{
+          headerShown: false,
+        }}
+      >
+        {({ navigation, route }) => (
+          <OtpVerificationScreen 
+            onBack={() => navigation.navigate('forgot-password-screen')}
+            onVerifySuccess={() => navigation.navigate('new-password-screen')}
+            email={(route.params as any)?.email || 'user@example.com'}
+          />
+        )}
+      </Stack.Screen>
+
+      <Stack.Screen
+        name="new-password-screen"
+        options={{
+          headerShown: false,
+        }}
+      >
+        {({ navigation }) => (
+          <NewPasswordScreen 
+            onPasswordReset={() => navigation.navigate('auth-screen')}
+          />
+        )}
+      </Stack.Screen>
+
+      <Stack.Screen
+        name="signup-otp-screen"
+        options={{
+          headerShown: false,
+        }}
+      >
+        {({ navigation, route }) => (
+          <SignupOtpScreen 
+            onBack={() => navigation.navigate('auth-screen')}
+            onVerifySuccess={() => navigation.navigate('create-profile-screen')}
+            email={(route.params as any)?.email || 'user@example.com'}
+          />
+        )}
+      </Stack.Screen>
+
+      <Stack.Screen
+        name="create-profile-screen"
+        options={{
+          headerShown: false,
+        }}
+      >
+        {({ navigation }) => (
+          <CreateProfileScreen 
+            onProfileComplete={() => navigation.navigate('location-permission-screen')}
+          />
+        )}
+      </Stack.Screen>
+
+      <Stack.Screen
+        name="location-permission-screen"
+        options={{
+          headerShown: false,
+        }}
+      >
+        {({ navigation }) => (
+          <LocationPermissionScreen 
+            onLocationGranted={handleLogin}
+            onSkip={handleLogin}
+          />
+        )}
       </Stack.Screen>
     </Stack.Navigator>
   );

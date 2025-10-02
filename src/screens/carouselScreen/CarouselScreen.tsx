@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -49,14 +49,25 @@ export function CarouselScreen({ onComplete }: CarouselScreenProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
 
-  const handleNext = () => {
-    if (currentIndex < carouselData.length - 1) {
-      const nextIndex = currentIndex + 1;
-      setCurrentIndex(nextIndex);
-      flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
-    } else {
-      onComplete();
-    }
+  // Auto-advance carousel every 4 seconds with smoother timing
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentIndex((prevIndex) => {
+        const nextIndex = (prevIndex + 1) % carouselData.length;
+        flatListRef.current?.scrollToIndex({ 
+          index: nextIndex, 
+          animated: true,
+          viewPosition: 0.5
+        });
+        return nextIndex;
+      });
+    }, 4000); // Increased to 4 seconds for better UX
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleGetStarted = () => {
+    onComplete();
   };
 
   const handleScroll = (event: any) => {
@@ -68,19 +79,19 @@ export function CarouselScreen({ onComplete }: CarouselScreenProps) {
 
   const renderCarouselItem = ({ item }: { item: CarouselItem }) => (
     <View 
-      className="flex-1 justify-between items-center px-8 pt-20 pb-15"
+      className="flex-1 justify-between items-center px-8 pt-20 pb-20"
       style={{ width: screenWidth }}
     >
       <View className="flex-1 justify-center items-center mt-10">
         <Image 
           source={require('../../assets/images/people.png')} 
-          className="w-64 h-48"
+          className="w-80 h-72"
           resizeMode="contain"
         />
       </View>
       
       <View className="items-center mb-10">
-        <Text className="text-3xl font-bold text-green-800 text-center mb-4">
+        <Text className="text-3xl font-bold text-center mb-4 text-black">
           {item.title}
         </Text>
         <Text className="text-base text-gray-700 text-center leading-6 px-5">
@@ -90,8 +101,8 @@ export function CarouselScreen({ onComplete }: CarouselScreenProps) {
       
       <View className="w-full mb-8">
         <CarouselButton
-          title={currentIndex === carouselData.length - 1 ? "Get Started" : "Next"}
-          onPress={handleNext}
+          title="Get Started"
+          onPress={handleGetStarted}
         />
       </View>
       
@@ -102,13 +113,20 @@ export function CarouselScreen({ onComplete }: CarouselScreenProps) {
             className={`
               w-2 h-2 rounded-full mx-1
               ${index === currentIndex 
-                ? 'bg-green-500 w-3 h-3' 
+                ? 'w-3 h-3' 
                 : 'bg-white/50'
               }
             `}
+            style={{
+              backgroundColor: index === currentIndex ? '#44A27B' : 'rgba(255, 255, 255, 0.5)'
+            }}
             onPress={() => {
               setCurrentIndex(index);
-              flatListRef.current?.scrollToIndex({ index, animated: true });
+              flatListRef.current?.scrollToIndex({ 
+                index, 
+                animated: true,
+                viewPosition: 0.5
+              });
             }}
           />
         ))}
@@ -132,11 +150,16 @@ export function CarouselScreen({ onComplete }: CarouselScreenProps) {
           pagingEnabled
           showsHorizontalScrollIndicator={false}
           onMomentumScrollEnd={handleScroll}
+          decelerationRate="fast"
+          snapToInterval={screenWidth}
+          snapToAlignment="center"
           getItemLayout={(_, index) => ({
             length: screenWidth,
             offset: screenWidth * index,
             index,
           })}
+          removeClippedSubviews={false}
+          scrollEventThrottle={16}
         />
       </View>
     </ImageBackground>

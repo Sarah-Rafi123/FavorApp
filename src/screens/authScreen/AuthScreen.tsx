@@ -13,9 +13,11 @@ import useAuthStore from '../../store/useAuthStore';
 
 interface AuthScreenProps {
   onLogin: () => void;
+  onForgotPassword?: () => void;
+  onSignup?: (email: string) => void;
 }
 
-export function AuthScreen({ onLogin }: AuthScreenProps) {
+export function AuthScreen({ onLogin, onForgotPassword, onSignup }: AuthScreenProps) {
   const [activeTab, setActiveTab] = useState<'signin' | 'signup'>('signin');
   const [formData, setFormData] = useState({
     email: '',
@@ -89,13 +91,18 @@ export function AuthScreen({ onLogin }: AuthScreenProps) {
 
   const handleSubmit = () => {
     if (validateForm()) {
-      // Mock authentication
-      setUser({
-        id: '1',
-        firstName: 'John',
-        email: formData.email,
-      });
-      onLogin();
+      if (activeTab === 'signin') {
+        // Mock authentication
+        setUser({
+          id: '1',
+          firstName: 'John',
+          email: formData.email,
+        });
+        onLogin();
+      } else {
+        // Sign up flow - navigate to OTP verification
+        onSignup?.(formData.email);
+      }
     }
   };
 
@@ -113,31 +120,30 @@ export function AuthScreen({ onLogin }: AuthScreenProps) {
       className="flex-1 w-full h-full"
       resizeMode="cover"
     >
-      <View className="flex-1 px-6 pt-16">
-        {/* Logo */}
+      <View className="flex-1 px-6 pt-20">
         <View className="items-center mb-8">
           <Image 
             source={require('../../assets/images/logo.png')} 
-            className="w-32 h-16"
+            className="w-36 h-20"
             resizeMode="contain"
           />
         </View>
 
         {/* Welcome Text */}
         <View className="items-center mb-8">
-          <Text className="text-2xl font-bold text-gray-800 mb-2">
+          <Text className="text-3xl font-bold text-gray-800 mb-4">
             Welcome to FavorApp
           </Text>
-          <Text className="text-base text-gray-600 text-center px-4">
+          <Text className="text-lg text-gray-600 text-center px-4">
             Create an account or login to explore about our app.
           </Text>
         </View>
 
         {/* Tabs */}
-        <View className="flex-row mb-6">
+        <View className="flex-row mb-10 bg-gray-100 rounded-full p-1">
           <TouchableOpacity
-            className={`flex-1 py-3 rounded-l-full ${
-              activeTab === 'signin' ? 'bg-green-500' : 'bg-white'
+            className={`flex-1 py-3 rounded-full ${
+              activeTab === 'signin' ? 'bg-green-500' : ''
             }`}
             onPress={() => setActiveTab('signin')}
           >
@@ -148,8 +154,8 @@ export function AuthScreen({ onLogin }: AuthScreenProps) {
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            className={`flex-1 py-3 rounded-r-full ${
-              activeTab === 'signup' ? 'bg-green-500' : 'bg-white'
+            className={`flex-1 py-3 rounded-full ${
+              activeTab === 'signup' ? 'bg-green-500' : ''
             }`}
             onPress={() => setActiveTab('signup')}
           >
@@ -164,39 +170,42 @@ export function AuthScreen({ onLogin }: AuthScreenProps) {
         {/* Form */}
         <View className="flex-1">
           {/* Email Field */}
-          <View className="mb-4">
-            <Text className="text-gray-700 mb-2 font-medium">Email</Text>
+          <View className="mb-6 relative">
             <TextInput
-              className="bg-white px-4 py-3 rounded-lg border border-gray-200"
+              className="px-4 py-4 rounded-xl border border-gray-200 text-base bg-transparent"
               placeholder="Enter your email"
+              placeholderTextColor="#9CA3AF"
               value={formData.email}
               onChangeText={(text) => updateFormData('email', text)}
               keyboardType="email-address"
               autoCapitalize="none"
             />
+            <Text className="absolute -top-3 left-3 px-1 text-sm font-medium text-gray-700">
+              Email
+            </Text>
             {errors.email ? (
               <Text className="text-red-500 text-sm mt-1">{errors.email}</Text>
             ) : null}
           </View>
-
           {/* Password Field */}
-          <View className="mb-4">
-            <Text className="text-gray-700 mb-2 font-medium">Password</Text>
-            <View className="relative">
-              <TextInput
-                className="bg-white px-4 py-3 rounded-lg border border-gray-200 pr-12"
-                placeholder="Enter your password"
-                value={formData.password}
-                onChangeText={(text) => updateFormData('password', text)}
-                secureTextEntry={!showPassword}
-              />
-              <TouchableOpacity
-                className="absolute right-3 top-3"
-                onPress={() => setShowPassword(!showPassword)}
-              >
-                <Text className="text-gray-500">👁</Text>
-              </TouchableOpacity>
-            </View>
+          <View className="mb-6 relative">
+            <TextInput
+              className="px-4 py-4 rounded-xl border border-gray-200 pr-12 text-base bg-transparent"
+              placeholder="Enter your password"
+              placeholderTextColor="#9CA3AF"
+              value={formData.password}
+              onChangeText={(text) => updateFormData('password', text)}
+              secureTextEntry={!showPassword}
+            />
+            <Text className="absolute -top-3 left-3 px-1 text-sm font-medium text-gray-700">
+              Password
+            </Text>
+            <TouchableOpacity
+              className="absolute right-3 top-4"
+              onPress={() => setShowPassword(!showPassword)}
+            >
+              <Text className="text-gray-500">👁</Text>
+            </TouchableOpacity>
             {errors.password ? (
               <Text className="text-red-500 text-sm mt-1">{errors.password}</Text>
             ) : null}
@@ -204,23 +213,24 @@ export function AuthScreen({ onLogin }: AuthScreenProps) {
 
           {/* Confirm Password Field (Sign Up only) */}
           {activeTab === 'signup' && (
-            <View className="mb-4">
-              <Text className="text-gray-700 mb-2 font-medium">Confirm Password</Text>
-              <View className="relative">
-                <TextInput
-                  className="bg-white px-4 py-3 rounded-lg border border-gray-200 pr-12"
-                  placeholder="Confirm your password"
-                  value={formData.confirmPassword}
-                  onChangeText={(text) => updateFormData('confirmPassword', text)}
-                  secureTextEntry={!showConfirmPassword}
-                />
-                <TouchableOpacity
-                  className="absolute right-3 top-3"
-                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                >
-                  <Text className="text-gray-500">👁</Text>
-                </TouchableOpacity>
-              </View>
+            <View className="mb-8 relative">
+              <TextInput
+                className="px-4 py-4 rounded-xl border border-gray-200 pr-12 text-base bg-transparent"
+                placeholder="Enter your password"
+                placeholderTextColor="#9CA3AF"
+                value={formData.confirmPassword}
+                onChangeText={(text) => updateFormData('confirmPassword', text)}
+                secureTextEntry={!showConfirmPassword}
+              />
+              <Text className="absolute -top-3 left-3 px-1 text-sm font-medium text-gray-700">
+                Confirm Password
+              </Text>
+              <TouchableOpacity
+                className="absolute right-3 top-4"
+                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+              >
+                <Text className="text-gray-500">👁</Text>
+              </TouchableOpacity>
               {errors.confirmPassword ? (
                 <Text className="text-red-500 text-sm mt-1">{errors.confirmPassword}</Text>
               ) : null}
@@ -229,7 +239,7 @@ export function AuthScreen({ onLogin }: AuthScreenProps) {
 
           {/* Remember Me / Terms (Sign In) */}
           {activeTab === 'signin' && (
-            <View className="flex-row justify-between items-center mb-6">
+            <View className="flex-row justify-between items-center mb-10">
               <TouchableOpacity
                 className="flex-row items-center"
                 onPress={() => updateFormData('rememberMe', !formData.rememberMe)}
@@ -241,17 +251,26 @@ export function AuthScreen({ onLogin }: AuthScreenProps) {
                     <Text className="text-white text-xs text-center">✓</Text>
                   )}
                 </View>
-                <Text className="text-gray-700">Remember Me</Text>
+                <Text className="text-black">Remember Me</Text>
               </TouchableOpacity>
-              <TouchableOpacity>
-                <Text className="text-green-500 font-medium">Forgot Password</Text>
+              <TouchableOpacity onPress={onForgotPassword}>
+                <Text className=" text-black">Forgot Password</Text>
               </TouchableOpacity>
             </View>
           )}
 
-          {/* Terms Agreement (Sign Up) */}
+          {/* Submit Button */}
+          <View className="mb-6">
+            <CarouselButton
+              title={activeTab === 'signin' ? 'Login' : 'Create Account'}
+              onPress={handleSubmit}
+              disabled={!isFormComplete()}
+            />
+          </View>
+
+          {/* Terms Agreement (Sign Up) - moved below button */}
           {activeTab === 'signup' && (
-            <View className="mb-6">
+            <View className="mb-8">
               <TouchableOpacity
                 className="flex-row items-start"
                 onPress={() => updateFormData('agreeTerms', !formData.agreeTerms)}
@@ -265,22 +284,13 @@ export function AuthScreen({ onLogin }: AuthScreenProps) {
                 </View>
                 <Text className="text-gray-700 flex-1">
                   I have read and agree to the{' '}
-                  <Text className="text-green-500 underline">Terms & Condition</Text>
+                  <Text className="underline text-black">Terms & Condition</Text>
                   {' '}and the{' '}
-                  <Text className="text-green-500 underline">Privacy Policy</Text>
+                  <Text className="underline text-black">Privacy Policy</Text>
                 </Text>
               </TouchableOpacity>
             </View>
           )}
-
-          {/* Submit Button */}
-          <View className="mb-8">
-            <CarouselButton
-              title={activeTab === 'signin' ? 'Login' : 'Create Account'}
-              onPress={handleSubmit}
-              disabled={!isFormComplete()}
-            />
-          </View>
         </View>
       </View>
     </ImageBackground>
