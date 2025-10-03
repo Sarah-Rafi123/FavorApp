@@ -11,31 +11,13 @@ import {
 } from 'react-native';
 import * as Location from 'expo-location';
 import { CarouselButton } from '../../components/buttons';
-import Svg, { Path, Circle } from 'react-native-svg';
+import LocationSvg from '../../assets/icons/Location';
 
 interface LocationPermissionScreenProps {
   onLocationGranted: () => void;
   onSkip: () => void;
 }
 
-const LocationIcon = () => (
-  <Svg width="80" height="80" viewBox="0 0 80 80" fill="none">
-    <Circle cx="40" cy="35" r="12" stroke="#44A27B" strokeWidth="3" fill="none" />
-    <Circle cx="40" cy="35" r="4" fill="#44A27B" />
-    <Path
-      d="M40 50L30 65H50L40 50Z"
-      stroke="#44A27B"
-      strokeWidth="3"
-      fill="#44A27B"
-    />
-    <Path
-      d="M25 60L20 70H25H55H60L55 60"
-      stroke="#44A27B"
-      strokeWidth="2"
-      fill="none"
-    />
-  </Svg>
-);
 
 export function LocationPermissionScreen({ onLocationGranted, onSkip }: LocationPermissionScreenProps) {
   const [showSystemModal, setShowSystemModal] = useState(false);
@@ -97,7 +79,7 @@ export function LocationPermissionScreen({ onLocationGranted, onSkip }: Location
         
         {/* Location Icon */}
         <View className="items-center mb-12 mt-20">
-          <LocationIcon />
+          <LocationSvg />
         </View>
 
         {/* Title and Description */}

@@ -41,6 +41,7 @@ const carouselData: CarouselItem[] = [
   },
 ];
 
+
 interface CarouselScreenProps {
   onComplete: () => void;
 }
@@ -84,7 +85,7 @@ export function CarouselScreen({ onComplete }: CarouselScreenProps) {
     >
       <View className="flex-1 justify-center items-center mt-10">
         <Image 
-          source={require('../../assets/images/people.png')} 
+          source={require('../../../assets/people.png')} 
           className="w-80 h-72"
           resizeMode="contain"
         />
@@ -136,7 +137,7 @@ export function CarouselScreen({ onComplete }: CarouselScreenProps) {
 
   return (
     <ImageBackground 
-      source={require('../../assets/images/Wallpaper.png')} 
+      source={require('../../../assets/Wallpaper.png')} 
       className="flex-1 w-full h-full"
       resizeMode="cover"
     >

@@ -16,7 +16,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.bobeveleth.tsarn",
       "config": {
-        "googleMapsApiKey": "AIzaSyB2pEBY-1YNiSv_8n1xHye2mDbcd1r5xLY"
+        "googleMapsApiKey": "AIzaSyDt1zyVSt1snXRBteLuH9ngKmE8ABve268"
       }
     },
     "android": {
@@ -27,7 +27,7 @@
       "package": "com.bobeveleth.tsarn",
       "config": {
         "googleMaps": {
-          "apiKey": "AIzaSyB2pEBY-1YNiSv_8n1xHye2mDbcd1r5xLY"
+          "apiKey": "AIzaSyDt1zyVSt1snXRBteLuH9ngKmE8ABve268"
         }
       }
     },

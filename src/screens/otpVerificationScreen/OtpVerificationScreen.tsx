@@ -6,9 +6,12 @@ import {
   TextInput,
   TouchableOpacity,
   StatusBar,
+  KeyboardAvoidingView,
+  ScrollView,
+  Platform,
 } from 'react-native';
 import { CarouselButton } from '../../components/buttons';
-import { LockIcon } from '../../components/icons';
+import { LockIcon } from '../../assets/icons';
 import { SuccessModal } from '../../components/overlays/SuccessModal';
 
 interface OtpVerificationScreenProps {
@@ -95,15 +98,25 @@ export function OtpVerificationScreen({ onBack, onVerifySuccess, email }: OtpVer
 
   return (
     <ImageBackground 
-      source={require('../../assets/images/Wallpaper.png')} 
+      source={require('../../../assets/Wallpaper.png')} 
       className="flex-1 w-full h-full"
       resizeMode="cover"
     >
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
-      <View className="flex-1 px-6 pt-20">
-        
-        {/* Back Button */}
-        <TouchableOpacity 
+      <KeyboardAvoidingView 
+        className="flex-1"
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <ScrollView 
+          className="flex-1"
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: 50 }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View className="flex-1 px-6 pt-20">
+            {/* Back Button */}
+            <TouchableOpacity 
           onPress={onBack}
           className="w-10 h-10 rounded-full bg-green-500 items-center justify-center mb-8"
         >
@@ -168,8 +181,9 @@ export function OtpVerificationScreen({ onBack, onVerifySuccess, email }: OtpVer
             </TouchableOpacity>
           </View>
         </View>
-
-      </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       <SuccessModal
         visible={showSuccessModal}

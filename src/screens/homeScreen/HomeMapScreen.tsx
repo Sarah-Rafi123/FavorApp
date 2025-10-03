@@ -5,6 +5,8 @@ import {
   TouchableOpacity,
   StatusBar,
   Alert,
+  TextInput,
+  Modal,
 } from 'react-native';
 import MapView, { Marker, Circle } from 'react-native-maps';
 import * as Location from 'expo-location';
@@ -52,28 +54,79 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
   const [location, setLocation] = useState<any>(null);
   const [selectedProfile, setSelectedProfile] = useState<any>(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showLocationPermissionModal, setShowLocationPermissionModal] = useState(false);
+  const [currentAddress, setCurrentAddress] = useState('Wyoming, USA');
+  const [editingLocation, setEditingLocation] = useState(false);
+  const [tempLocation, setTempLocation] = useState('');
   const [mapRegion, setMapRegion] = useState({
-    latitude: 35.1983,
-    longitude: -106.5348,
-    latitudeDelta: 1.0,
-    longitudeDelta: 1.0,
+    latitude: 42.9957, // Wyoming center
+    longitude: -107.5512,
+    latitudeDelta: 5.0, // Show entire state
+    longitudeDelta: 5.0,
   });
 
   useEffect(() => {
-    getCurrentLocation();
+    checkLocationPermission();
   }, []);
 
-  const getCurrentLocation = async () => {
+  const checkLocationPermission = async () => {
     try {
       const { status } = await Location.getForegroundPermissionsAsync();
       
       if (status !== 'granted') {
-        Alert.alert('Permission denied', 'Location permission is required to show your position on the map.');
+        setShowLocationPermissionModal(true);
         return;
       }
 
-      const currentLocation = await Location.getCurrentPositionAsync({});
+      getCurrentLocation();
+    } catch (error) {
+      console.error('Error checking location permission:', error);
+    }
+  };
+
+  const requestLocationPermission = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      setShowLocationPermissionModal(false);
+      
+      if (status === 'granted') {
+        getCurrentLocation();
+      } else {
+        // Fall back to Wyoming when permission denied
+        setCurrentAddress('Wyoming, USA');
+        setMapRegion({
+          latitude: 42.9957,
+          longitude: -107.5512,
+          latitudeDelta: 5.0,
+          longitudeDelta: 5.0,
+        });
+      }
+    } catch (error) {
+      console.error('Error requesting location permission:', error);
+      setShowLocationPermissionModal(false);
+    }
+  };
+
+  const getCurrentLocation = async () => {
+    try {
+      const currentLocation = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+        timeInterval: 5000,
+        distanceInterval: 10,
+      });
       const { latitude, longitude } = currentLocation.coords;
+      
+      // Reverse geocode to get address
+      const addresses = await Location.reverseGeocodeAsync({
+        latitude,
+        longitude,
+      });
+      
+      if (addresses.length > 0) {
+        const address = addresses[0];
+        const formattedAddress = `${address.street || ''} ${address.city || ''}, ${address.region || ''}, ${address.country || ''}`.trim();
+        setCurrentAddress(formattedAddress || 'Current Location');
+      }
       
       setLocation(currentLocation.coords);
       setMapRegion({
@@ -91,8 +144,8 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
   const mockFavors = [
     {
       id: '1',
-      latitude: 35.2084,
-      longitude: -106.5448,
+      latitude: 41.1400, // Cheyenne, WY
+      longitude: -104.8197,
       title: 'Dog Walking',
       price: '$20',
       profile: {
@@ -110,8 +163,8 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
     },
     {
       id: '2',
-      latitude: 35.1884,
-      longitude: -106.5248,
+      latitude: 44.2619, // Casper, WY  
+      longitude: -106.3131,
       title: 'Lawn Mowing',
       price: '$0',
       profile: {
@@ -142,7 +195,7 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
       <View className="absolute top-16 left-6 right-6 z-10 flex-row justify-between items-center">
         <View>
           <Text className="text-2xl font-bold text-gray-800">Home</Text>
-          <Text className="text-sm text-gray-600">Mesa Verde National Park</Text>
+          <Text className="text-sm text-gray-600">{currentAddress}</Text>
         </View>
         <View className="flex-row space-x-3">
           <TouchableOpacity
@@ -174,49 +227,80 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
       </View>
 
       {/* Map */}
-      <MapView
-        style={{ flex: 1 }}
-        region={mapRegion}
-        showsUserLocation={true}
-        showsMyLocationButton={false}
-        onRegionChangeComplete={setMapRegion}
-      >
-        {/* User Location Circle */}
-        {location && (
-          <Circle
-            center={{
-              latitude: location.latitude,
-              longitude: location.longitude,
-            }}
-            radius={5000} // 5km radius
-            fillColor="rgba(68, 162, 123, 0.2)"
-            strokeColor="rgba(68, 162, 123, 0.8)"
-            strokeWidth={2}
-          />
-        )}
+      <View style={{ flex: 1, backgroundColor: '#f0f0f0' }}>
+        <MapView
+          style={{ flex: 1 }}
+          initialRegion={mapRegion}
+          showsUserLocation={true}
+          showsMyLocationButton={false}
+          onRegionChangeComplete={setMapRegion}
+          onMapReady={() => console.log('Map is ready')}
+        >
+          {/* User Location Circle */}
+          {location && (
+            <Circle
+              center={{
+                latitude: location.latitude,
+                longitude: location.longitude,
+              }}
+              radius={5000} // 5km radius
+              fillColor="rgba(68, 162, 123, 0.2)"
+              strokeColor="rgba(68, 162, 123, 0.8)"
+              strokeWidth={2}
+            />
+          )}
 
-        {/* Mock Favor Markers */}
-        {mockFavors.map((favor) => (
-          <Marker
-            key={favor.id}
-            coordinate={{
-              latitude: favor.latitude,
-              longitude: favor.longitude,
-            }}
-            title={favor.title}
-            description={favor.price}
-            onPress={() => handleMarkerPress(favor)}
-          />
-        ))}
-      </MapView>
+          {/* Mock Favor Markers */}
+          {mockFavors.map((favor) => (
+            <Marker
+              key={favor.id}
+              coordinate={{
+                latitude: favor.latitude,
+                longitude: favor.longitude,
+              }}
+              title={favor.title}
+              description={favor.price}
+              onPress={() => handleMarkerPress(favor)}
+            />
+          ))}
+        </MapView>
+      </View>
 
       {/* Location Search Bar */}
       <View className="absolute top-48 left-6 right-6 z-10">
         <View className="bg-white rounded-xl px-4 py-3 shadow-sm flex-row items-center">
           <View className="w-2 h-2 bg-red-500 rounded-full mr-3"></View>
-          <Text className="text-gray-600 flex-1">VM8P+MQ Casper, WY, USA</Text>
-          <TouchableOpacity>
-            <Text className="text-gray-400">✕</Text>
+          {editingLocation ? (
+            <TextInput
+              className="text-gray-600 flex-1"
+              value={tempLocation}
+              onChangeText={setTempLocation}
+              placeholder="Enter location..."
+              autoFocus
+              onSubmitEditing={() => {
+                setCurrentAddress(tempLocation);
+                setEditingLocation(false);
+              }}
+              onBlur={() => {
+                if (tempLocation.trim()) {
+                  setCurrentAddress(tempLocation);
+                }
+                setEditingLocation(false);
+              }}
+            />
+          ) : (
+            <TouchableOpacity 
+              className="flex-1"
+              onPress={() => {
+                setTempLocation(currentAddress);
+                setEditingLocation(true);
+              }}
+            >
+              <Text className="text-gray-600">{currentAddress}</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity onPress={getCurrentLocation}>
+            <Text className="text-blue-500 ml-2">📍</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -239,6 +323,48 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
           user={selectedProfile}
         />
       )}
+
+      {/* Location Permission Modal */}
+      <Modal
+        visible={showLocationPermissionModal}
+        transparent
+        animationType="fade"
+      >
+        <View className="flex-1 bg-black/50 justify-center items-center">
+          <View className="bg-white rounded-2xl p-6 mx-6 max-w-sm">
+            <Text className="text-xl font-bold text-gray-800 mb-4 text-center">
+              Location Access
+            </Text>
+            <Text className="text-gray-600 text-center mb-6 leading-6">
+              FavorApp needs access to your location to show nearby favors and services. This helps you find and provide help in your area.
+            </Text>
+            <View className="flex-row space-x-3">
+              <TouchableOpacity
+                className="flex-1 py-3 px-4 border border-gray-300 rounded-xl"
+                onPress={() => {
+                  setShowLocationPermissionModal(false);
+                  // Show Wyoming as default when declining location
+                  setCurrentAddress('Wyoming, USA');
+                  setMapRegion({
+                    latitude: 42.9957,
+                    longitude: -107.5512,
+                    latitudeDelta: 5.0,
+                    longitudeDelta: 5.0,
+                  });
+                }}
+              >
+                <Text className="text-gray-600 text-center font-semibold">Not Now</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                className="flex-1 py-3 px-4 bg-green-500 rounded-xl"
+                onPress={requestLocationPermission}
+              >
+                <Text className="text-white text-center font-semibold">Allow</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

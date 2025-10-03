@@ -6,7 +6,7 @@ import {
   Modal,
 } from 'react-native';
 import { CarouselButton } from '../buttons';
-import Svg, { Path, Circle } from 'react-native-svg';
+import { TickSvg } from '../../assets/icons/Tick';
 
 interface SuccessModalProps {
   visible: boolean;
@@ -15,18 +15,6 @@ interface SuccessModalProps {
   message?: string;
 }
 
-const CheckIcon = () => (
-  <Svg width="80" height="80" viewBox="0 0 80 80" fill="none">
-    <Circle cx="40" cy="40" r="35" fill="#44A27B" />
-    <Path
-      d="M25 40L35 50L55 30"
-      stroke="white"
-      strokeWidth="4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </Svg>
-);
 
 export function SuccessModal({ 
   visible, 
@@ -54,7 +42,7 @@ export function SuccessModal({
 
           {/* Success Icon */}
           <View className="items-center mb-6 mt-4">
-            <CheckIcon />
+            <TickSvg />
           </View>
 
           {/* Title */}

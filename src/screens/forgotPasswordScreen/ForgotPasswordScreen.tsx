@@ -6,9 +6,12 @@ import {
   TextInput,
   TouchableOpacity,
   StatusBar,
+  KeyboardAvoidingView,
+  ScrollView,
+  Platform,
 } from 'react-native';
 import { CarouselButton } from '../../components/buttons';
-import { LockIcon } from '../../components/icons';
+import { LockIcon } from '../../assets/icons';
 
 interface ForgotPasswordScreenProps {
   onBackToLogin: () => void;
@@ -46,69 +49,81 @@ export function ForgotPasswordScreen({ onBackToLogin, onContinue }: ForgotPasswo
 
   return (
     <ImageBackground 
-      source={require('../../assets/images/Wallpaper.png')} 
+      source={require('../../../assets/Wallpaper.png')} 
       className="flex-1 w-full h-full"
       resizeMode="cover"
     >
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
-      <View className="flex-1 px-6 pt-20">
-        
-        {/* Lock Icon */}
-        <View className="items-center mb-8 mt-16">
-            <LockIcon />
-        </View>
-        <View className="items-center mb-12">
-          <Text className="text-3xl font-bold text-gray-800 mb-4 text-center">
-            Forgot Password
-          </Text>
-          <Text className="text-base text-gray-600 text-center px-4 leading-6">
-            Enter phone number on which we can share you OTP to reset your password
-          </Text>
-        </View>
+      <KeyboardAvoidingView 
+        className="flex-1"
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <ScrollView 
+          className="flex-1"
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: 50 }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View className="flex-1 px-6 pt-20">
+            {/* Lock Icon */}
+            <View className="items-center mb-8 mt-16">
+              <LockIcon />
+            </View>
+            
+            <View className="items-center mb-12">
+              <Text className="text-3xl font-bold text-gray-800 mb-4 text-center">
+                Forgot Password
+              </Text>
+              <Text className="text-base text-gray-600 text-center px-4 leading-6">
+                Enter phone number on which we can share you OTP to reset your password
+              </Text>
+            </View>
 
-        {/* Email Input */}
-        <View className="mb-8">
-          <View className="mb-6 relative">
-            <TextInput
-              className="px-4 py-4 rounded-xl border border-gray-200 text-base bg-transparent"
-              placeholder="deanna.curtis@example.com"
-              placeholderTextColor="#9CA3AF"
-              value={email}
-              onChangeText={(text) => {
-                setEmail(text);
-                if (error) setError('');
-              }}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-            <Text className="absolute -top-3 left-3 px-1 text-sm font-medium text-gray-700">
-              Email
-            </Text>
-            {error ? (
-              <Text className="text-red-500 text-sm mt-1">{error}</Text>
-            ) : null}
+            {/* Email Input */}
+            <View className="mb-8">
+              <View className="mb-6 relative">
+                <TextInput
+                  className="px-4 py-4 rounded-xl border border-gray-200 text-base bg-white/80"
+                  placeholder="deanna.curtis@example.com"
+                  placeholderTextColor="#9CA3AF"
+                  value={email}
+                  onChangeText={(text) => {
+                    setEmail(text);
+                    if (error) setError('');
+                  }}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+                <Text className="absolute -top-3 left-3 px-1 text-sm font-medium text-gray-700 bg-white rounded">
+                  Email
+                </Text>
+                {error ? (
+                  <Text className="text-red-500 text-sm mt-1">{error}</Text>
+                ) : null}
+              </View>
+            </View>
+
+            {/* Continue Button */}
+            <View className="mb-6">
+              <CarouselButton
+                title="Continue"
+                onPress={handleContinue}
+                disabled={!isFormValid}
+              />
+            </View>
+
+            {/* Back to Login */}
+            <View className="items-center">
+              <TouchableOpacity onPress={onBackToLogin}>
+                <Text className="text-gray-800 text-base font-medium">
+                  Back to login
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-
-        {/* Continue Button */}
-        <View className="mb-6">
-          <CarouselButton
-            title="Continue"
-            onPress={handleContinue}
-            disabled={!isFormValid}
-          />
-        </View>
-
-        {/* Back to Login */}
-        <View className="items-center">
-          <TouchableOpacity onPress={onBackToLogin}>
-            <Text className="text-gray-800 text-base font-medium">
-              Back to login
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-      </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </ImageBackground>
   );
 }

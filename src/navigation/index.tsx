@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { AuthStack } from './stacks';
 import * as SplashScreen from 'expo-splash-screen';
@@ -33,6 +33,7 @@ export default function Navigator() {
   const setUser = useAuthStore((state) => state.setUser);
 
   const [appIsReady, setAppIsReady] = useState(false);
+  const [showCustomSplash, setShowCustomSplash] = useState(false);
   const [carouselCompleted, setCarouselCompleted] = useState(false);
 
   useEffect(() => {
@@ -58,6 +59,23 @@ export default function Navigator() {
     prepare();
   }, []);
 
+  // Hide expo splash and show custom splash after app is ready
+  useEffect(() => {
+    if (appIsReady) {
+      const hideExpoSplash = async () => {
+        await SplashScreen.hideAsync();
+        setShowCustomSplash(true);
+        
+        // Show custom splash for 2 seconds then move to carousel
+        setTimeout(() => {
+          setShowCustomSplash(false);
+        }, 2000);
+      };
+      
+      hideExpoSplash();
+    }
+  }, [appIsReady]);
+
   // Cleanup when component unmounts
   useEffect(()=>{
     return () => {
@@ -65,19 +83,12 @@ export default function Navigator() {
     }
   }, []);
 
-  // Hide splash screen when fonts are loaded and app is ready
-  const onLayoutRootView = useCallback(async () => {
-    if (appIsReady) {
-      await SplashScreen.hideAsync();
-    }
-  }, [ appIsReady]);
-
-  // Show custom splash screen while fonts and app are initializing
-  if (!appIsReady) {
+  // Show custom splash screen for 2 seconds after expo splash
+  if (!appIsReady || showCustomSplash) {
     return <CustomSplashScreen />;
   }
 
-  // Show carousel after splash screen but before main navigation
+  // Show carousel after custom splash screen but before main navigation
   if (!carouselCompleted) {
     return (
       <>
@@ -88,7 +99,7 @@ export default function Navigator() {
   }
 
   return (
-    <NavigationContainer onReady={onLayoutRootView}>
+    <NavigationContainer>
       {
         user ? (
           <>

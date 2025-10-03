@@ -8,7 +8,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { CarouselButton } from '../../components/buttons';
-import { LockIcon } from '../../components/icons';
+import { LockIcon } from '../../assets/icons';
 import { SuccessModal } from '../../components/overlays/SuccessModal';
 
 interface SignupOtpScreenProps {
