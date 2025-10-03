@@ -13,6 +13,9 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { CarouselButton } from '../../components/buttons';
+import CalenderSvg from '../../assets/icons/Calender';
+import PhoneSvg from '../../assets/icons/Phone';
+import ChatSvg from '../../assets/icons/Chat';
 
 interface CreateProfileScreenProps {
   onProfileComplete: () => void;
@@ -257,7 +260,7 @@ export function CreateProfileScreen({ onProfileComplete }: CreateProfileScreenPr
               className="absolute right-3 top-4"
               onPress={() => setShowDatePicker(true)}
             >
-              <Text className="text-gray-500">📅</Text>
+              <CalenderSvg />
             </TouchableOpacity>
             {errors.dateOfBirth ? (
               <Text className="text-red-500 text-sm mt-1">{errors.dateOfBirth}</Text>
@@ -296,7 +299,7 @@ export function CreateProfileScreen({ onProfileComplete }: CreateProfileScreenPr
               Phone Number (Call)
             </Text>
             <TouchableOpacity className="absolute right-3 top-4">
-              <Text className="text-gray-500">📞</Text>
+              <PhoneSvg />
             </TouchableOpacity>
             {errors.phoneCall ? (
               <Text className="text-red-500 text-sm mt-1">{errors.phoneCall}</Text>
@@ -317,7 +320,7 @@ export function CreateProfileScreen({ onProfileComplete }: CreateProfileScreenPr
               Phone Number (Text)
             </Text>
             <TouchableOpacity className="absolute right-3 top-4">
-              <Text className="text-gray-500">💬</Text>
+              <ChatSvg />
             </TouchableOpacity>
             {errors.phoneText ? (
               <Text className="text-red-500 text-sm mt-1">{errors.phoneText}</Text>

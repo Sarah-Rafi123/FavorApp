@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   StatusBar,
   ScrollView,
+  ImageBackground,
 } from 'react-native';
 import { CarouselButton } from '../../components/buttons';
 import Svg, { Path } from 'react-native-svg';
@@ -19,7 +20,7 @@ const BackIcon = () => (
   <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
     <Path
       d="M19 12H5M12 19L5 12L12 5"
-      stroke="#374151"
+      stroke="#000000"
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -74,23 +75,23 @@ export function FilterScreen({ onBack, onApply, navigation }: FilterScreenProps)
     options: string[]; 
     section: string;
   }) => (
-    <View className="bg-white rounded-2xl p-6 mb-4">
-      <Text className="text-lg font-semibold text-gray-800 mb-4">{title}</Text>
+    <View className="bg-white rounded-2xl p-4 mb-4 mx-4">
+      <Text className="text-lg font-semibold text-gray-800 mb-3">{title}</Text>
       <View className="flex-row flex-wrap">
         {options.map((option) => {
           const isSelected = filters[section as keyof typeof filters].includes(option);
           return (
             <TouchableOpacity
               key={option}
-              className={`flex-row items-center mr-6 mb-3`}
+              className={`flex-row items-center mr-4 mb-2 w-full`}
               onPress={() => toggleFilter(section, option)}
             >
-              <View className={`w-6 h-6 rounded border-2 mr-3 items-center justify-center ${
+              <View className={`w-5 h-5 rounded border-2 mr-3 items-center justify-center ${
                 isSelected ? 'bg-green-500 border-green-500' : 'border-gray-300'
               }`}>
                 {isSelected && <CheckIcon />}
               </View>
-              <Text className="text-gray-700 text-base">
+              <Text className="text-gray-700 text-base flex-1">
                 {option}
                 {option === 'Verified' && ' 🛡️'}
               </Text>
@@ -102,11 +103,15 @@ export function FilterScreen({ onBack, onApply, navigation }: FilterScreenProps)
   );
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <ImageBackground
+      source={require('../../assets/images/Wallpaper.png')}
+      className="flex-1"
+      resizeMode="cover"
+    >
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       
       {/* Header */}
-      <View className="pt-16 pb-6 px-6 bg-white">
+      <View className="pt-16 pb-4 px-6">
         <View className="flex-row items-center">
           <TouchableOpacity 
             className="mr-4 p-2"
@@ -114,14 +119,14 @@ export function FilterScreen({ onBack, onApply, navigation }: FilterScreenProps)
           >
             <BackIcon />
           </TouchableOpacity>
-          <Text className="text-2xl font-bold text-gray-800">Filter</Text>
+          <Text className="text-2xl font-bold text-black">Filter</Text>
         </View>
       </View>
 
       <ScrollView 
-        className="flex-1 px-6"
+        className="flex-1"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingTop: 20, paddingBottom: 140 }}
+        contentContainerStyle={{ paddingTop: 10, paddingBottom: 200 }}
       >
         <FilterSection
           title="Priority"
@@ -149,7 +154,7 @@ export function FilterScreen({ onBack, onApply, navigation }: FilterScreenProps)
       </ScrollView>
 
       {/* Bottom Buttons */}
-      <View className="absolute bottom-0 left-0 right-0 bg-white pt-6 pb-8 px-6 border-t border-gray-100">
+      <View className="absolute bottom-24 left-0 right-0 px-6">
         <View className="mb-4">
           <CarouselButton
             title="Apply"
@@ -163,11 +168,11 @@ export function FilterScreen({ onBack, onApply, navigation }: FilterScreenProps)
           />
         </View>
         <TouchableOpacity onPress={clearAll}>
-          <Text className="text-gray-600 text-center text-lg font-medium">
+          <Text className="text-gray-700 text-center text-lg font-medium">
             Clear All
           </Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </ImageBackground>
   );
 }

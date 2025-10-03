@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { AuthStack } from './stacks';
-import * as SplashScreen from 'expo-splash-screen';
 import useAuthStore from '../store/useAuthStore';
 import useThemeStore from '../store/useThemeStore';
 import { StatusBar, View } from 'react-native';
@@ -25,7 +24,7 @@ import { MainTabs } from './tabs/MainTabs';
  * 
  */
 
-SplashScreen.preventAutoHideAsync(); // keep native splash visible
+// Expo splash screen removed - using custom splash only
 
 export default function Navigator() {
   const theme = useThemeStore((state) => state.theme);
@@ -59,20 +58,15 @@ export default function Navigator() {
     prepare();
   }, []);
 
-  // Hide expo splash and show custom splash after app is ready
+  // Show custom splash after app is ready
   useEffect(() => {
     if (appIsReady) {
-      const hideExpoSplash = async () => {
-        await SplashScreen.hideAsync();
-        setShowCustomSplash(true);
-        
-        // Show custom splash for 2 seconds then move to carousel
-        setTimeout(() => {
-          setShowCustomSplash(false);
-        }, 2000);
-      };
+      setShowCustomSplash(true);
       
-      hideExpoSplash();
+      // Show custom splash for 2 seconds then move to carousel
+      setTimeout(() => {
+        setShowCustomSplash(false);
+      }, 2000);
     }
   }, [appIsReady]);
 

@@ -7,11 +7,6 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/logo.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#A5D6A7"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.bobeveleth.tsarn",

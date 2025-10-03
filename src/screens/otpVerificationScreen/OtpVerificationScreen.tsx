@@ -25,6 +25,7 @@ export function OtpVerificationScreen({ onBack, onVerifySuccess, email }: OtpVer
   const [timer, setTimer] = useState(30);
   const [canResend, setCanResend] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
   const inputRefs = useRef<TextInput[]>([]);
 
   // Timer countdown
@@ -147,10 +148,14 @@ export function OtpVerificationScreen({ onBack, onVerifySuccess, email }: OtpVer
               ref={(ref) => {
                 if (ref) inputRefs.current[index] = ref;
               }}
-              className="w-12 h-12 border-2 border-gray-200 rounded-lg text-center text-xl font-semibold bg-transparent"
+              className={`w-12 h-12 border-2 rounded-lg text-center text-xl font-semibold bg-transparent ${
+                focusedIndex === index ? 'border-green-500' : 'border-gray-200'
+              }`}
               value={digit}
               onChangeText={(value) => handleOtpChange(value, index)}
               onKeyPress={({ nativeEvent }) => handleKeyPress(nativeEvent.key, index)}
+              onFocus={() => setFocusedIndex(index)}
+              onBlur={() => setFocusedIndex(null)}
               keyboardType="number-pad"
               maxLength={1}
               selectTextOnFocus
