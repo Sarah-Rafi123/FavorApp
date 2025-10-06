@@ -12,4 +12,4 @@ const CenterSvg = () => {
 
   )
 }
-export default CenterSvg;
+export default CenterSvg;                                                                                                                                                               
