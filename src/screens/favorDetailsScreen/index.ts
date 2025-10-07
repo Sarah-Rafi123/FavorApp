@@ -1,0 +1,1 @@
+export { FavorDetailsScreen } from './FavorDetailsScreen';

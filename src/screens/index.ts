@@ -22,3 +22,4 @@ export * from "./deleteAccountScreen";
 export * from "./aboutAppScreen";
 export * from "./privacyPolicyScreen";
 export * from "./termsConditionsScreen";
+export * from "./favorDetailsScreen";

@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { CarouselButton } from '../../components/buttons';
 import useAuthStore from '../../store/useAuthStore';
+import EyeSvg from '../../assets/icons/Eye';
 
 interface AuthScreenProps {
   onLogin: () => void;
@@ -185,8 +186,13 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup }: AuthScreenPr
               {/* Email Field */}
               <View className="mb-6 relative">
                 <TextInput
-                  className="px-4 py-4 rounded-xl border border-gray-200 text-base bg-transparent"
-                  style={{ backgroundColor: 'transparent' }}
+                  className="px-4 py-3 rounded-xl border border-gray-200 text-base bg-transparent"
+                  style={{ 
+                    backgroundColor: 'transparent',
+                    fontSize: 16,
+                    lineHeight: 22,
+                    height: 56
+                  }}
                   placeholder="Enter your email"
                   placeholderTextColor="#9CA3AF"
                   value={formData.email}
@@ -194,7 +200,7 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup }: AuthScreenPr
                   keyboardType="email-address"
                   autoCapitalize="none"
                 />
-                <Text className="absolute -top-3 left-3 px-1 text-sm font-medium text-gray-700">
+                <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700">
                   Email
                 </Text>
                 {errors.email ? (
@@ -205,22 +211,27 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup }: AuthScreenPr
               {/* Password Field */}
               <View className="mb-6 relative">
                 <TextInput
-                  className="px-4 py-4 rounded-xl border border-gray-200 pr-12 text-base bg-transparent"
-                  style={{ backgroundColor: 'transparent' }}
+                  className="px-4 py-3 rounded-xl border border-gray-200 pr-12 text-base bg-transparent"
+                  style={{ 
+                    backgroundColor: 'transparent',
+                    fontSize: 16,
+                    lineHeight: 22,
+                    height: 56
+                  }}
                   placeholder="Enter your password"
                   placeholderTextColor="#9CA3AF"
                   value={formData.password}
                   onChangeText={(text) => updateFormData('password', text)}
                   secureTextEntry={!showPassword}
                 />
-                <Text className="absolute -top-3 left-3 px-1 text-sm font-medium text-gray-700">
+                <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700">
                   Password
                 </Text>
                 <TouchableOpacity
-                  className="absolute right-3 top-4"
+                  className="absolute right-3 top-0 bottom-0 justify-center"
                   onPress={() => setShowPassword(!showPassword)}
                 >
-                  <Text className="text-gray-500">👁</Text>
+                  <EyeSvg />
                 </TouchableOpacity>
                 {errors.password ? (
                   <Text className="text-red-500 text-sm mt-1">{errors.password}</Text>
@@ -231,22 +242,27 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup }: AuthScreenPr
               {activeTab === 'signup' && (
                 <View className="mb-8 relative">
                   <TextInput
-                    className="px-4 py-4 rounded-xl border border-gray-200 pr-12 text-base bg-transparent"
-                    style={{ backgroundColor: 'transparent' }}
+                    className="px-4 py-3 rounded-xl border border-gray-200 pr-12 text-base bg-transparent"
+                    style={{ 
+                      backgroundColor: 'transparent',
+                      fontSize: 16,
+                      lineHeight: 22,
+                      height: 56
+                    }}
                     placeholder="Confirm your password"
                     placeholderTextColor="#9CA3AF"
                     value={formData.confirmPassword}
                     onChangeText={(text) => updateFormData('confirmPassword', text)}
                     secureTextEntry={!showConfirmPassword}
                   />
-                  <Text className="absolute -top-3 left-3 px-1 text-sm font-medium text-gray-700">
+                  <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700">
                     Confirm Password
                   </Text>
                   <TouchableOpacity
-                    className="absolute right-3 top-4"
+                    className="absolute right-3 top-0 bottom-0 justify-center"
                     onPress={() => setShowConfirmPassword(!showConfirmPassword)}
                   >
-                    <Text className="text-gray-500">👁</Text>
+                    <EyeSvg />
                   </TouchableOpacity>
                   {errors.confirmPassword ? (
                     <Text className="text-red-500 text-sm mt-1">{errors.confirmPassword}</Text>
