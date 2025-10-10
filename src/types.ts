@@ -4,6 +4,124 @@ export interface User {
   email: string;
 }
 
+export interface RegistrationData {
+  user: {
+    email: string;
+    password: string;
+    password_confirmation: string;
+    first_name: string;
+    last_name: string;
+    middle_name?: string;
+    phone_no_call: string;
+    phone_no_text: string;
+    date_of_birth: string;
+    years_of_experience: string;
+    about_me?: string;
+    heard_about_us?: string;
+    birth_day: string;
+    birth_month: string;
+    birth_year: string;
+    terms_of_service: string;
+    skills: string[];
+    other_skills?: string;
+    address_attributes: {
+      full_address: string;
+      city: string;
+      state: string;
+    };
+  };
+}
+
+export interface CountryCode {
+  name: string;
+  code: string;
+  dialCode: string;
+  flag: string;
+}
+
+export interface SkillsResponse {
+  success: boolean;
+  data: {
+    skills: string[];
+    description: string;
+  };
+  message: string | null;
+}
+
+export interface OtpVerificationData {
+  email: string;
+  otp_code: string;
+}
+
+export interface OtpVerificationResponse {
+  success: boolean;
+  message: string;
+  data?: any;
+}
+
+export interface LoginData {
+  email: string;
+  password: string;
+}
+
+export interface LoginResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    user?: {
+      id: string;
+      first_name: string;
+      email: string;
+    };
+    access_token?: string;
+    refresh_token?: string;
+  };
+}
+
+export interface ResendOtpData {
+  email: string;
+}
+
+export interface ResendOtpResponse {
+  success: boolean;
+  message: string;
+  data?: any;
+}
+
+export interface ForgotPasswordData {
+  email: string;
+}
+
+export interface ForgotPasswordResponse {
+  success: boolean;
+  message: string;
+  data?: any;
+}
+
+export interface VerifyResetOtpData {
+  email: string;
+  otp_code: string;
+}
+
+export interface VerifyResetOtpResponse {
+  success: boolean;
+  message: string;
+  data?: any;
+}
+
+export interface ResetPasswordData {
+  email: string;
+  reset_token: string;
+  password: string;
+  password_confirmation: string;
+}
+
+export interface ResetPasswordResponse {
+  success: boolean;
+  message: string;
+  data?: any;
+}
+
 // Routes
 export type AppRoutes = {
   // Tabs
@@ -17,8 +135,8 @@ export type AppRoutes = {
   'splash-screen': any;
   'auth-screen': any;
   'forgot-password-screen': any;
-  'otp-verification-screen': any;
-  'new-password-screen': any;
+  'otp-verification-screen': { email: string };
+  'new-password-screen': { email: string; resetToken: string };
   'signup-otp-screen': { email: string };
   'create-profile-screen': any;
   'location-permission-screen': any;

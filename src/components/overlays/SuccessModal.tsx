@@ -30,7 +30,7 @@ export function SuccessModal({
       statusBarTranslucent
     >
       <View className="flex-1 bg-black/50 items-center justify-center px-6">
-        <View className="bg-white rounded-3xl p-8 w-full max-w-sm relative border-4" style={{borderColor: '#71DFB1'}}>
+        <View className="bg-[#FBFFF0] rounded-3xl p-8 w-full max-w-sm relative border-4" style={{borderColor: '#71DFB1'}}>
           
           {/* Close Button */}
           <TouchableOpacity 

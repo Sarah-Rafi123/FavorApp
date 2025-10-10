@@ -6,7 +6,7 @@ import {
 } from '../../utils';
 
 const axiosInstance = axios.create({
-  baseURL: '...',
+  baseURL: 'https://api.favorapp.net/api/v1',
   timeout: 20000,
 });
 
@@ -43,9 +43,15 @@ const refreshAccessToken = async () => {
 // Interceptor to attach the token to each request
 axiosInstance.interceptors.request.use(
   async config => {
-    const tokens = await retrieveTokenSecurely();
-    if (tokens) {
-      config.headers['Authorization'] = `Bearer ${tokens.accessToken}`;
+    // Skip auth for registration, skills, OTP verification, login, resend OTP, forgot password, verify reset OTP, and reset password endpoints
+    const authSkipEndpoints = ['/auth/register', '/skills/available', '/auth/verify_otp', '/auth/login', '/auth/resend_otp', '/auth/forgot_password', '/auth/verify_reset_otp', '/auth/reset_password'];
+    const shouldSkipAuth = authSkipEndpoints.some(endpoint => config.url?.includes(endpoint));
+    
+    if (!shouldSkipAuth) {
+      const tokens = await retrieveTokenSecurely();
+      if (tokens) {
+        config.headers['Authorization'] = `Bearer ${tokens.accessToken}`;
+      }
     }
     return config;
   },

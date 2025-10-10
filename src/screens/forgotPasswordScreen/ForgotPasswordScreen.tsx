@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 import { CarouselButton } from '../../components/buttons';
 import { LockIcon } from '../../assets/icons';
+import { useForgotPasswordMutation } from '../../services/mutations/AuthMutations';
+import Toast from 'react-native-toast-message';
 
 interface ForgotPasswordScreenProps {
   onBackToLogin: () => void;
@@ -21,6 +23,7 @@ interface ForgotPasswordScreenProps {
 export function ForgotPasswordScreen({ onBackToLogin, onContinue }: ForgotPasswordScreenProps) {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
+  const forgotPasswordMutation = useForgotPasswordMutation();
 
   // Email validation
   const validateEmail = (email: string) => {
@@ -28,7 +31,7 @@ export function ForgotPasswordScreen({ onBackToLogin, onContinue }: ForgotPasswo
     return emailRegex.test(email);
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!email) {
       setError('Email is required');
       return;
@@ -38,14 +41,47 @@ export function ForgotPasswordScreen({ onBackToLogin, onContinue }: ForgotPasswo
       return;
     }
     setError('');
-    // Handle forgot password logic here
-    console.log('Password reset requested for:', email);
-    if (onContinue) {
-      onContinue(email);
+    
+    try {
+      console.log('Forgot password request for:', email);
+      const response = await forgotPasswordMutation.mutateAsync({
+        email: email,
+      });
+      
+      console.log('Forgot password response:', response);
+      
+      Toast.show({
+        type: 'success',
+        text1: 'Success',
+        text2: 'Password reset email sent successfully!'
+      });
+      
+      // Navigate to OTP verification screen
+      if (onContinue) {
+        onContinue(email);
+      }
+    } catch (error: any) {
+      console.error('Forgot password error:', error);
+      console.error('Error response:', error.response?.data);
+      
+      let errorMessage = 'Failed to send reset email. Please try again.';
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.userMessage) {
+        errorMessage = error.userMessage;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      Toast.show({
+        type: 'error',
+        text1: 'Reset Failed',
+        text2: errorMessage
+      });
     }
   };
 
-  const isFormValid = email && validateEmail(email);
+  const isFormValid = email && validateEmail(email) && !forgotPasswordMutation.isPending;
 
   return (
     <ImageBackground 
@@ -76,7 +112,7 @@ export function ForgotPasswordScreen({ onBackToLogin, onContinue }: ForgotPasswo
                 Forgot Password
               </Text>
               <Text className="text-base text-gray-600 text-center px-4 leading-6">
-                Enter phone number on which we can share you OTP to reset your password
+                Enter email on which we can share you OTP to reset your password
               </Text>
             </View>
 
@@ -84,8 +120,11 @@ export function ForgotPasswordScreen({ onBackToLogin, onContinue }: ForgotPasswo
             <View className="mb-8">
               <View className="mb-6 relative">
                 <TextInput
-                  className="px-4 py-4 rounded-xl border border-gray-200 text-base bg-white/80"
-                  placeholder="deanna.curtis@example.com"
+                 style={{ 
+                    lineHeight: 18,
+                  }}
+                  className="px-4 py-4 rounded-xl border border-gray-200 text-base bg-transparent"
+                  placeholder="Enter your email"
                   placeholderTextColor="#9CA3AF"
                   value={email}
                   onChangeText={(text) => {
@@ -95,7 +134,7 @@ export function ForgotPasswordScreen({ onBackToLogin, onContinue }: ForgotPasswo
                   keyboardType="email-address"
                   autoCapitalize="none"
                 />
-                <Text className="absolute -top-3 left-3 px-1 text-sm font-medium text-gray-700 bg-white rounded">
+                <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700">
                   Email
                 </Text>
                 {error ? (
@@ -107,7 +146,7 @@ export function ForgotPasswordScreen({ onBackToLogin, onContinue }: ForgotPasswo
             {/* Continue Button */}
             <View className="mb-6">
               <CarouselButton
-                title="Continue"
+                title={forgotPasswordMutation.isPending ? "Sending..." : "Continue"}
                 onPress={handleContinue}
                 disabled={!isFormValid}
               />

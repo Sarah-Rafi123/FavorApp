@@ -13,14 +13,18 @@ import {
 import { CarouselButton } from '../../components/buttons';
 import useAuthStore from '../../store/useAuthStore';
 import EyeSvg from '../../assets/icons/Eye';
+import { useLoginMutation } from '../../services/mutations/AuthMutations';
+import Toast from 'react-native-toast-message';
+import { storeTokenSecurely } from '../../utils';
 
 interface AuthScreenProps {
   onLogin: () => void;
   onForgotPassword?: () => void;
   onSignup?: (email: string) => void;
+  onCreateProfile?: () => void;
 }
 
-export function AuthScreen({ onLogin, onForgotPassword, onSignup }: AuthScreenProps) {
+export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfile }: AuthScreenProps) {
   const [activeTab, setActiveTab] = useState<'signin' | 'signup'>('signin');
   const [formData, setFormData] = useState({
     email: '',
@@ -38,11 +42,23 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup }: AuthScreenPr
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const setUser = useAuthStore((state) => state.setUser);
+  const setRegistrationData = useAuthStore((state) => state.setRegistrationData);
+  const loginMutation = useLoginMutation();
 
   // Email validation
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
+  };
+
+  // Password validation
+  const validatePassword = (password: string) => {
+    const hasLowercase = /[a-z]/.test(password);
+    const hasUppercase = /[A-Z]/.test(password);
+    const hasDigit = /\d/.test(password);
+    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+    
+    return hasLowercase && hasUppercase && hasDigit && hasSpecialChar;
   };
 
   // Form validation
@@ -63,8 +79,11 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup }: AuthScreenPr
     if (!formData.password) {
       newErrors.password = 'Password is required';
       isValid = false;
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
+    } else if (formData.password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters';
+      isValid = false;
+    } else if (activeTab === 'signup' && !validatePassword(formData.password)) {
+      newErrors.password = 'Password must include at least one lowercase, one uppercase, one digit, and one special character';
       isValid = false;
     }
 
@@ -92,19 +111,67 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup }: AuthScreenPr
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (validateForm()) {
       if (activeTab === 'signin') {
-        // Mock authentication
-        setUser({
-          id: '1',
-          firstName: 'John',
-          email: formData.email,
-        });
-        onLogin();
+        try {
+          console.log('Login request:', { email: formData.email, password: formData.password });
+          const response = await loginMutation.mutateAsync({
+            email: formData.email,
+            password: formData.password,
+          });
+          
+          console.log('Login response:', response);
+          
+          // Store tokens if available
+          if (response.data?.access_token && response.data?.refresh_token) {
+            await storeTokenSecurely({
+              accessToken: response.data.access_token,
+              refreshToken: response.data.refresh_token,
+            });
+          }
+          
+          // Set user data
+          setUser({
+            id: response.data?.user?.id || '1',
+            firstName: response.data?.user?.first_name || 'User',
+            email: formData.email,
+          });
+          
+          Toast.show({
+            type: 'success',
+            text1: 'Success',
+            text2: 'Login successful!'
+          });
+          
+          onLogin();
+        } catch (error: any) {
+          console.error('Login error:', error);
+          console.error('Error response:', error.response?.data);
+          
+          let errorMessage = 'Invalid credentials. Please try again.';
+          if (error.response?.data?.message) {
+            errorMessage = error.response.data.message;
+          } else if (error.userMessage) {
+            errorMessage = error.userMessage;
+          } else if (error.message) {
+            errorMessage = error.message;
+          }
+          
+          Toast.show({
+            type: 'error',
+            text1: 'Login Failed',
+            text2: errorMessage
+          });
+        }
       } else {
-        // Sign up flow - navigate to OTP verification
-        onSignup?.(formData.email);
+        // Sign up flow - save email, password and terms acceptance, navigate to profile creation
+        setRegistrationData({
+          email: formData.email,
+          password: formData.password,
+          termsAccepted: formData.agreeTerms,
+        });
+        onCreateProfile?.();
       }
     }
   };
@@ -184,7 +251,7 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup }: AuthScreenPr
             {/* Form */}
             <View className="flex-1">
               {/* Email Field */}
-              <View className="mb-6 relative">
+              <View className="relative">
                 <TextInput
                   className="px-4 py-3 rounded-xl border border-gray-200 text-base bg-transparent"
                   style={{ 
@@ -203,13 +270,16 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup }: AuthScreenPr
                 <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700">
                   Email
                 </Text>
-                {errors.email ? (
-                  <Text className="text-red-500 text-sm mt-1">{errors.email}</Text>
-                ) : null}
+                {/* Fixed height container for error message to prevent layout shift */}
+                <View className="min-h-[30px] mt-1">
+                  {errors.email ? (
+                    <Text className="text-red-500 text-sm leading-4">{errors.email}</Text>
+                  ) : null}
+                </View>
               </View>
               
               {/* Password Field */}
-              <View className="mb-6 relative">
+              <View className="relative">
                 <TextInput
                   className="px-4 py-3 rounded-xl border border-gray-200 pr-12 text-base bg-transparent"
                   style={{ 
@@ -228,19 +298,29 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup }: AuthScreenPr
                   Password
                 </Text>
                 <TouchableOpacity
-                  className="absolute right-3 top-0 bottom-0 justify-center"
+                  className="absolute right-3"
+                  style={{
+                    top: 56 / 2 - 12, // Center of 56px height minus half icon height
+                    height: 24,
+                    width: 24,
+                    justifyContent: 'center',
+                    alignItems: 'center'
+                  }}
                   onPress={() => setShowPassword(!showPassword)}
                 >
                   <EyeSvg />
                 </TouchableOpacity>
-                {errors.password ? (
-                  <Text className="text-red-500 text-sm mt-1">{errors.password}</Text>
-                ) : null}
+                {/* Fixed height container for error message to prevent layout shift */}
+                <View className="min-h-[35px] mt-1">
+                  {errors.password ? (
+                    <Text className="text-red-500 text-xs leading-4">{errors.password}</Text>
+                  ) : null}
+                </View>
               </View>
 
               {/* Confirm Password Field (Sign Up only) */}
               {activeTab === 'signup' && (
-                <View className="mb-8 relative">
+                <View className=" relative">
                   <TextInput
                     className="px-4 py-3 rounded-xl border border-gray-200 pr-12 text-base bg-transparent"
                     style={{ 
@@ -259,14 +339,24 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup }: AuthScreenPr
                     Confirm Password
                   </Text>
                   <TouchableOpacity
-                    className="absolute right-3 top-0 bottom-0 justify-center"
+                    className="absolute right-3"
+                    style={{
+                      top: 56 / 2 - 12, // Center of 56px height minus half icon height
+                      height: 24,
+                      width: 24,
+                      justifyContent: 'center',
+                      alignItems: 'center'
+                    }}
                     onPress={() => setShowConfirmPassword(!showConfirmPassword)}
                   >
                     <EyeSvg />
                   </TouchableOpacity>
-                  {errors.confirmPassword ? (
-                    <Text className="text-red-500 text-sm mt-1">{errors.confirmPassword}</Text>
-                  ) : null}
+                  {/* Fixed height container for error message to prevent layout shift */}
+                  <View className="min-h-[40px] mt-1">
+                    {errors.confirmPassword ? (
+                      <Text className="text-red-500 text-sm leading-4">{errors.confirmPassword}</Text>
+                    ) : null}
+                  </View>
                 </View>
               )}
 
@@ -295,9 +385,9 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup }: AuthScreenPr
               {/* Submit Button */}
               <View className="mb-6">
                 <CarouselButton
-                  title={activeTab === 'signin' ? 'Login' : 'Create Account'}
+                  title={activeTab === 'signin' ? (loginMutation.isPending ? 'Logging in...' : 'Login') : 'Create Account'}
                   onPress={handleSubmit}
-                  disabled={!isFormComplete()}
+                  disabled={!isFormComplete() || (activeTab === 'signin' && loginMutation.isPending)}
                 />
               </View>
 

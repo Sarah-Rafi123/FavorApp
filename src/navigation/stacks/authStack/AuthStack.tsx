@@ -32,6 +32,7 @@ export function AuthStack() {
             onLogin={handleLogin}
             onForgotPassword={() => navigation.navigate('forgot-password-screen')}
             onSignup={(email: string) => navigation.navigate('signup-otp-screen', { email })}
+            onCreateProfile={() => navigation.navigate('create-profile-screen')}
           />
         )}
       </Stack.Screen>
@@ -61,7 +62,10 @@ export function AuthStack() {
         {({ navigation, route }) => (
           <OtpVerificationScreen 
             onBack={() => navigation.navigate('forgot-password-screen')}
-            onVerifySuccess={() => navigation.navigate('new-password-screen')}
+            onVerifySuccess={(resetToken) => navigation.navigate('new-password-screen', { 
+              email: (route.params as any)?.email || 'user@example.com',
+              resetToken: resetToken || ''
+            })}
             email={(route.params as any)?.email || 'user@example.com'}
           />
         )}
@@ -73,9 +77,11 @@ export function AuthStack() {
           headerShown: false,
         }}
       >
-        {({ navigation }) => (
+        {({ navigation, route }) => (
           <NewPasswordScreen 
             onPasswordReset={() => navigation.navigate('auth-screen')}
+            email={(route.params as any)?.email || 'user@example.com'}
+            resetToken={(route.params as any)?.resetToken || ''}
           />
         )}
       </Stack.Screen>
@@ -89,7 +95,7 @@ export function AuthStack() {
         {({ navigation, route }) => (
           <SignupOtpScreen 
             onBack={() => navigation.navigate('auth-screen')}
-            onVerifySuccess={() => navigation.navigate('create-profile-screen')}
+            onVerifySuccess={handleLogin}
             email={(route.params as any)?.email || 'user@example.com'}
           />
         )}
@@ -103,7 +109,8 @@ export function AuthStack() {
       >
         {({ navigation }) => (
           <CreateProfileScreen 
-            onProfileComplete={() => navigation.navigate('location-permission-screen')}
+            onProfileComplete={handleLogin}
+            onNavigateToOtp={(email: string) => navigation.navigate('signup-otp-screen', { email })}
           />
         )}
       </Stack.Screen>

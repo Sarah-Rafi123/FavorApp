@@ -10,12 +10,16 @@ import {
 import { CarouselButton } from '../../components/buttons';
 import { LockIcon } from '../../assets/icons';
 import { SuccessModal } from '../../components/overlays/SuccessModal';
+import { useResetPasswordMutation } from '../../services/mutations/AuthMutations';
+import Toast from 'react-native-toast-message';
 
 interface NewPasswordScreenProps {
   onPasswordReset: () => void;
+  email: string;
+  resetToken: string;
 }
 
-export function NewPasswordScreen({ onPasswordReset }: NewPasswordScreenProps) {
+export function NewPasswordScreen({ onPasswordReset, email, resetToken }: NewPasswordScreenProps) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -25,16 +29,25 @@ export function NewPasswordScreen({ onPasswordReset }: NewPasswordScreenProps) {
     password: '',
     confirmPassword: '',
   });
+  const resetPasswordMutation = useResetPasswordMutation();
 
   // Password validation
   const validatePassword = (password: string) => {
-    if (password.length < 6) {
-      return 'Password must be at least 6 characters';
+    if (password.length < 8) {
+      return 'Password must be at least 8 characters';
+    }
+    const hasLowercase = /[a-z]/.test(password);
+    const hasUppercase = /[A-Z]/.test(password);
+    const hasDigit = /\d/.test(password);
+    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+    
+    if (!hasLowercase || !hasUppercase || !hasDigit || !hasSpecialChar) {
+      return 'Password must include at least one lowercase, one uppercase, one digit, and one special character';
     }
     return '';
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const newErrors = { password: '', confirmPassword: '' };
     let isValid = true;
 
@@ -57,12 +70,58 @@ export function NewPasswordScreen({ onPasswordReset }: NewPasswordScreenProps) {
     setErrors(newErrors);
 
     if (isValid) {
-      // Handle password reset
-      setShowSuccessModal(true);
+      try {
+        console.log('Resetting password:', { email, reset_token: resetToken });
+        const response = await resetPasswordMutation.mutateAsync({
+          email,
+          reset_token: resetToken,
+          password,
+          password_confirmation: confirmPassword,
+        });
+        
+        console.log('Reset password response:', response);
+        
+        Toast.show({
+          type: 'success',
+          text1: 'Success',
+          text2: 'Password reset successfully!'
+        });
+        
+        setShowSuccessModal(true);
+        
+      } catch (error: any) {
+        console.error('Reset password error:', error);
+        console.error('Error response:', error.response?.data);
+        
+        let errorMessage = 'Failed to reset password. Please try again.';
+        
+        // Handle specific error cases
+        if (error.response?.data?.errors && Array.isArray(error.response.data.errors)) {
+          // If errors is an array, join them
+          errorMessage = error.response.data.errors.join('. ');
+        } else if (error.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.userMessage) {
+          errorMessage = error.userMessage;
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        
+        // Special handling for token-related errors
+        if (errorMessage.toLowerCase().includes('invalid') && errorMessage.toLowerCase().includes('token')) {
+          errorMessage = 'Invalid or expired reset token. Please request a new password reset.';
+        }
+        
+        Toast.show({
+          type: 'error',
+          text1: 'Reset Failed',
+          text2: errorMessage
+        });
+      }
     }
   };
 
-  const isFormValid = password && confirmPassword && password === confirmPassword && password.length >= 6;
+  const isFormValid = password && confirmPassword && password === confirmPassword && password.length >= 8 && !validatePassword(password) && !resetPasswordMutation.isPending && resetToken;
 
   return (
     <ImageBackground 
@@ -83,6 +142,11 @@ export function NewPasswordScreen({ onPasswordReset }: NewPasswordScreenProps) {
           <Text className="text-3xl font-bold text-gray-800 mb-4 text-center">
             New Password
           </Text>
+          {!resetToken && (
+            <Text className="text-red-500 text-sm text-center px-4">
+              No valid reset token found. Please request a new password reset.
+            </Text>
+          )}
         </View>
 
         {/* Form */}
@@ -91,6 +155,9 @@ export function NewPasswordScreen({ onPasswordReset }: NewPasswordScreenProps) {
           {/* Password Field */}
           <View className="mb-6 relative">
             <TextInput
+             style={{ 
+                    lineHeight: 20,
+                  }}
               className="px-4 py-4 rounded-xl border border-gray-200 pr-12 text-base bg-transparent"
               placeholder="••••••••••"
               placeholderTextColor="#9CA3AF"
@@ -120,6 +187,9 @@ export function NewPasswordScreen({ onPasswordReset }: NewPasswordScreenProps) {
           {/* Confirm Password Field */}
           <View className="mb-8 relative">
             <TextInput
+             style={{ 
+                    lineHeight: 20,
+                  }}
               className="px-4 py-4 rounded-xl border border-gray-200 pr-12 text-base bg-transparent"
               placeholder="••••••••••"
               placeholderTextColor="#9CA3AF"
@@ -149,7 +219,7 @@ export function NewPasswordScreen({ onPasswordReset }: NewPasswordScreenProps) {
           {/* Submit Button */}
           <View className="mb-8">
             <CarouselButton
-              title="Submit"
+              title={resetPasswordMutation.isPending ? "Resetting..." : "Submit"}
               onPress={handleSubmit}
               disabled={!isFormValid}
             />

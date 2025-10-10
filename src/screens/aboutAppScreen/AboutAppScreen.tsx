@@ -69,15 +69,6 @@ export function AboutAppScreen({ navigation }: AboutAppScreenProps) {
         contentContainerStyle={{ paddingBottom: 40 }}
       >
         <View className="px-6 pt-6">
-          
-          {/* App Icon and Name */}
-          <View className="items-center mb-8">
-            <FavorAppIcon />
-            <Text className="text-3xl font-bold text-gray-800 mt-4 mb-2">FavorApp</Text>
-            <Text className="text-lg text-gray-600">Version 1.2.0</Text>
-          </View>
-
-          {/* Content */}
           <View className="px-6">
             <Text className="text-base text-gray-700 leading-6 mb-6">
               Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.

@@ -10,6 +10,9 @@ import {
 import { CarouselButton } from '../../components/buttons';
 import { LockIcon } from '../../assets/icons';
 import { SuccessModal } from '../../components/overlays/SuccessModal';
+import { useVerifyOtpMutation } from '../../services/mutations/AuthMutations';
+import useAuthStore from '../../store/useAuthStore';
+import Toast from 'react-native-toast-message';
 
 interface SignupOtpScreenProps {
   onBack: () => void;
@@ -19,11 +22,16 @@ interface SignupOtpScreenProps {
 
 export function SignupOtpScreen({ onBack, onVerifySuccess, email }: SignupOtpScreenProps) {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
-  const [timer, setTimer] = useState(30);
+  const [timer, setTimer] = useState(300); // 5 minutes = 300 seconds
   const [canResend, setCanResend] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
   const inputRefs = useRef<TextInput[]>([]);
+  
+  const verifyOtpMutation = useVerifyOtpMutation();
+  const setUser = useAuthStore((state) => state.setUser);
+  const registrationData = useAuthStore((state) => state.registrationData);
+  const clearRegistrationData = useAuthStore((state) => state.clearRegistrationData);
 
   // Timer countdown
   useEffect(() => {
@@ -53,23 +61,77 @@ export function SignupOtpScreen({ onBack, onVerifySuccess, email }: SignupOtpScr
   };
 
   const handleKeyPress = (key: string, index: number) => {
-    // Move to previous input on backspace
-    if (key === 'Backspace' && !otp[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
+    if (key === 'Backspace') {
+      // If current field has content, clear it
+      if (otp[index]) {
+        const newOtp = [...otp];
+        newOtp[index] = '';
+        setOtp(newOtp);
+      } else if (index > 0) {
+        // If current field is empty, move to previous field and clear it
+        const newOtp = [...otp];
+        newOtp[index - 1] = '';
+        setOtp(newOtp);
+        inputRefs.current[index - 1]?.focus();
+      }
     }
   };
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     const otpCode = otp.join('');
     if (otpCode.length === 6) {
-      // Simulate OTP verification
-      setShowSuccessModal(true);
+      try {
+        console.log('Verifying OTP:', { email, otp_code: otpCode });
+        const response = await verifyOtpMutation.mutateAsync({
+          email,
+          otp_code: otpCode,
+        });
+        
+        console.log('OTP verification response:', response);
+        
+        // Set user data if available from registration
+        if (registrationData) {
+          setUser({
+            id: response.data?.user?.id || '1',
+            firstName: response.data?.user?.first_name || 'User',
+            email: email,
+          });
+          clearRegistrationData();
+        }
+        
+        setShowSuccessModal(true);
+        
+        Toast.show({
+          type: 'success',
+          text1: 'Success',
+          text2: 'OTP verified successfully!'
+        });
+        
+      } catch (error: any) {
+        console.error('OTP verification error:', error);
+        console.error('Error response:', error.response?.data);
+        
+        let errorMessage = 'Invalid OTP code. Please try again.';
+        if (error.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.userMessage) {
+          errorMessage = error.userMessage;
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        
+        Toast.show({
+          type: 'error',
+          text1: 'Verification Failed',
+          text2: errorMessage
+        });
+      }
     }
   };
 
   const handleResendCode = () => {
     if (canResend) {
-      setTimer(30);
+      setTimer(300); // Reset to 5 minutes
       setCanResend(false);
       setOtp(['', '', '', '', '', '']);
       // Reset timer
@@ -142,12 +204,13 @@ export function SignupOtpScreen({ onBack, onVerifySuccess, email }: SignupOtpScr
           ))}
         </View>
 
+
         {/* Verify Button */}
         <View className="mb-8">
           <CarouselButton
-            title="Verify"
+            title={verifyOtpMutation.isPending ? "Verifying..." : "Verify"}
             onPress={handleVerify}
-            disabled={!isFormValid}
+            disabled={!isFormValid || verifyOtpMutation.isPending}
           />
         </View>
 
@@ -159,7 +222,7 @@ export function SignupOtpScreen({ onBack, onVerifySuccess, email }: SignupOtpScr
           <View className="flex-row items-center">
             <Text className="text-gray-600">Didn't receive OTP code? </Text>
             <TouchableOpacity onPress={handleResendCode} disabled={!canResend}>
-              <Text className={`font-medium ${canResend ? 'text-gray-800' : 'text-gray-400'}`}>
+              <Text className={`font-medium ${canResend ? 'text-[#44A27B]' : 'text-black'}`}>
                 Resend Code
               </Text>
             </TouchableOpacity>

@@ -13,20 +13,25 @@ import {
 import { CarouselButton } from '../../components/buttons';
 import { LockIcon } from '../../assets/icons';
 import { SuccessModal } from '../../components/overlays/SuccessModal';
+import { useResendOtpMutation, useVerifyResetOtpMutation } from '../../services/mutations/AuthMutations';
+import Toast from 'react-native-toast-message';
 
 interface OtpVerificationScreenProps {
   onBack: () => void;
-  onVerifySuccess: () => void;
+  onVerifySuccess: (resetToken?: string) => void;
   email: string;
 }
 
 export function OtpVerificationScreen({ onBack, onVerifySuccess, email }: OtpVerificationScreenProps) {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
-  const [timer, setTimer] = useState(30);
+  const [timer, setTimer] = useState(300); // 5 minutes = 300 seconds
   const [canResend, setCanResend] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
+  const [resetToken, setResetToken] = useState<string>('');
   const inputRefs = useRef<TextInput[]>([]);
+  const resendOtpMutation = useResendOtpMutation();
+  const verifyResetOtpMutation = useVerifyResetOtpMutation();
 
   // Timer countdown
   useEffect(() => {
@@ -56,36 +61,123 @@ export function OtpVerificationScreen({ onBack, onVerifySuccess, email }: OtpVer
   };
 
   const handleKeyPress = (key: string, index: number) => {
-    // Move to previous input on backspace
-    if (key === 'Backspace' && !otp[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
+    if (key === 'Backspace') {
+      // If current field has content, clear it
+      if (otp[index]) {
+        const newOtp = [...otp];
+        newOtp[index] = '';
+        setOtp(newOtp);
+      } else if (index > 0) {
+        // If current field is empty, move to previous field and clear it
+        const newOtp = [...otp];
+        newOtp[index - 1] = '';
+        setOtp(newOtp);
+        inputRefs.current[index - 1]?.focus();
+      }
     }
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     const otpCode = otp.join('');
     if (otpCode.length === 6) {
-      // Simulate OTP verification
-      setShowSuccessModal(true);
+      try {
+        console.log('Verifying reset OTP:', { email, otp_code: otpCode });
+        const response = await verifyResetOtpMutation.mutateAsync({
+          email,
+          otp_code: otpCode,
+        });
+        
+        console.log('Verify reset OTP response:', response);
+        
+        // Extract reset token from response
+        const token = response.data?.reset_token;
+        if (token) {
+          setResetToken(token);
+          console.log('Reset token received:', token);
+        }
+        
+        Toast.show({
+          type: 'success',
+          text1: 'Success',
+          text2: 'OTP verified successfully!'
+        });
+        
+        setShowSuccessModal(true);
+        
+      } catch (error: any) {
+        console.error('Verify reset OTP error:', error);
+        console.error('Error response:', error.response?.data);
+        
+        let errorMessage = 'Invalid OTP code. Please try again.';
+        if (error.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.userMessage) {
+          errorMessage = error.userMessage;
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        
+        Toast.show({
+          type: 'error',
+          text1: 'Verification Failed',
+          text2: errorMessage
+        });
+      }
     }
   };
 
-  const handleResendCode = () => {
-    if (canResend) {
-      setTimer(30);
-      setCanResend(false);
-      setOtp(['', '', '', '', '', '']);
-      // Reset timer
-      const interval = setInterval(() => {
-        setTimer((prev) => {
-          if (prev <= 1) {
-            setCanResend(true);
-            clearInterval(interval);
-            return 0;
-          }
-          return prev - 1;
+  const handleResendCode = async () => {
+    if (canResend && !resendOtpMutation.isPending) {
+      try {
+        console.log('Resending OTP to:', email);
+        const response = await resendOtpMutation.mutateAsync({
+          email: email,
         });
-      }, 1000);
+        
+        console.log('Resend OTP response:', response);
+        
+        // Reset timer and form on successful resend
+        setTimer(300); // Reset to 5 minutes
+        setCanResend(false);
+        setOtp(['', '', '', '', '', '']);
+        
+        // Reset timer
+        const interval = setInterval(() => {
+          setTimer((prev) => {
+            if (prev <= 1) {
+              setCanResend(true);
+              clearInterval(interval);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+        
+        Toast.show({
+          type: 'success',
+          text1: 'Success',
+          text2: 'OTP code sent successfully!'
+        });
+        
+      } catch (error: any) {
+        console.error('Resend OTP error:', error);
+        console.error('Error response:', error.response?.data);
+        
+        let errorMessage = 'Failed to resend OTP. Please try again.';
+        if (error.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.userMessage) {
+          errorMessage = error.userMessage;
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        
+        Toast.show({
+          type: 'error',
+          text1: 'Resend Failed',
+          text2: errorMessage
+        });
+      }
     }
   };
 
@@ -141,7 +233,7 @@ export function OtpVerificationScreen({ onBack, onVerifySuccess, email }: OtpVer
         </View>
 
         {/* OTP Input Fields */}
-        <View className="flex-row justify-center mb-8 space-x-3">
+        <View className="flex-row justify-center mb-8 gap-x-3">
           {otp.map((digit, index) => (
             <TextInput
               key={index}
@@ -166,9 +258,9 @@ export function OtpVerificationScreen({ onBack, onVerifySuccess, email }: OtpVer
         {/* Continue Button */}
         <View className="mb-8">
           <CarouselButton
-            title="Continue"
+            title={verifyResetOtpMutation.isPending ? "Verifying..." : "Continue"}
             onPress={handleContinue}
-            disabled={!isFormValid}
+            disabled={!isFormValid || verifyResetOtpMutation.isPending}
           />
         </View>
 
@@ -179,9 +271,9 @@ export function OtpVerificationScreen({ onBack, onVerifySuccess, email }: OtpVer
           </Text>
           <View className="flex-row items-center">
             <Text className="text-gray-600">Didn't receive OTP code? </Text>
-            <TouchableOpacity onPress={handleResendCode} disabled={!canResend}>
-              <Text className={`font-medium ${canResend ? 'text-gray-800' : 'text-gray-400'}`}>
-                Resend Code
+            <TouchableOpacity onPress={handleResendCode} disabled={!canResend || resendOtpMutation.isPending}>
+              <Text className={`font-medium ${canResend && !resendOtpMutation.isPending ? 'text-[#44A27B]' : 'text-black'}`}>
+                {resendOtpMutation.isPending ? 'Sending...' : 'Resend Code'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -192,9 +284,11 @@ export function OtpVerificationScreen({ onBack, onVerifySuccess, email }: OtpVer
 
       <SuccessModal
         visible={showSuccessModal}
+        title="Success"
+        message="OTP verified. You can now reset your password."
         onContinue={() => {
           setShowSuccessModal(false);
-          onVerifySuccess();
+          onVerifySuccess(resetToken);
         }}
       />
     </ImageBackground>
