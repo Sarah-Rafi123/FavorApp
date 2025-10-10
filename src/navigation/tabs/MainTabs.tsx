@@ -2,7 +2,8 @@ import React from 'react';
 import { View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
-import { HomeScreen, ProvideFavorScreen, ProfileScreen, SettingsScreen, FilterScreen, AskFavorScreen } from '../../screens';
+import { HomeScreen, ProvideFavorScreen, ProfileScreen, SettingsScreen, FilterScreen, AskFavorScreen, FavorDetailsScreen } from '../../screens';
+import { CreateFavorScreen } from '../../screens/createFavorScreen/CreateFavorScreen';
 import { GetCertifiedScreen } from '../../screens/getCertifiedScreen/GetCertifiedScreen';
 import { PaymentMethodScreen } from '../../screens/paymentMethodScreen/PaymentMethodScreen';
 import { ChangePasswordScreen } from '../../screens/changePasswordScreen/ChangePasswordScreen';
@@ -43,7 +44,7 @@ function HomeStack() {
   );
 }
 
-// Provide Favor Stack that includes Ask Favor screen
+// Provide Favor Stack that includes Ask Favor screen and Favor Details screen
 function ProvideFavorStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -54,6 +55,30 @@ function ProvideFavorStack() {
       <Stack.Screen 
         name="AskFavorScreen" 
         component={AskFavorScreen}
+      />
+      <Stack.Screen 
+        name="FavorDetailsScreen" 
+        component={FavorDetailsScreen}
+      />
+    </Stack.Navigator>
+  );
+}
+
+// Create Favor Stack that includes Ask Favor and Favor Details screens
+function CreateFavorStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen 
+        name="CreateFavorMain" 
+        component={CreateFavorScreen}
+      />
+      <Stack.Screen 
+        name="AskFavorScreen" 
+        component={AskFavorScreen}
+      />
+      <Stack.Screen 
+        name="FavorDetailsScreen" 
+        component={FavorDetailsScreen}
       />
     </Stack.Navigator>
   );
@@ -113,7 +138,7 @@ export function MainTabs() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: '#2D3748', // Dark background matching the image
+          backgroundColor: '#1C2013', // Dark background matching the image
           borderTopWidth: 0,
           height: 90,
           paddingBottom: 25,
@@ -153,16 +178,16 @@ export function MainTabs() {
       
       <Tab.Screen
         name="Add"
-        component={ProvideFavorScreen}
+        component={CreateFavorStack}
         options={{
           tabBarIcon: () => (
             <View style={{
-              width: 60,
-              height: 60,
-              borderRadius: 30,
-              backgroundColor: '#44A27B',
-              borderWidth: 3,
-              borderColor: '#2D3748',
+              width: 90,
+              height: 90,
+              borderRadius: 80,
+              backgroundColor: '#2E8862',
+              borderWidth: 5,
+              borderColor: '#95D7BB',
               justifyContent: 'center',
               alignItems: 'center',
               marginTop: -25,
@@ -172,18 +197,7 @@ export function MainTabs() {
               shadowRadius: 3.84,
               elevation: 5,
             }}>
-              <View style={{
-                width: 50,
-                height: 50,
-                borderRadius: 25,
-                backgroundColor: '#44A27B',
-                borderWidth: 2,
-                borderColor: '#2D5A44',
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}>
-                <CenterSvg />
-              </View>
+              <CenterSvg />
             </View>
           ),
           tabBarLabel: '',

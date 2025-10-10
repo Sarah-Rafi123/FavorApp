@@ -5,51 +5,18 @@ import {
   TouchableOpacity,
   StatusBar,
   ScrollView,
+  ImageBackground,
 } from 'react-native';
 import { CarouselButton } from '../../components/buttons';
 import Svg, { Path, Circle } from 'react-native-svg';
+import FIcon from '../../assets/icons/FIcon';
+import BackSvg from '../../assets/icons/Back';
 
 interface GetCertifiedScreenProps {
   navigation?: any;
 }
 
-const BackIcon = () => (
-  <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-    <Path
-      d="M19 12H5M12 19L5 12L12 5"
-      stroke="#374151"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </Svg>
-);
 
-const FavorAppIcon = () => (
-  <Svg width="80" height="80" viewBox="0 0 80 80" fill="none">
-    <Circle
-      cx="40"
-      cy="40"
-      r="35"
-      stroke="#44A27B"
-      strokeWidth="3"
-      strokeDasharray="5,5"
-      fill="none"
-    />
-    <Svg x="25" y="20" width="30" height="30" viewBox="0 0 30 30">
-      <Text
-        x="15"
-        y="22"
-        textAnchor="middle"
-        fontSize="20"
-        fontWeight="bold"
-        fill="#44A27B"
-      >
-        F
-      </Text>
-    </Svg>
-  </Svg>
-);
 
 const CheckIcon = () => (
   <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -76,19 +43,23 @@ export function GetCertifiedScreen({ navigation }: GetCertifiedScreenProps) {
   };
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <ImageBackground
+      source={require('../../assets/images/Wallpaper.png')}
+      className="flex-1"
+      resizeMode="cover"
+    >
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       
       {/* Header */}
-      <View className="pt-16 pb-6 px-6 bg-white">
+      <View className="pt-16 pb-6 px-6">
         <View className="flex-row items-center">
           <TouchableOpacity 
-            className="mr-4 p-2"
+            className="mr-4"
             onPress={() => navigation?.goBack()}
           >
-            <BackIcon />
+            <BackSvg />
           </TouchableOpacity>
-          <Text className="text-2xl font-bold text-gray-800">Get Certified</Text>
+          <Text className="text-2xl font-bold text-black">Get Certified</Text>
         </View>
       </View>
 
@@ -101,7 +72,7 @@ export function GetCertifiedScreen({ navigation }: GetCertifiedScreenProps) {
           
           {/* Icon */}
           <View className="mb-8">
-            <FavorAppIcon />
+            <FIcon />
           </View>
 
           {/* Title */}
@@ -109,10 +80,14 @@ export function GetCertifiedScreen({ navigation }: GetCertifiedScreenProps) {
             Get Certified
           </Text>
           
-          {/* Subtitle */}
-          <Text className="text-lg text-gray-600 mb-8 text-center">
-            Key Feature
-          </Text>
+          {/* Subtitle with lines */}
+          <View className="flex-row items-center mb-8 w-full px-4">
+            <View className="flex-1 h-px bg-gray-300" />
+            <Text className="text-lg text-gray-600 px-4">
+              Key Feature
+            </Text>
+            <View className="flex-1 h-px bg-gray-300" />
+          </View>
 
           {/* Features List */}
           <View className="w-full mb-8">
@@ -129,21 +104,21 @@ export function GetCertifiedScreen({ navigation }: GetCertifiedScreenProps) {
           </View>
 
           {/* Pricing Cards */}
-          <View className="flex-row w-full space-x-4 mb-8">
+          <View className="flex-row w-full gap-x-4 mb-8">
             
             {/* 1 Year Plan */}
-            <View className="flex-1 bg-white rounded-2xl p-6 border-2 border-green-300 shadow-sm">
+            <View className="flex-1 bg-[#FBFFF0] rounded-2xl p-6 border-2 border-[#71DFB1] shadow-sm">
               <Text className="text-lg font-semibold text-gray-800 text-center mb-2">
                 1 Year
               </Text>
               <Text className="text-3xl font-bold text-gray-800 text-center mb-1">
-                $ 55
+                $ 30
               </Text>
               <Text className="text-sm text-gray-600 text-center mb-6">
                 saving up to 10%
               </Text>
               <TouchableOpacity 
-                className="bg-green-500 rounded-xl py-3"
+                className="bg-green-500 rounded-3xl py-3"
                 onPress={() => handleBuyNow('1 Year')}
               >
                 <Text className="text-white text-center font-semibold">
@@ -153,18 +128,18 @@ export function GetCertifiedScreen({ navigation }: GetCertifiedScreenProps) {
             </View>
 
             {/* 1 Month Plan */}
-            <View className="flex-1 bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+            <View className="flex-1 bg-[#FBFFF0] rounded-2xl p-6 border border-[#71DFB1] shadow-sm">
               <Text className="text-lg font-semibold text-gray-800 text-center mb-2">
                 1 Month
               </Text>
               <Text className="text-3xl font-bold text-gray-800 text-center mb-1">
-                $ 4.9
+                $ 4.99
               </Text>
               <Text className="text-sm text-gray-600 text-center mb-6">
                 {/* Empty space for alignment */}
               </Text>
               <TouchableOpacity 
-                className="bg-green-500 rounded-xl py-3"
+                className="bg-green-500 rounded-3xl py-3"
                 onPress={() => handleBuyNow('1 Month')}
               >
                 <Text className="text-white text-center font-semibold">
@@ -176,6 +151,6 @@ export function GetCertifiedScreen({ navigation }: GetCertifiedScreenProps) {
           </View>
         </View>
       </ScrollView>
-    </View>
+    </ImageBackground>
   );
 }

@@ -6,8 +6,7 @@ import {
   Modal,
   Image,
 } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
-
+import { BlurView } from '@react-native-community/blur';
 interface ProfileModalProps {
   visible: boolean;
   onClose: () => void;
@@ -25,16 +24,17 @@ interface ProfileModalProps {
   };
 }
 
-const CloseIcon = () => (
-  <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-    <Path
-      d="M18 6L6 18M6 6L18 18"
-      stroke="#374151"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </Svg>
+const BlurredText = ({ children }: { children: string }) => (
+  <Text style={{ 
+    fontSize: 16,
+    color: '#9CA3AF',
+    opacity: 0.4,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
+  }}>
+    {children}
+  </Text>
 );
 
 export function ProfileModal({ visible, onClose, user }: ProfileModalProps) {
@@ -50,10 +50,10 @@ export function ProfileModal({ visible, onClose, user }: ProfileModalProps) {
           
           {/* Close Button */}
           <TouchableOpacity 
-            className="absolute top-4 right-4 w-8 h-8 bg-gray-200 rounded-full items-center justify-center"
+            className="absolute top-4 right-4 w-8 h-8 bg-black rounded-full items-center justify-center"
             onPress={onClose}
           >
-            <CloseIcon />
+            <Text className="text-white text-lg font-bold">×</Text>
           </TouchableOpacity>
 
           {/* Profile Photo */}
@@ -75,9 +75,10 @@ export function ProfileModal({ visible, onClose, user }: ProfileModalProps) {
           {/* User Details */}
           <View className="mb-6">
             <View className="mb-3">
-              <Text className="text-gray-700 text-base">
-                Email : <Text className="text-gray-500">●●●●●●●●●●●●●●●●●</Text>
-              </Text>
+              <View className="flex-row items-center">
+                <Text className="text-gray-700 text-base">Email : </Text>
+                <BlurredText>{user.email}</BlurredText>
+              </View>
             </View>
 
             <View className="mb-3">
@@ -87,21 +88,24 @@ export function ProfileModal({ visible, onClose, user }: ProfileModalProps) {
             </View>
 
             <View className="mb-3">
-              <Text className="text-gray-700 text-base">
-                Call : <Text className="text-gray-500">●●●●●●●●●●●●</Text>
-              </Text>
+              <View className="flex-row items-center">
+                <Text className="text-gray-700 text-base">Call : </Text>
+                <BlurredText>{user.phone}</BlurredText>
+              </View>
             </View>
 
             <View className="mb-3">
-              <Text className="text-gray-700 text-base">
-                Text : <Text className="text-gray-500">●●●●●●●●●●●●</Text>
-              </Text>
+              <View className="flex-row items-center">
+                <Text className="text-gray-700 text-base">Text : </Text>
+                <BlurredText>{user.textNumber}</BlurredText>
+              </View>
             </View>
 
             <View className="mb-3">
-              <Text className="text-gray-700 text-base">
-                Since : <Text className="text-gray-500">●●●●●●●●●●</Text>
-              </Text>
+              <View className="flex-row items-center">
+                <Text className="text-gray-700 text-base">Since : </Text>
+                <BlurredText>{user.since}</BlurredText>
+              </View>
             </View>
           </View>
 

@@ -4,9 +4,18 @@ import {
   Text,
   TouchableOpacity,
   StatusBar,
+  ImageBackground,
+  ScrollView,
+  Image,
 } from 'react-native';
 import { CarouselButton } from '../../components/buttons';
 import Svg, { Path } from 'react-native-svg';
+import ProvideFavorSvg from '../../assets/icons/ProvideFavor';
+import PersonwithHeartSvg from '../../assets/icons/PersonwithHeart';
+import { TimerSvg } from '../../assets/icons/Timer';
+import DollarSvg from '../../assets/icons/Dollar';
+import FilterSvg from '../../assets/icons/Filter';
+import BellSvg from '../../assets/icons/Bell';
 
 interface ProvideFavorScreenProps {
   navigation?: any;
@@ -111,41 +120,181 @@ const PersonHeartIcon = () => (
 export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
   const [activeTab, setActiveTab] = useState<'All' | 'Active' | 'History'>('All');
 
+  // Mock data for different states
+  const mockFavors = {
+    All: [
+      {
+        id: '1',
+        name: 'Janet',
+        priority: 'Immediate',
+        category: 'Maintenance',
+        duration: '1 Hour',
+        location: 'Casper | Wyoming',
+        description: 'Clean Dog Poop And Take Out Trash.',
+        price: '$20',
+        image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop&crop=face',
+        status: 'new'
+      },
+      {
+        id: '2',
+        name: 'Steven',
+        priority: 'Immediate',
+        category: 'Gardening',
+        duration: '30 Min',
+        location: 'Mills | Wyoming',
+        description: "I'm Blind And Need Assistance Cutting My Lawn. Lot Number A3",
+        price: '$0',
+        image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face',
+        status: 'new'
+      },
+      {
+        id: '3',
+        name: 'Steven',
+        priority: 'Immediate',
+        category: 'Gardening',
+        duration: '30 Min',
+        location: 'Mills | Wyoming',
+        description: "I'm Blind And Need Assistance Cutting My Lawn. Lot Number A3",
+        price: '$0',
+        image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face',
+        status: 'new'
+      }
+    ],
+    Active: [
+      {
+        id: '1',
+        name: 'Janet',
+        priority: 'Immediate',
+        category: 'Maintenance',
+        duration: '1 Hour',
+        location: 'Casper | Wyoming',
+        description: 'Clean Dog Poop And Take Out Trash.',
+        price: '$20',
+        image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop&crop=face',
+        status: 'active'
+      }
+    ],
+    History: [
+      {
+        id: '1',
+        name: 'Janet',
+        priority: 'Immediate',
+        category: 'Maintenance',
+        duration: '1 Hour',
+        location: 'Casper | Wyoming',
+        description: 'Clean Dog Poop And Take Out Trash.',
+        price: '$20',
+        image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop&crop=face',
+        status: 'completed'
+      }
+    ]
+  };
+
+  const currentFavors = mockFavors[activeTab];
+
   const handleAskFavor = () => {
     navigation?.navigate('AskFavorScreen');
   };
 
+  const handleProvideFavor = (favor: any) => {
+    console.log('Provide favor for:', favor.name);
+  };
+
+  const handleCancelFavor = (favor: any) => {
+    console.log('Cancel favor for:', favor.name);
+  };
+
+  const handleFavorCardPress = (favor: any) => {
+    navigation?.navigate('FavorDetailsScreen', { favor });
+  };
+
+  const FavorCard = ({ favor }: { favor: any }) => (
+    <TouchableOpacity 
+      onPress={() => handleFavorCardPress(favor)}
+      activeOpacity={0.7}
+    >
+      <View className="bg-[#F7FBF5] rounded-2xl p-4 mb-4 mx-4 border-2 border-b-4 border-b-[#44A27B] border-[#44A27B66] ">
+        <View className="flex-row mb-3">
+          <Image
+            source={{ uri: favor.image }}
+            className="w-20 h-20 rounded-2xl mr-4"
+            style={{ backgroundColor: '#f3f4f6' }}
+          />
+          <View className="flex-1">
+            <View className="flex-row items-center mb-1">
+              <View className="mr-2">
+                <DollarSvg />
+              </View>
+              <Text className="text-lg font-semibold text-gray-800">{favor.name}</Text>
+              <View className="ml-2 px-2 py-1 rounded">
+                <Text className="text-[#D12E34] text-sm font-medium">{favor.priority}</Text>
+              </View>
+            </View>
+            <Text className="text-sm text-gray-600 mb-1">
+              {favor.category} | {favor.duration}
+            </Text>
+            <Text className="text-sm text-gray-600 mb-2">{favor.location}</Text>
+            <Text className="text-gray-700 text-sm leading-4">
+              {favor.description}
+            </Text>
+          </View>
+        </View>
+      
+      {favor.status !== 'completed' && (
+        <TouchableOpacity 
+          className="bg-green-500 rounded-full py-3"
+          onPress={() => {
+            if (favor.status === 'active') {
+              handleCancelFavor(favor);
+            } else {
+              handleProvideFavor(favor);
+            }
+          }}
+        >
+          <Text className="text-white text-center font-semibold text-base">
+            {favor.status === 'active' ? 'Cancel Favor' : `${favor.price} | Provide a Favor`}
+          </Text>
+        </TouchableOpacity>
+      )}
+      </View>
+    </TouchableOpacity>
+  );
+
   const TabButton = ({ title, isActive, onPress }: { title: string; isActive: boolean; onPress: () => void }) => (
     <TouchableOpacity
-      className={`px-6 py-3 rounded-full ${isActive ? 'bg-green-500' : ''}`}
+      className={`flex-1 py-3 rounded-full ${isActive ? 'bg-green-500' : ''}`}
       onPress={onPress}
     >
-      <Text className={`font-semibold ${isActive ? 'text-white' : 'text-gray-600'}`}>
+      <Text className={`font-semibold text-center ${isActive ? 'text-white' : 'text-gray-600'}`}>
         {title}
       </Text>
     </TouchableOpacity>
   );
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <ImageBackground
+      source={require('../../assets/images/Wallpaper.png')}
+      className="flex-1"
+      resizeMode="cover"
+    >
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       
       {/* Header */}
-      <View className="pt-16 pb-4 px-6 bg-white">
+      <View className="pt-16 pb-6 px-6">
         <View className="flex-row justify-between items-center mb-6">
-          <Text className="text-2xl font-bold text-gray-800">Provide Favor</Text>
-          <View className="flex-row space-x-3">
-            <TouchableOpacity className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center">
-              <FilterIcon />
+          <Text className="text-2xl font-bold text-black">Provide Favor</Text>
+          <View className="flex-row gap-x-2">
+            <TouchableOpacity className="w-10 h-10  rounded-full items-center justify-center">
+              <FilterSvg />
             </TouchableOpacity>
-            <TouchableOpacity className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center">
-              <BellIcon />
+            <TouchableOpacity className="w-10 h-10 rounded-full items-center justify-center">
+              <BellSvg />
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Tab Bar */}
-        <View className="flex-row bg-gray-100 rounded-full p-1">
+        <View className="flex-row bg-gray-100 rounded-full p-1 mx-4">
           <TabButton
             title="All"
             isActive={activeTab === 'All'}
@@ -164,33 +313,50 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
         </View>
       </View>
 
-      {/* Empty State */}
-      <View className="flex-1 items-center justify-center px-6">
-        <View className="items-center mb-8">
-          {activeTab === 'All' && <LocationHeartIcon />}
-          {activeTab === 'Active' && <PersonHeartIcon />}
-          {activeTab === 'History' && <HistoryClockIcon />}
+      {/* Content Area */}
+      {currentFavors.length > 0 ? (
+        <ScrollView 
+          className="flex-1"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingTop: 16, paddingBottom: 120 }}
+        >
+          {currentFavors.map((favor) => (
+            <FavorCard key={favor.id} favor={favor} />
+          ))}
+        </ScrollView>
+      ) : (
+        /* Empty State */
+        <View className="flex-1 items-center justify-center px-6">
+          <View className="items-center mb-8">
+            {activeTab === 'All' && (
+              <View style={{ transform: [{ scale: 2 }] }}>
+                <ProvideFavorSvg focused={true} />
+              </View>
+            )}
+            {activeTab === 'Active' && <PersonwithHeartSvg />}
+            {activeTab === 'History' && <TimerSvg />}
+          </View>
+          
+          <Text className="text-2xl font-bold text-[#000000B8] mb-4 text-center">
+            {activeTab === 'All' && 'No New Favors Yet'}
+            {activeTab === 'Active' && 'No Active Favors'}
+            {activeTab === 'History' && 'No History Yet'}
+          </Text>
+          
+          <Text className="text-[#000000B] text-center mb-12 leading-6">
+            {activeTab === 'All' && 'Check back soon or post a favor to get\nhelp from your community.'}
+            {activeTab === 'Active' && "You don't have any ongoing favors right\nnow. Start helping or request a hand to see\nthem here."}
+            {activeTab === 'History' && 'Once you help someone, your favor history\nwill appear here.'}
+          </Text>
+          
+          <View className="w-full max-w-sm">
+            <CarouselButton
+              title={activeTab === 'All' ? 'Ask Favor' : 'Explore Favors'}
+              onPress={handleAskFavor}
+            />
+          </View>
         </View>
-        
-        <Text className="text-2xl font-bold text-gray-800 mb-4 text-center">
-          {activeTab === 'All' && 'No New Favors Yet'}
-          {activeTab === 'Active' && 'No Active Favors'}
-          {activeTab === 'History' && 'No History Yet'}
-        </Text>
-        
-        <Text className="text-gray-600 text-center mb-12 leading-6">
-          {activeTab === 'All' && 'Check back soon or post a favor to get\nhelp from your community.'}
-          {activeTab === 'Active' && "You don't have any ongoing favors right\nnow. Start helping or request a hand to see\nthem here."}
-          {activeTab === 'History' && 'Once you help someone, your favor history\nwill appear here.'}
-        </Text>
-        
-        <View className="w-full max-w-sm">
-          <CarouselButton
-            title="Explore Favors"
-            onPress={handleAskFavor}
-          />
-        </View>
-      </View>
-    </View>
+      )}
+    </ImageBackground>
   );
 }

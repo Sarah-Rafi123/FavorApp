@@ -5,40 +5,35 @@ import {
   TouchableOpacity,
   StatusBar,
   ScrollView,
+  ImageBackground,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import BackSvg from '../../assets/icons/Back';
 
 interface TermsConditionsScreenProps {
   navigation?: any;
 }
 
-const BackIcon = () => (
-  <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-    <Path
-      d="M19 12H5M12 19L5 12L12 5"
-      stroke="#374151"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </Svg>
-);
 
 export function TermsConditionsScreen({ navigation }: TermsConditionsScreenProps) {
   return (
-    <View className="flex-1 bg-green-50">
+    <ImageBackground
+      source={require('../../assets/images/Wallpaper.png')}
+      className="flex-1"
+      resizeMode="cover"
+    >
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       
       {/* Header */}
-      <View className="pt-16 pb-6 px-6 bg-green-200">
+      <View className="pt-16 pb-6 px-6">
         <View className="flex-row items-center">
           <TouchableOpacity 
-            className="mr-4 p-2"
+            className="mr-4"
             onPress={() => navigation?.goBack()}
           >
-            <BackIcon />
+            <BackSvg />
           </TouchableOpacity>
-          <Text className="text-2xl font-bold text-gray-800">Terms and Conditions</Text>
+          <Text className="text-2xl font-bold text-black">Terms and Conditions</Text>
         </View>
       </View>
 
@@ -48,112 +43,21 @@ export function TermsConditionsScreen({ navigation }: TermsConditionsScreenProps
         contentContainerStyle={{ paddingBottom: 40 }}
       >
         <View className="px-6 pt-6">
-          
-          {/* Last Updated */}
-          <View className="bg-blue-50 rounded-2xl p-4 mb-6">
-            <Text className="text-sm text-blue-700 text-center">
-              Last updated: January 1, 2024
-            </Text>
-          </View>
+          <Text className="text-base text-gray-700 leading-6 mb-6">
+            Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.
+          </Text>
 
-          {/* Introduction */}
-          <View className="bg-white rounded-2xl p-6 mb-6">
-            <Text className="text-lg font-bold text-gray-800 mb-4">Agreement to Terms</Text>
-            <Text className="text-base text-gray-700 leading-6">
-              By accessing and using FavorApp, you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.
-            </Text>
-          </View>
+          <Text className="text-lg font-bold text-gray-800 mb-3">Where does it come from?</Text>
+          <Text className="text-base text-gray-700 leading-6 mb-6">
+            Contrary to popular belief, Lorem Ipsum is not simply random text. It has roots in a piece of classical Latin literature from 45 BC, making it over 2000 years old. Richard McClintock, a Latin professor at Hampden-Sydney College in Virginia, looked up one of the more obscure Latin words, consectetur, from a Lorem Ipsum passage, and going through the cites of the word in classical literature, discovered the undoubtable source. Lorem Ipsum comes from sections 1.10.32 and 1.10.33 of "de Finibus Bonorum et Malorum" (The Extremes of Good and Evil) by Cicero, written in 45 BC. This book is a treatise on the theory of ethics, very popular during the Renaissance. The first line of Lorem Ipsum, "Lorem ipsum dolor sit amet..", comes from a line in section 1.10.32.
+          </Text>
 
-          {/* Use License */}
-          <View className="bg-white rounded-2xl p-6 mb-6">
-            <Text className="text-lg font-bold text-gray-800 mb-4">Use License</Text>
-            <Text className="text-base text-gray-700 leading-6 mb-4">
-              Permission is granted to temporarily download one copy of FavorApp for personal, non-commercial transitory viewing only. This is the grant of a license, not a transfer of title, and under this license you may not:
-            </Text>
-            <View className="space-y-2">
-              <Text className="text-base text-gray-700">• Modify or copy the app materials</Text>
-              <Text className="text-base text-gray-700">• Use the materials for commercial purposes</Text>
-              <Text className="text-base text-gray-700">• Attempt to reverse engineer any software</Text>
-              <Text className="text-base text-gray-700">• Remove any copyright or proprietary notations</Text>
-            </View>
-          </View>
-
-          {/* User Responsibilities */}
-          <View className="bg-white rounded-2xl p-6 mb-6">
-            <Text className="text-lg font-bold text-gray-800 mb-4">User Responsibilities</Text>
-            <Text className="text-base text-gray-700 leading-6 mb-4">
-              As a user of FavorApp, you agree to:
-            </Text>
-            <View className="space-y-2">
-              <Text className="text-base text-gray-700">• Provide accurate and truthful information</Text>
-              <Text className="text-base text-gray-700">• Treat other community members with respect</Text>
-              <Text className="text-base text-gray-700">• Use the app only for lawful purposes</Text>
-              <Text className="text-base text-gray-700">• Not engage in fraudulent or harmful activities</Text>
-              <Text className="text-base text-gray-700">• Maintain the confidentiality of your account</Text>
-              <Text className="text-base text-gray-700">• Report any suspicious or inappropriate behavior</Text>
-            </View>
-          </View>
-
-          {/* Prohibited Uses */}
-          <View className="bg-white rounded-2xl p-6 mb-6">
-            <Text className="text-lg font-bold text-gray-800 mb-4">Prohibited Uses</Text>
-            <Text className="text-base text-gray-700 leading-6 mb-4">
-              You may not use FavorApp:
-            </Text>
-            <View className="space-y-2">
-              <Text className="text-base text-gray-700">• For any unlawful purpose or to solicit unlawful acts</Text>
-              <Text className="text-base text-gray-700">• To violate any international, federal, provincial, or state laws</Text>
-              <Text className="text-base text-gray-700">• To transmit harmful or offensive content</Text>
-              <Text className="text-base text-gray-700">• To harass, abuse, or harm other users</Text>
-              <Text className="text-base text-gray-700">• To spam or send unsolicited messages</Text>
-            </View>
-          </View>
-
-          {/* Limitation of Liability */}
-          <View className="bg-white rounded-2xl p-6 mb-6">
-            <Text className="text-lg font-bold text-gray-800 mb-4">Limitation of Liability</Text>
-            <Text className="text-base text-gray-700 leading-6">
-              FavorApp Inc. shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses, resulting from your use of the service.
-            </Text>
-          </View>
-
-          {/* Service Availability */}
-          <View className="bg-white rounded-2xl p-6 mb-6">
-            <Text className="text-lg font-bold text-gray-800 mb-4">Service Availability</Text>
-            <Text className="text-base text-gray-700 leading-6">
-              We reserve the right to withdraw or amend our service, and any service or material we provide, in our sole discretion without notice. We will not be liable if for any reason all or any part of the service is unavailable at any time or for any period.
-            </Text>
-          </View>
-
-          {/* Termination */}
-          <View className="bg-white rounded-2xl p-6 mb-6">
-            <Text className="text-lg font-bold text-gray-800 mb-4">Termination</Text>
-            <Text className="text-base text-gray-700 leading-6">
-              We may terminate or suspend your account and bar access to the service immediately, without prior notice or liability, under our sole discretion, for any reason whatsoever, including without limitation if you breach the Terms.
-            </Text>
-          </View>
-
-          {/* Changes to Terms */}
-          <View className="bg-white rounded-2xl p-6 mb-6">
-            <Text className="text-lg font-bold text-gray-800 mb-4">Changes to Terms</Text>
-            <Text className="text-base text-gray-700 leading-6">
-              We reserve the right, at our sole discretion, to modify or replace these Terms at any time. If a revision is material, we will provide at least 30 days notice prior to any new terms taking effect.
-            </Text>
-          </View>
-
-          {/* Contact Information */}
-          <View className="bg-white rounded-2xl p-6 mb-6">
-            <Text className="text-lg font-bold text-gray-800 mb-4">Contact Information</Text>
-            <Text className="text-base text-gray-700 leading-6">
-              If you have any questions about these Terms and Conditions, please contact us at:
-            </Text>
-            <Text className="text-base text-gray-700 mt-2">
-              Email: legal@favorapp.com{'\n'}
-              Address: 123 Legal St, San Francisco, CA 94105
-            </Text>
-          </View>
+          <Text className="text-lg font-bold text-gray-800 mb-3">Why do we use it?</Text>
+          <Text className="text-base text-gray-700 leading-6 mb-6">
+            It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters, as opposed to using 'Content here, content here', making it look like readable English. Many desktop publishing packages and web page editors now use Lorem Ipsum as their default model text, and a search for 'lorem ipsum' will uncover many web sites still in their infancy. Various versions have evolved over the years, sometimes by accident, sometimes on purpose (injected humour and the like).
+          </Text>
         </View>
       </ScrollView>
-    </View>
+    </ImageBackground>
   );
 }

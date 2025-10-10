@@ -5,40 +5,35 @@ import {
   TouchableOpacity,
   StatusBar,
   ScrollView,
+  ImageBackground,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import BackSvg from '../../assets/icons/Back';
 
 interface PrivacyPolicyScreenProps {
   navigation?: any;
 }
 
-const BackIcon = () => (
-  <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-    <Path
-      d="M19 12H5M12 19L5 12L12 5"
-      stroke="#374151"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </Svg>
-);
 
 export function PrivacyPolicyScreen({ navigation }: PrivacyPolicyScreenProps) {
   return (
-    <View className="flex-1 bg-green-50">
+    <ImageBackground
+      source={require('../../assets/images/Wallpaper.png')}
+      className="flex-1"
+      resizeMode="cover"
+    >
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       
       {/* Header */}
-      <View className="pt-16 pb-6 px-6 bg-green-200">
+      <View className="pt-16 pb-6 px-6">
         <View className="flex-row items-center">
           <TouchableOpacity 
-            className="mr-4 p-2"
+            className="mr-4"
             onPress={() => navigation?.goBack()}
           >
-            <BackIcon />
+            <BackSvg />
           </TouchableOpacity>
-          <Text className="text-2xl font-bold text-gray-800">Privacy Policy</Text>
+          <Text className="text-2xl font-bold text-black">Privacy Policy</Text>
         </View>
       </View>
 
@@ -48,104 +43,21 @@ export function PrivacyPolicyScreen({ navigation }: PrivacyPolicyScreenProps) {
         contentContainerStyle={{ paddingBottom: 40 }}
       >
         <View className="px-6 pt-6">
-          
-          {/* Last Updated */}
-          <View className="bg-blue-50 rounded-2xl p-4 mb-6">
-            <Text className="text-sm text-blue-700 text-center">
-              Last updated: January 1, 2024
-            </Text>
-          </View>
+          <Text className="text-base text-gray-700 leading-6 mb-6">
+            Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.
+          </Text>
 
-          {/* Introduction */}
-          <View className="bg-white rounded-2xl p-6 mb-6">
-            <Text className="text-lg font-bold text-gray-800 mb-4">Introduction</Text>
-            <Text className="text-base text-gray-700 leading-6">
-              FavorApp Inc. ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application and services.
-            </Text>
-          </View>
+          <Text className="text-lg font-bold text-gray-800 mb-3">Where does it come from?</Text>
+          <Text className="text-base text-gray-700 leading-6 mb-6">
+            Contrary to popular belief, Lorem Ipsum is not simply random text. It has roots in a piece of classical Latin literature from 45 BC, making it over 2000 years old. Richard McClintock, a Latin professor at Hampden-Sydney College in Virginia, looked up one of the more obscure Latin words, consectetur, from a Lorem Ipsum passage, and going through the cites of the word in classical literature, discovered the undoubtable source. Lorem Ipsum comes from sections 1.10.32 and 1.10.33 of "de Finibus Bonorum et Malorum" (The Extremes of Good and Evil) by Cicero, written in 45 BC. This book is a treatise on the theory of ethics, very popular during the Renaissance. The first line of Lorem Ipsum, "Lorem ipsum dolor sit amet..", comes from a line in section 1.10.32.
+          </Text>
 
-          {/* Information We Collect */}
-          <View className="bg-white rounded-2xl p-6 mb-6">
-            <Text className="text-lg font-bold text-gray-800 mb-4">Information We Collect</Text>
-            
-            <Text className="text-base font-semibold text-gray-800 mb-2">Personal Information</Text>
-            <Text className="text-base text-gray-700 leading-6 mb-4">
-              We collect information you provide directly, such as your name, email address, phone number, profile photo, and location when you create an account or use our services.
-            </Text>
-
-            <Text className="text-base font-semibold text-gray-800 mb-2">Usage Information</Text>
-            <Text className="text-base text-gray-700 leading-6 mb-4">
-              We collect information about how you use the app, including your interactions with other users, favors requested or offered, and app features used.
-            </Text>
-
-            <Text className="text-base font-semibold text-gray-800 mb-2">Location Information</Text>
-            <Text className="text-base text-gray-700 leading-6">
-              With your permission, we collect and process information about your location to help connect you with nearby community members and relevant favors.
-            </Text>
-          </View>
-
-          {/* How We Use Your Information */}
-          <View className="bg-white rounded-2xl p-6 mb-6">
-            <Text className="text-lg font-bold text-gray-800 mb-4">How We Use Your Information</Text>
-            <View className="space-y-2">
-              <Text className="text-base text-gray-700">• Provide and maintain our services</Text>
-              <Text className="text-base text-gray-700">• Connect you with community members for favors</Text>
-              <Text className="text-base text-gray-700">• Send you notifications and updates</Text>
-              <Text className="text-base text-gray-700">• Improve our app and user experience</Text>
-              <Text className="text-base text-gray-700">• Ensure safety and prevent fraud</Text>
-              <Text className="text-base text-gray-700">• Comply with legal obligations</Text>
-            </View>
-          </View>
-
-          {/* Information Sharing */}
-          <View className="bg-white rounded-2xl p-6 mb-6">
-            <Text className="text-lg font-bold text-gray-800 mb-4">Information Sharing</Text>
-            <Text className="text-base text-gray-700 leading-6 mb-4">
-              We do not sell, trade, or rent your personal information to third parties. We may share your information in the following circumstances:
-            </Text>
-            <View className="space-y-2">
-              <Text className="text-base text-gray-700">• With other users as part of the favor-sharing functionality</Text>
-              <Text className="text-base text-gray-700">• With service providers who assist in operating our app</Text>
-              <Text className="text-base text-gray-700">• When required by law or to protect our rights</Text>
-              <Text className="text-base text-gray-700">• In connection with a business transfer or merger</Text>
-            </View>
-          </View>
-
-          {/* Data Security */}
-          <View className="bg-white rounded-2xl p-6 mb-6">
-            <Text className="text-lg font-bold text-gray-800 mb-4">Data Security</Text>
-            <Text className="text-base text-gray-700 leading-6">
-              We implement appropriate technical and organizational security measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction. However, no method of transmission over the internet is 100% secure.
-            </Text>
-          </View>
-
-          {/* Your Rights */}
-          <View className="bg-white rounded-2xl p-6 mb-6">
-            <Text className="text-lg font-bold text-gray-800 mb-4">Your Rights</Text>
-            <Text className="text-base text-gray-700 leading-6 mb-4">
-              You have the right to:
-            </Text>
-            <View className="space-y-2">
-              <Text className="text-base text-gray-700">• Access and update your personal information</Text>
-              <Text className="text-base text-gray-700">• Delete your account and personal data</Text>
-              <Text className="text-base text-gray-700">• Opt out of certain communications</Text>
-              <Text className="text-base text-gray-700">• Request a copy of your data</Text>
-            </View>
-          </View>
-
-          {/* Contact Information */}
-          <View className="bg-white rounded-2xl p-6 mb-6">
-            <Text className="text-lg font-bold text-gray-800 mb-4">Contact Us</Text>
-            <Text className="text-base text-gray-700 leading-6">
-              If you have any questions about this Privacy Policy, please contact us at:
-            </Text>
-            <Text className="text-base text-gray-700 mt-2">
-              Email: privacy@favorapp.com{'\n'}
-              Address: 123 Privacy St, San Francisco, CA 94105
-            </Text>
-          </View>
+          <Text className="text-lg font-bold text-gray-800 mb-3">Why do we use it?</Text>
+          <Text className="text-base text-gray-700 leading-6 mb-6">
+            It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters, as opposed to using 'Content here, content here', making it look like readable English. Many desktop publishing packages and web page editors now use Lorem Ipsum as their default model text, and a search for 'lorem ipsum' will uncover many web sites still in their infancy. Various versions have evolved over the years, sometimes by accident, sometimes on purpose (injected humour and the like).
+          </Text>
         </View>
       </ScrollView>
-    </View>
+    </ImageBackground>
   );
 }

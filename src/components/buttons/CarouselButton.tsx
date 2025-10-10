@@ -13,7 +13,7 @@ export function CarouselButton({ title, onPress, disabled = false }: CarouselBut
       <TouchableOpacity 
         className={`
           ${disabled ? '' : 'bg-green-500'} 
-          py-5 px-12 rounded-full items-center justify-center
+          py-4 px-12 rounded-full items-center justify-center
           shadow-lg shadow-black/25 w-full max-w-sm
         `}
         style={{

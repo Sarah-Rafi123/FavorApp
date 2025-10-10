@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,26 +6,19 @@ import {
   StatusBar,
   Image,
   ScrollView,
+  ImageBackground,
+  Modal,
+  TextInput,
 } from 'react-native';
-import { CarouselButton } from '../../components/buttons';
 import Svg, { Path } from 'react-native-svg';
+import BackSvg from '../../assets/icons/Back';
+import CancelSvg from '../../assets/icons/Cancel';
 
 interface FavorDetailsScreenProps {
   navigation?: any;
   route?: any;
 }
 
-const BackIcon = () => (
-  <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-    <Path
-      d="M19 12H5M12 19L5 12L12 5"
-      stroke="#374151"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </Svg>
-);
 
 const VerifiedIcon = () => (
   <Svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -44,45 +37,99 @@ const VerifiedIcon = () => (
 );
 
 export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProps) {
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [rating, setRating] = useState(0);
+  const [reviewText, setReviewText] = useState('');
+
+  const favor = route?.params?.favor || {
+    name: 'Janet',
+    priority: 'Immediate',
+    category: 'Maintenance',
+    duration: '1 Hour',
+    location: 'Casper, Wyoming',
+    description: 'Clean dog poop and take out trash.',
+    price: '$0',
+    image: 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=200&h=200&fit=crop&crop=face',
+    status: 'active'
+  };
+
   const handleGoBack = () => {
     navigation?.goBack();
   };
 
-  const handleProvideFavor = () => {
-    // Handle provide favor action
-    console.log('Provide favor pressed');
+  const handleCancelFavor = () => {
+    setShowCancelModal(true);
   };
 
-  const handleViewProfile = () => {
-    // Handle view profile action
-    console.log('View profile pressed');
+  const handleConfirmCancel = () => {
+    setShowCancelModal(false);
+    console.log('Favor cancelled');
+    navigation?.goBack();
+  };
+
+  const handleCancelModalClose = () => {
+    setShowCancelModal(false);
+  };
+
+  const handleCallNumber = () => {
+    console.log('Call number pressed');
+  };
+
+  const handleTextNumber = () => {
+    console.log('Text number pressed');
+  };
+
+  const handleSubmitReview = () => {
+    setShowReviewModal(true);
+  };
+
+  const handleReviewSubmit = () => {
+    console.log('Review submitted:', { rating, reviewText });
+    setShowReviewModal(false);
+    setRating(0);
+    setReviewText('');
+  };
+
+  const handleReviewModalClose = () => {
+    setShowReviewModal(false);
+    setRating(0);
+    setReviewText('');
   };
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <ImageBackground
+      source={require('../../assets/images/Wallpaper.png')}
+      className="flex-1"
+      resizeMode="cover"
+    >
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       
       {/* Header */}
-      <View className="pt-16 pb-4 px-6 bg-white">
+      <View className="pt-16 pb-6 px-6">
         <View className="flex-row items-center">
           <TouchableOpacity 
-            className="w-10 h-10 items-center justify-center"
+            className="mr-4"
             onPress={handleGoBack}
           >
-            <BackIcon />
+            <BackSvg />
           </TouchableOpacity>
-          <Text className="text-2xl font-bold text-gray-800 ml-4">Favor Details</Text>
+          <Text className="text-2xl font-bold text-black">Favor Details</Text>
         </View>
       </View>
 
-      <ScrollView className="flex-1 px-6 py-6">
+      <ScrollView 
+        className="flex-1"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 120 }}
+      >
         {/* Favor Details Card */}
-        <View className="bg-white rounded-3xl p-6 mb-6 border-2 border-green-400">
+        <View className="mx-4 mb-6 bg-[#FBFFF0] rounded-3xl p-6 border-4 border-[#71DFB1]">
           {/* Favor Image */}
           <View className="items-center mb-6">
             <View className="w-24 h-24 bg-gray-200 rounded-2xl overflow-hidden">
               <Image
-                source={{ uri: 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=200&h=200&fit=crop&crop=face' }}
+                source={{ uri: favor.image }}
                 className="w-full h-full"
                 resizeMode="cover"
               />
@@ -90,52 +137,45 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
           </View>
 
           {/* Favor Details */}
-          <View className="space-y-4">
+          <View className="space-y-4 mb-6">
             <View className="flex-row">
-              <Text className="text-gray-600 w-24">Priority</Text>
-              <Text className="text-gray-600 mr-2">:</Text>
-              <Text className="text-gray-800 font-medium flex-1">Immediate</Text>
+              <Text className="text-gray-700 text-lg w-24">Priority</Text>
+              <Text className="text-gray-700 text-lg mr-2">:</Text>
+              <Text className="text-gray-800 text-lg flex-1">{favor.priority}</Text>
             </View>
 
             <View className="flex-row">
-              <Text className="text-gray-600 w-24">Category</Text>
-              <Text className="text-gray-600 mr-2">:</Text>
-              <Text className="text-gray-800 font-medium flex-1">Maintenance</Text>
+              <Text className="text-gray-700 text-lg w-24">Category</Text>
+              <Text className="text-gray-700 text-lg mr-2">:</Text>
+              <Text className="text-gray-800 text-lg flex-1">{favor.category}</Text>
             </View>
 
             <View className="flex-row">
-              <Text className="text-gray-600 w-24">Duration</Text>
-              <Text className="text-gray-600 mr-2">:</Text>
-              <Text className="text-gray-800 font-medium flex-1">1 Hour</Text>
+              <Text className="text-gray-700 text-lg w-24">Duration</Text>
+              <Text className="text-gray-700 text-lg mr-2">:</Text>
+              <Text className="text-gray-800 text-lg flex-1">{favor.duration}</Text>
             </View>
 
             <View className="flex-row">
-              <Text className="text-gray-600 w-24">Location</Text>
-              <Text className="text-gray-600 mr-2">:</Text>
-              <Text className="text-gray-800 font-medium flex-1">Casper, Wyoming</Text>
+              <Text className="text-gray-700 text-lg w-24">Location</Text>
+              <Text className="text-gray-700 text-lg mr-2">:</Text>
+              <Text className="text-gray-800 text-lg flex-1">{favor.location}</Text>
             </View>
 
-            <View className="flex-row">
-              <Text className="text-gray-600 w-24">Description</Text>
-              <Text className="text-gray-600 mr-2">:</Text>
-              <Text className="text-gray-800 font-medium flex-1">Clean dog poop and take out trash.</Text>
+            <View className="flex-row items-start">
+              <Text className="text-gray-700 text-lg w-24">Description</Text>
+              <Text className="text-gray-700 text-lg mr-2">:</Text>
+              <Text className="text-gray-800 text-lg flex-1">{favor.description}</Text>
             </View>
           </View>
 
-          {/* Provide Favor Button */}
-          <View className="mt-8">
-            <CarouselButton
-              title="$0 | Provide a Favor"
-              onPress={handleProvideFavor}
-            />
-          </View>
         </View>
 
         {/* You are helping section */}
-        <View className="mb-6">
-          <Text className="text-xl font-bold text-gray-800 mb-4">You are helping</Text>
+        <View className="mx-4 mb-6">
+          <Text className="text-xl font-semibold text-black mb-4">You are helping</Text>
           
-          <View className="flex-row items-center">
+          <View className="flex-row items-center border rounded-3xl border-gray-300 p-5 border-1 mb-4">
             <View className="relative">
               <View className="w-16 h-16 bg-gray-200 rounded-full overflow-hidden">
                 <Image
@@ -148,20 +188,187 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
                 <VerifiedIcon />
               </View>
             </View>
-            
+
             <View className="ml-4 flex-1">
-              <Text className="text-lg font-semibold text-gray-800">Janet</Text>
+              <Text className="text-lg font-semibold text-black">David Warner</Text>
               <View className="flex-row items-center">
-                <Text className="text-yellow-500 text-sm">⭐ 0 | </Text>
-                <Text className="text-gray-600 text-sm">0 Reviews</Text>
+                <Text className="text-gray-600 text-sm">⭐ 4.5 | </Text>
+                <Text className="text-gray-600 text-sm">456 Reviews</Text>
               </View>
-              <TouchableOpacity onPress={handleViewProfile}>
-                <Text className="text-green-600 text-sm font-medium">View Profile</Text>
+              <Text className="text-gray-600 text-sm">2 Mins Away</Text>
+              <TouchableOpacity>
+                <Text className="text-green-600 text-sm font-medium underline">View Profile</Text>
+              </TouchableOpacity>
+            </View>
+            
+          </View>
+
+          {/* Contact Buttons */}
+          <View className="flex-row mb-4">
+            <TouchableOpacity 
+              className="flex-1 bg-transparent border border-black rounded-xl mr-3 py-3 px-2"
+              onPress={handleCallNumber}
+            >
+              <Text className="text-center text-gray-800 font-medium text-sm">Call: 917-582-3220</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              className="flex-1 bg-transparent border border-black rounded-xl mr-3 py-3 px-2"
+              onPress={handleTextNumber}
+            >
+              <Text className="text-center text-gray-800 font-medium text-sm">Text: 908-245-4242</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Action Buttons */}
+          <View className="flex-row ">
+            <TouchableOpacity 
+              className="flex-1 bg-transparent border border-black justify-center mr-3 rounded-xl py-1 px-1"
+              onPress={() => console.log('Cancel & Repost pressed')}
+            >
+              <Text className="text-center text-gray-800 font-medium text-base">Cancel & Repost</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              className="bg-green-500 py-1 px-1 mr-3 justify-center rounded-xl"
+              onPress={handleSubmitReview}
+            >
+              <Text className="text-white text-center font-medium text-base">Submit Review</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              className="flex-1 bg-transparent justify-center border mr-3 border-black rounded-xl py-1 px-1"
+              onPress={handleCancelFavor}
+            >
+              <Text className="text-center text-gray-800 font-medium text-base">Cancel</Text>
+            </TouchableOpacity>
+          </View>
+         
+        </View>
+      </ScrollView>
+
+      {/* Cancel Confirmation Modal */}
+      <Modal
+        visible={showCancelModal}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCancelModalClose}
+      >
+        <View className="flex-1 bg-black/50 justify-center items-center px-6">
+          <View className="bg-white rounded-3xl p-6 max-w-sm w-full border-4 border-blue-400 relative">
+            {/* Close Button */}
+            <TouchableOpacity 
+              className="absolute top-4 right-4 w-8 h-8 bg-black rounded-full items-center justify-center"
+              onPress={handleCancelModalClose}
+            >
+              <Text className="text-white font-bold text-lg">×</Text>
+            </TouchableOpacity>
+
+            {/* Cancel Icon */}
+            <View className="items-center mb-6 mt-4">
+              <View className="w-20 h-20 items-center justify-center">
+                <View style={{ transform: [{ scale: 0.8 }] }}>
+                  <CancelSvg />
+                </View>
+              </View>
+            </View>
+
+            {/* Modal Text */}
+            <Text className="text-gray-700 text-lg text-center mb-8 leading-6">
+              Are you sure you want to cancel this Favor request to help David Warner?
+            </Text>
+
+            {/* Buttons */}
+            <View className="flex-row space-x-4">
+              <TouchableOpacity 
+                className="flex-1 bg-green-500 rounded-full py-4"
+                onPress={handleCancelModalClose}
+              >
+                <Text className="text-white text-center font-semibold text-lg">No</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                className="flex-1 border-2 border-green-500 rounded-full py-4"
+                onPress={handleConfirmCancel}
+              >
+                <Text className="text-green-500 text-center font-semibold text-lg">Yes</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
-      </ScrollView>
-    </View>
+      </Modal>
+
+      {/* Submit Review Modal */}
+      <Modal
+        visible={showReviewModal}
+        transparent
+        animationType="fade"
+        onRequestClose={handleReviewModalClose}
+      >
+        <View className="flex-1 bg-black/50 justify-center items-center px-6">
+          <View className="bg-white rounded-3xl p-6 max-w-sm w-full border-4 border-green-400 relative">
+            {/* Close Button */}
+            <TouchableOpacity 
+              className="absolute top-4 right-4 w-8 h-8 bg-black rounded-full items-center justify-center"
+              onPress={handleReviewModalClose}
+            >
+              <Text className="text-white font-bold text-lg">×</Text>
+            </TouchableOpacity>
+
+            {/* Modal Title */}
+            <Text className="text-gray-800 text-lg font-semibold text-center mb-6 mt-4">
+              Give "David Warner" Feedback
+            </Text>
+
+            {/* Star Rating */}
+            <View className="flex-row justify-center mb-6">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <TouchableOpacity
+                  key={star}
+                  onPress={() => {
+                    if (rating === star) {
+                      // If clicking on the same star, decrease by 1
+                      setRating(star - 1);
+                    } else {
+                      // If clicking on a different star, set to that rating
+                      setRating(star);
+                    }
+                  }}
+                  className="mx-1"
+                >
+                  <Svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+                    <Path
+                      d="M14 2L17.09 8.26L24 9.27L19 14.14L20.18 21.02L14 17.77L7.82 21.02L9 14.14L4 9.27L10.91 8.26L14 2Z"
+                      fill={rating >= star ? "#FCD34D" : "none"}
+                      stroke="#D1D5DB"
+                      strokeWidth="1.5"
+                      strokeLinejoin="round"
+                    />
+                  </Svg>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Review Text Input */}
+            <View className="mb-6">
+              <Text className="text-gray-700 text-base font-medium mb-2">Write Review</Text>
+              <TextInput
+                className="border border-gray-300 rounded-xl p-4 h-24 text-base"
+                placeholder="Enter"
+                placeholderTextColor="#9CA3AF"
+                multiline
+                textAlignVertical="top"
+                value={reviewText}
+                onChangeText={setReviewText}
+              />
+            </View>
+
+            {/* Submit Button */}
+            <TouchableOpacity 
+              className="bg-green-500 rounded-full py-4"
+              onPress={handleReviewSubmit}
+            >
+              <Text className="text-white text-center font-semibold text-lg">Submit</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </ImageBackground>
   );
 }

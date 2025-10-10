@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { CarouselButton } from '../../components/buttons';
 import Svg, { Path } from 'react-native-svg';
+import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 
 interface AskFavorScreenProps {
   navigation?: any;
@@ -163,14 +164,63 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
           {/* Address Section */}
           <View className="mb-8">
             <Text className="text-lg font-semibold text-gray-800 mb-4">Address</Text>
-            <View className="bg-white border border-gray-200 rounded-xl px-4 py-4">
-              <Text className="text-gray-500 text-sm mb-2">Address</Text>
-              <TextInput
-                className="text-gray-800 text-base"
+            <View className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+              <Text className="text-gray-500 text-sm px-4 pt-4 pb-2">Address</Text>
+              <GooglePlacesAutocomplete
                 placeholder="Enter a location"
-                placeholderTextColor="#9CA3AF"
-                value={formData.address}
-                onChangeText={(text) => updateFormData('address', text)}
+                onPress={(data, details = null) => {
+                  updateFormData('address', data.description);
+                }}
+                query={{
+                  key: 'AIzaSyDt1zyVSt1snXRBteLuH9ngKmE8ABve268',
+                  language: 'en',
+                }}
+                fetchDetails={true}
+                styles={{
+                  textInputContainer: {
+                    paddingHorizontal: 16,
+                    paddingBottom: 16,
+                    backgroundColor: 'transparent',
+                  },
+                  textInput: {
+                    height: 40,
+                    fontSize: 16,
+                    backgroundColor: 'transparent',
+                    borderWidth: 0,
+                    paddingHorizontal: 0,
+                    color: '#374151',
+                  },
+                  predefinedPlacesDescription: {
+                    color: '#1faadb',
+                  },
+                  listView: {
+                    backgroundColor: 'white',
+                    marginTop: 0,
+                    borderTopWidth: 1,
+                    borderTopColor: '#e5e7eb',
+                  },
+                  row: {
+                    backgroundColor: 'white',
+                    padding: 13,
+                    height: 44,
+                    flexDirection: 'row',
+                  },
+                  separator: {
+                    height: 0.5,
+                    backgroundColor: '#e5e7eb',
+                  },
+                  description: {
+                    fontSize: 14,
+                    color: '#374151',
+                  },
+                  loader: {
+                    flexDirection: 'row',
+                    justifyContent: 'flex-end',
+                    height: 20,
+                  },
+                }}
+                enablePoweredByContainer={false}
+                debounce={200}
               />
             </View>
           </View>

@@ -173,7 +173,7 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
       {/* Header */}
       <View className="absolute top-16 left-6 right-6 z-10 flex-row justify-between items-center">
         <Text className="text-2xl font-bold text-gray-800">Home</Text>
-        <View className="flex-row gap-x-4">
+        <View className="flex-row gap-x-2">
           <TouchableOpacity
             className="items-center justify-center"
             onPress={onFilter}

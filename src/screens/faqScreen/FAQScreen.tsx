@@ -5,24 +5,15 @@ import {
   TouchableOpacity,
   StatusBar,
   ScrollView,
+  ImageBackground,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import BackSvg from '../../assets/icons/Back';
 
 interface FAQScreenProps {
   navigation?: any;
 }
 
-const BackIcon = () => (
-  <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-    <Path
-      d="M19 12H5M12 19L5 12L12 5"
-      stroke="#374151"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </Svg>
-);
 
 const PlusIcon = () => (
   <Svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -104,7 +95,7 @@ export function FAQScreen({ navigation }: FAQScreenProps) {
     return (
       <View className="mb-3">
         <TouchableOpacity
-          className="bg-white rounded-xl px-4 py-4 flex-row justify-between items-center"
+          className="bg-transparent rounded-xl px-4 py-4 flex-row justify-between items-center"
           onPress={() => toggleExpand(item.id)}
         >
           <Text className="flex-1 text-base font-medium text-gray-800 mr-3">
@@ -114,7 +105,7 @@ export function FAQScreen({ navigation }: FAQScreenProps) {
         </TouchableOpacity>
         
         {isExpanded && (
-          <View className="bg-white rounded-xl mt-1 px-4 py-4">
+          <View className="bg-transparent rounded-xl mt-1 px-4 py-4">
             <Text className="text-sm text-gray-600 leading-6">
               {item.answer}
             </Text>
@@ -125,19 +116,23 @@ export function FAQScreen({ navigation }: FAQScreenProps) {
   };
 
   return (
-    <View className="flex-1 bg-green-50">
+    <ImageBackground
+      source={require('../../assets/images/Wallpaper.png')}
+      className="flex-1"
+      resizeMode="cover"
+    >
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       
       {/* Header */}
-      <View className="pt-16 pb-6 px-6 bg-green-200">
+      <View className="pt-16 pb-6 px-6">
         <View className="flex-row items-center">
           <TouchableOpacity 
-            className="mr-4 p-2"
+            className="mr-4"
             onPress={() => navigation?.goBack()}
           >
-            <BackIcon />
+            <BackSvg />
           </TouchableOpacity>
-          <Text className="text-2xl font-bold text-gray-800">FAQ</Text>
+          <Text className="text-2xl font-bold text-black">FAQ</Text>
         </View>
       </View>
 
@@ -149,25 +144,9 @@ export function FAQScreen({ navigation }: FAQScreenProps) {
         <View className="px-6 pt-6">
           {faqData.map((item) => (
             <FAQItem key={item.id} item={item} />
-          ))}
-          
-          {/* Need More Help Section */}
-          <View className="mt-8 bg-white rounded-2xl p-6">
-            <Text className="text-lg font-bold text-gray-800 mb-3">Still Need Help?</Text>
-            <Text className="text-sm text-gray-600 mb-4">
-              Can't find the answer you're looking for? Our support team is here to help you.
-            </Text>
-            <TouchableOpacity 
-              className="bg-green-500 rounded-xl py-3"
-              onPress={() => navigation?.navigate('HelpSupportScreen')}
-            >
-              <Text className="text-white text-center font-semibold">
-                Contact Support
-              </Text>
-            </TouchableOpacity>
-          </View>
+          ))}   
         </View>
       </ScrollView>
-    </View>
+    </ImageBackground>
   );
 }

@@ -9,6 +9,8 @@ import {
 } from 'react-native';
 import { CarouselButton } from '../../components/buttons';
 import Svg, { Path } from 'react-native-svg';
+import BackSvg from '../../assets/icons/Back';
+import FIconSmallSvg from '../../assets/icons/FIconSmall';
 
 interface FilterScreenProps {
   onBack?: () => void;
@@ -75,15 +77,15 @@ export function FilterScreen({ onBack, onApply, navigation }: FilterScreenProps)
     options: string[]; 
     section: string;
   }) => (
-    <View className="bg-white rounded-2xl p-4 mb-4 mx-4">
-      <Text className="text-lg font-semibold text-gray-800 mb-3">{title}</Text>
+    <View className="border-[#44A27B66] border bg-[#F7FBF5] rounded-2xl p-4 mb-4 mx-4">
+      <Text className="text-lg font-semibold text-gray-800 mb-4">{title}</Text>
       <View className="flex-row flex-wrap">
         {options.map((option) => {
           const isSelected = filters[section as keyof typeof filters].includes(option);
           return (
             <TouchableOpacity
               key={option}
-              className={`flex-row items-center mr-4 mb-2 w-full`}
+              className="flex-row items-center mr-6 mb-3"
               onPress={() => toggleFilter(section, option)}
             >
               <View className={`w-5 h-5 rounded border-2 mr-3 items-center justify-center ${
@@ -91,10 +93,12 @@ export function FilterScreen({ onBack, onApply, navigation }: FilterScreenProps)
               }`}>
                 {isSelected && <CheckIcon />}
               </View>
-              <Text className="text-gray-700 text-base flex-1">
-                {option}
-                {option === 'Verified' && ' 🛡️'}
-              </Text>
+              <Text className="text-gray-700 text-base">{option}</Text>
+              {option === 'Verified' && (
+                <View className="ml-1" >
+                  <FIconSmallSvg />
+                </View>
+              )}
             </TouchableOpacity>
           );
         })}
@@ -114,10 +118,10 @@ export function FilterScreen({ onBack, onApply, navigation }: FilterScreenProps)
       <View className="pt-16 pb-4 px-6">
         <View className="flex-row items-center">
           <TouchableOpacity 
-            className="mr-4 p-2"
+            className="mr-4"
             onPress={onBack || (() => navigation?.goBack())}
           >
-            <BackIcon />
+            <BackSvg />
           </TouchableOpacity>
           <Text className="text-2xl font-bold text-black">Filter</Text>
         </View>
@@ -126,7 +130,7 @@ export function FilterScreen({ onBack, onApply, navigation }: FilterScreenProps)
       <ScrollView 
         className="flex-1"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingTop: 10, paddingBottom: 200 }}
+        contentContainerStyle={{ paddingTop: 10, paddingBottom: 180 }}
       >
         <FilterSection
           title="Priority"
@@ -154,7 +158,7 @@ export function FilterScreen({ onBack, onApply, navigation }: FilterScreenProps)
       </ScrollView>
 
       {/* Bottom Buttons */}
-      <View className="absolute bottom-24 left-0 right-0 px-6">
+      <View className="absolute bottom-32 left-0 right-0 px-6 bg-transparent">
         <View className="mb-4">
           <CarouselButton
             title="Apply"

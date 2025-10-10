@@ -7,24 +7,15 @@ import {
   ScrollView,
   TextInput,
   Alert,
+  ImageBackground,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import BackSvg from '../../assets/icons/Back';
 
 interface HelpSupportScreenProps {
   navigation?: any;
 }
 
-const BackIcon = () => (
-  <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-    <Path
-      d="M19 12H5M12 19L5 12L12 5"
-      stroke="#374151"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </Svg>
-);
 
 export function HelpSupportScreen({ navigation }: HelpSupportScreenProps) {
   const [fullName, setFullName] = useState('Kathryn');
@@ -74,19 +65,23 @@ export function HelpSupportScreen({ navigation }: HelpSupportScreenProps) {
   };
 
   return (
-    <View className="flex-1 bg-green-50">
+    <ImageBackground
+      source={require('../../assets/images/Wallpaper.png')}
+      className="flex-1"
+      resizeMode="cover"
+    >
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       
       {/* Header */}
-      <View className="pt-16 pb-6 px-6 bg-green-200">
+      <View className="pt-16 pb-6 px-6">
         <View className="flex-row items-center">
           <TouchableOpacity 
-            className="mr-4 p-2"
+            className="mr-4"
             onPress={() => navigation?.goBack()}
           >
-            <BackIcon />
+            <BackSvg />
           </TouchableOpacity>
-          <Text className="text-2xl font-bold text-gray-800">Help and Support</Text>
+          <Text className="text-2xl font-bold text-black">Help and Support</Text>
         </View>
       </View>
 
@@ -98,59 +93,93 @@ export function HelpSupportScreen({ navigation }: HelpSupportScreenProps) {
         <View className="px-6 pt-6">
           
           {/* Full Name */}
-          <View className="mb-4">
-            <Text className="text-sm font-medium text-gray-700 mb-2">Full Name</Text>
+          <View className="mb-6 relative">
             <TextInput
-              className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-800"
-              placeholder="Enter your full name"
+              className="px-4 py-3 rounded-xl border border-gray-200 text-base bg-transparent"
+              style={{ 
+                backgroundColor: 'transparent',
+                fontSize: 16,
+                lineHeight: 22,
+                height: 56
+              }}
+              placeholder="Kathryn"
+              placeholderTextColor="#9CA3AF"
               value={fullName}
               onChangeText={setFullName}
               autoCapitalize="words"
             />
+            <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700 ">
+              Full Name
+            </Text>
           </View>
 
           {/* Email */}
-          <View className="mb-4">
-            <Text className="text-sm font-medium text-gray-700 mb-2">Email</Text>
+          <View className="mb-6 relative">
             <TextInput
-              className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-800"
-              placeholder="Enter your email address"
+              className="px-4 py-3 rounded-xl border border-gray-200 text-base bg-transparent"
+              style={{ 
+                backgroundColor: 'transparent',
+                fontSize: 16,
+                lineHeight: 22,
+                height: 56
+              }}
+              placeholder="Kathryn@gmail.com"
+              placeholderTextColor="#9CA3AF"
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
             />
+            <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700">
+              Email
+            </Text>
           </View>
 
           {/* Subject */}
-          <View className="mb-4">
-            <Text className="text-sm font-medium text-gray-700 mb-2">Subject</Text>
+          <View className="mb-6 relative">
             <TextInput
-              className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-800"
-              placeholder="Enter subject"
+              className="px-4 py-3 rounded-xl border border-gray-200 text-base bg-transparent"
+              style={{ 
+                backgroundColor: 'transparent',
+                fontSize: 16,
+                lineHeight: 22,
+                height: 56
+              }}
+              placeholder="Help"
+              placeholderTextColor="#9CA3AF"
               value={subject}
               onChangeText={setSubject}
             />
+            <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700 ">
+              Subject
+            </Text>
           </View>
 
           {/* Description */}
-          <View className="mb-6">
-            <Text className="text-sm font-medium text-gray-700 mb-2">Description</Text>
+          <View className="mb-8 relative">
             <TextInput
-              className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-800"
-              placeholder="Describe your issue or question in detail"
+              className="px-4 py-3 rounded-xl border border-gray-200 text-base bg-transparent"
+              style={{ 
+                backgroundColor: 'transparent',
+                fontSize: 16,
+                lineHeight: 22,
+                minHeight: 120
+              }}
+              placeholder="Lacus pharetra aenean pellentesque massa. Est posuere tortor porttitor libero sed sem consequat sollicitudin pellentesque. Sed nisl et placerat ipsum sit quam. Libero sollicitudin consequat sit imperdiet consectetur integer etiam. Nec phasellus."
+              placeholderTextColor="#9CA3AF"
               value={description}
               onChangeText={setDescription}
               multiline
-              numberOfLines={8}
               textAlignVertical="top"
-              style={{ minHeight: 120 }}
             />
+            <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700 ">
+              Description
+            </Text>
           </View>
 
           {/* Submit Button */}
           <TouchableOpacity 
-            className={`rounded-2xl py-4 ${
+            className={`rounded-full py-4 ${
               isLoading 
                 ? 'bg-gray-400' 
                 : 'bg-green-500'
@@ -162,28 +191,8 @@ export function HelpSupportScreen({ navigation }: HelpSupportScreenProps) {
               {isLoading ? 'Submitting...' : 'Submit'}
             </Text>
           </TouchableOpacity>
-
-          {/* Contact Information */}
-          <View className="mt-8 bg-white rounded-2xl p-6">
-            <Text className="text-lg font-bold text-gray-800 mb-4">Other Ways to Reach Us</Text>
-            
-            <View className="mb-3">
-              <Text className="text-sm font-medium text-gray-700">Email</Text>
-              <Text className="text-base text-gray-600">support@favorapp.com</Text>
-            </View>
-            
-            <View className="mb-3">
-              <Text className="text-sm font-medium text-gray-700">Phone</Text>
-              <Text className="text-base text-gray-600">+1 (555) 123-4567</Text>
-            </View>
-            
-            <View>
-              <Text className="text-sm font-medium text-gray-700">Business Hours</Text>
-              <Text className="text-base text-gray-600">Monday - Friday: 9:00 AM - 6:00 PM EST</Text>
-            </View>
-          </View>
         </View>
       </ScrollView>
-    </View>
+    </ImageBackground>
   );
 }

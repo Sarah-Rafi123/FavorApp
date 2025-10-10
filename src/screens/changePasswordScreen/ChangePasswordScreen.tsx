@@ -7,24 +7,15 @@ import {
   ScrollView,
   TextInput,
   Alert,
+  ImageBackground,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import BackSvg from '../../assets/icons/Back';
 
 interface ChangePasswordScreenProps {
   navigation?: any;
 }
 
-const BackIcon = () => (
-  <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-    <Path
-      d="M19 12H5M12 19L5 12L12 5"
-      stroke="#374151"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </Svg>
-);
 
 const EyeIcon = () => (
   <Svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -57,24 +48,6 @@ const EyeOffIcon = () => (
   </Svg>
 );
 
-const LockIcon = () => (
-  <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-    <Path
-      d="M19 11H5C3.89543 11 3 11.8954 3 13V20C3 21.1046 3.89543 22 5 22H19C20.1046 22 21 21.1046 21 20V13C21 11.8954 20.1046 11 19 11Z"
-      stroke="#44A27B"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <Path
-      d="M7 11V7C7 5.67392 7.52678 4.40215 8.46447 3.46447C9.40215 2.52678 10.6739 2 12 2C13.3261 2 14.5979 2.52678 15.5355 3.46447C16.4732 4.40215 17 5.67392 17 7V11"
-      stroke="#44A27B"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </Svg>
-);
 
 export function ChangePasswordScreen({ navigation }: ChangePasswordScreenProps) {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -162,20 +135,47 @@ export function ChangePasswordScreen({ navigation }: ChangePasswordScreenProps) 
     onToggleShow: () => void;
     placeholder: string;
   }) => (
-    <View className="mb-4">
-      <Text className="text-sm font-medium text-gray-700 mb-2">{label}</Text>
-      <View className="relative">
+    <View style={{ marginBottom: 24 }}>
+      <Text style={{ fontSize: 16, fontWeight: '500', color: 'black', marginBottom: 8 }}>
+        {label}
+      </Text>
+      <View style={{ position: 'relative' }}>
         <TextInput
-          className="border border-gray-300 rounded-xl px-4 py-3 pr-12 text-base text-gray-800"
+          style={{ 
+            backgroundColor: '#FBFFF0',
+            borderWidth: 1,
+            borderColor: '#D0D5DD',
+            borderRadius: 12,
+            paddingHorizontal: 16,
+            paddingRight: 48,
+            paddingVertical: 16,
+            fontSize: 16,
+            color: 'black'
+          }}
           placeholder={placeholder}
+          placeholderTextColor="#9CA3AF"
           value={value}
           onChangeText={onChangeText}
           secureTextEntry={!show}
           autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType="default"
+          textContentType="password"
         />
         <TouchableOpacity
-          className="absolute right-4 top-3"
+          style={{ 
+            position: 'absolute', 
+            right: 16, 
+            top: 0, 
+            bottom: 0, 
+            justifyContent: 'center',
+            alignItems: 'center',
+            width: 24,
+            height: 24,
+            marginTop: 16
+          }}
           onPress={onToggleShow}
+          activeOpacity={0.7}
         >
           {show ? <EyeOffIcon /> : <EyeIcon />}
         </TouchableOpacity>
@@ -183,27 +183,25 @@ export function ChangePasswordScreen({ navigation }: ChangePasswordScreenProps) 
     </View>
   );
 
-  const PasswordRequirement = ({ met, text }: { met: boolean; text: string }) => (
-    <View className="flex-row items-center mb-1">
-      <View className={`w-2 h-2 rounded-full mr-3 ${met ? 'bg-green-500' : 'bg-gray-300'}`} />
-      <Text className={`text-sm ${met ? 'text-green-600' : 'text-gray-500'}`}>{text}</Text>
-    </View>
-  );
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <ImageBackground
+      source={require('../../assets/images/Wallpaper.png')}
+      className="flex-1"
+      resizeMode="cover"
+    >
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       
       {/* Header */}
-      <View className="pt-16 pb-6 px-6 bg-white">
+      <View className="pt-16 pb-6 px-6">
         <View className="flex-row items-center">
           <TouchableOpacity 
-            className="mr-4 p-2"
+            className="mr-4"
             onPress={() => navigation?.goBack()}
           >
-            <BackIcon />
+            <BackSvg />
           </TouchableOpacity>
-          <Text className="text-2xl font-bold text-gray-800">Change Password</Text>
+          <Text className="text-2xl font-bold text-black">Change Password</Text>
         </View>
       </View>
 
@@ -213,77 +211,38 @@ export function ChangePasswordScreen({ navigation }: ChangePasswordScreenProps) 
         contentContainerStyle={{ paddingBottom: 40 }}
       >
         <View className="px-6 pt-6">
-          
-          {/* Icon */}
-          <View className="items-center mb-8">
-            <View className="w-20 h-20 bg-green-100 rounded-full items-center justify-center">
-              <LockIcon />
-            </View>
-          </View>
 
-          {/* Form */}
-          <View className="bg-white rounded-2xl p-6 shadow-sm">
-            <Text className="text-xl font-bold text-gray-800 mb-6 text-center">
-              Create New Password
-            </Text>
+          <PasswordInput
+            label="Old Password"
+            value={currentPassword}
+            onChangeText={setCurrentPassword}
+            show={showCurrentPassword}
+            onToggleShow={() => setShowCurrentPassword(!showCurrentPassword)}
+            placeholder="••••••••••"
+          />
 
-            <PasswordInput
-              label="Current Password"
-              value={currentPassword}
-              onChangeText={setCurrentPassword}
-              show={showCurrentPassword}
-              onToggleShow={() => setShowCurrentPassword(!showCurrentPassword)}
-              placeholder="Enter current password"
-            />
+          <PasswordInput
+            label="New Password"
+            value={newPassword}
+            onChangeText={setNewPassword}
+            show={showNewPassword}
+            onToggleShow={() => setShowNewPassword(!showNewPassword)}
+            placeholder="••••••••••"
+          />
 
-            <PasswordInput
-              label="New Password"
-              value={newPassword}
-              onChangeText={setNewPassword}
-              show={showNewPassword}
-              onToggleShow={() => setShowNewPassword(!showNewPassword)}
-              placeholder="Enter new password"
-            />
+          <PasswordInput
+            label="Confirm Password"
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            show={showConfirmPassword}
+            onToggleShow={() => setShowConfirmPassword(!showConfirmPassword)}
+            placeholder="••••••••••"
+          />
 
-            <PasswordInput
-              label="Confirm New Password"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              show={showConfirmPassword}
-              onToggleShow={() => setShowConfirmPassword(!showConfirmPassword)}
-              placeholder="Confirm new password"
-            />
-
-            {/* Password Requirements */}
-            {newPassword.length > 0 && (
-              <View className="mt-4 mb-6">
-                <Text className="text-sm font-medium text-gray-700 mb-3">Password Requirements:</Text>
-                <PasswordRequirement 
-                  met={passwordValidation.hasMinLength} 
-                  text="At least 8 characters" 
-                />
-                <PasswordRequirement 
-                  met={passwordValidation.hasUpperCase} 
-                  text="One uppercase letter" 
-                />
-                <PasswordRequirement 
-                  met={passwordValidation.hasLowerCase} 
-                  text="One lowercase letter" 
-                />
-                <PasswordRequirement 
-                  met={passwordValidation.hasNumbers} 
-                  text="One number" 
-                />
-                <PasswordRequirement 
-                  met={passwordValidation.hasSpecialChar} 
-                  text="One special character" 
-                />
-              </View>
-            )}
-
-            {/* Change Password Button */}
+          {/* Change Password Button */}
+          <View className="mt-12">
             <TouchableOpacity 
-              className={`rounded-xl py-4 ${
+              className={`rounded-full py-4 ${
                 isLoading 
                   ? 'bg-gray-400' 
                   : 'bg-green-500'
@@ -292,20 +251,12 @@ export function ChangePasswordScreen({ navigation }: ChangePasswordScreenProps) 
               disabled={isLoading}
             >
               <Text className="text-white text-center text-lg font-semibold">
-                {isLoading ? 'Changing Password...' : 'Change Password'}
+                {isLoading ? 'Updating...' : 'Update Password'}
               </Text>
             </TouchableOpacity>
           </View>
-
-          {/* Security Tips */}
-          <View className="bg-blue-50 rounded-2xl p-6 mt-6">
-            <Text className="text-lg font-semibold text-blue-800 mb-3">Security Tips</Text>
-            <Text className="text-sm text-blue-700 mb-2">• Use a unique password you don't use elsewhere</Text>
-            <Text className="text-sm text-blue-700 mb-2">• Avoid using personal information in your password</Text>
-            <Text className="text-sm text-blue-700">• Consider using a password manager</Text>
-          </View>
         </View>
       </ScrollView>
-    </View>
+    </ImageBackground>
   );
 }

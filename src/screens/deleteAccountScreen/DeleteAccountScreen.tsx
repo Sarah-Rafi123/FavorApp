@@ -7,24 +7,15 @@ import {
   ScrollView,
   TextInput,
   Alert,
+  ImageBackground,
 } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
+import BackSvg from '../../assets/icons/Back';
 
 interface DeleteAccountScreenProps {
   navigation?: any;
 }
 
-const BackIcon = () => (
-  <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-    <Path
-      d="M19 12H5M12 19L5 12L12 5"
-      stroke="#374151"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </Svg>
-);
 
 const RadioButton = ({ selected }: { selected: boolean }) => (
   <Svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -113,19 +104,23 @@ export function DeleteAccountScreen({ navigation }: DeleteAccountScreenProps) {
   };
 
   return (
-    <View className="flex-1 bg-green-50">
+    <ImageBackground
+      source={require('../../assets/images/Wallpaper.png')}
+      className="flex-1"
+      resizeMode="cover"
+    >
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       
       {/* Header */}
-      <View className="pt-16 pb-6 px-6 bg-green-200">
+      <View className="pt-16 pb-6 px-6">
         <View className="flex-row items-center">
           <TouchableOpacity 
-            className="mr-4 p-2"
+            className="mr-4"
             onPress={() => navigation?.goBack()}
           >
-            <BackIcon />
+            <BackSvg />
           </TouchableOpacity>
-          <Text className="text-2xl font-bold text-gray-800">Delete Account</Text>
+          <Text className="text-2xl font-bold text-black">Delete Account</Text>
         </View>
       </View>
 
@@ -161,37 +156,43 @@ export function DeleteAccountScreen({ navigation }: DeleteAccountScreenProps) {
 
           {/* Custom Reason Input */}
           {selectedReason === "Other(Please Specify)" && (
-            <View className="mb-6">
-              <Text className="text-sm font-medium text-gray-700 mb-2">Reason</Text>
+            <View className="mb-6 relative">
               <TextInput
-                className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-800"
+                className="bg-transparent border border-[#D0D5DD] rounded-xl px-4 py-4 text-base text-black"
                 placeholder="Please specify your reason"
+                placeholderTextColor="#9CA3AF"
                 value={customReason}
                 onChangeText={setCustomReason}
                 multiline
                 numberOfLines={4}
                 textAlignVertical="top"
-                style={{ minHeight: 100 }}
+                style={{ 
+                  minHeight: 120,
+                  lineHeight: 20
+                }}
               />
+              <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700 bg-[#FBFFF0]">
+                Reason
+              </Text>
             </View>
           )}
 
           {/* Action Buttons */}
-          <View className="flex-row space-x-4 mt-6">
+          <View className="flex-row gap-x-4 mt-6">
             <TouchableOpacity
-              className="flex-1 bg-transparent border-2 border-green-500 rounded-2xl py-3"
+              className="flex-1 bg-transparent border-2 border-[#44A27B] rounded-full py-4"
               onPress={handleCancel}
             >
-              <Text className="text-green-500 text-center text-lg font-semibold">
+              <Text className="text-[#44A27B] text-center text-lg font-semibold">
                 Cancel
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              className={`flex-1 rounded-2xl py-3 ${
+              className={`flex-1 rounded-full py-4 ${
                 isLoading 
                   ? 'bg-gray-400' 
-                  : 'bg-green-500'
+                  : 'bg-[#44A27B]'
               }`}
               onPress={handleDeleteAccount}
               disabled={isLoading}
@@ -201,15 +202,8 @@ export function DeleteAccountScreen({ navigation }: DeleteAccountScreenProps) {
               </Text>
             </TouchableOpacity>
           </View>
-
-          {/* Warning Notice */}
-          <View className="bg-red-50 border border-red-200 rounded-2xl p-4 mt-6">
-            <Text className="text-sm text-red-700 text-center">
-              ⚠️ Warning: This action is irreversible. All your data, including your profile, favor history, and connections will be permanently deleted.
-            </Text>
-          </View>
         </View>
       </ScrollView>
-    </View>
+    </ImageBackground>
   );
 }

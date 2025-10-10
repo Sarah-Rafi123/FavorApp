@@ -11,6 +11,7 @@ import {
 import { ProfileModal } from '../../components/overlays';
 import FilterSvg from '../../assets/icons/Filter';
 import BellSvg from '../../assets/icons/Bell';
+import DollarSvg from '../../assets/icons/Dollar';
 
 interface HomeListScreenProps {
   onMapView: () => void;
@@ -38,6 +39,7 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications }: HomeLis
         id: '1',
         name: 'Janet Brooks',
         email: 'janet.brooks@email.com',
+        
         age: 74,
         phone: '(629) 555-0129',
         textNumber: '(406) 555-0120',
@@ -78,7 +80,7 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications }: HomeLis
   };
 
   const FavorCard = ({ favor }: { favor: any }) => (
-    <View className="bg-white rounded-2xl p-4 mb-4 mx-4 shadow-sm border-2 border-green-500">
+    <View className="bg-[#F7FBF5] rounded-2xl p-4 mb-4 mx-4 shadow-sm border-2 border-b-4 border-b-[#44A27B] border-[#44A27B66]">
       <TouchableOpacity 
         onPress={() => handleProfileClick(favor)}
         activeOpacity={0.7}
@@ -91,10 +93,12 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications }: HomeLis
           />
           <View className="flex-1 justify-start">
             <View className="flex-row items-center mb-1">
-              <View className="w-2 h-2 bg-black rounded-full mr-2"></View>
+              <View className="mr-2">
+                <DollarSvg />
+              </View>
               <Text className="text-lg font-semibold text-gray-800">{favor.name}</Text>
-              <View className="ml-2 px-2 py-1 bg-red-100 rounded">
-                <Text className="text-red-600 text-xs font-medium">{favor.priority}</Text>
+              <View className="ml-2 px-2 py-1 rounded">
+                <Text className="text-[#D12E34] text-sm font-medium">{favor.priority}</Text>
               </View>
             </View>
             <Text className="text-sm text-gray-600 mb-1">
@@ -135,7 +139,7 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications }: HomeLis
       <View className="pt-16 pb-4 px-6">
         <View className="flex-row justify-between items-center mb-4">
           <Text className="text-2xl font-bold text-black">Home</Text>
-          <View className="flex-row gap-x-4">
+          <View className="flex-row gap-x-2">
             <TouchableOpacity
               className="items-center justify-center"
               onPress={onFilter}
@@ -152,7 +156,7 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications }: HomeLis
         </View>
 
         {/* Map View / List View Toggle */}
-        <View className="flex-row bg-white rounded-full shadow-lg">
+        <View className="flex-row p-2 bg-white rounded-full shadow-lg">
           <TouchableOpacity 
             className="flex-1 py-2.5 items-center"
             onPress={onMapView}

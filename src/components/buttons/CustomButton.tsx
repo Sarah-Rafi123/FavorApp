@@ -44,7 +44,7 @@ export function CustomButton(props: CustomButtonProps) {
     <TouchableOpacity 
       onPress={onPress} 
       disabled={disabled}
-      className={`bg-green-500 rounded-full border overflow-hidden ${disabled ? 'opacity-50' : ''} ${className}`}
+      className={`bg-green-500 rounded-full overflow-hidden ${disabled ? 'opacity-50' : ''} ${className}`}
     >
       <View className="items-center px-6 py-4">
         {
