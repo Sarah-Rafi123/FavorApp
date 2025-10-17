@@ -104,4 +104,8 @@ axiosInstance.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+export { PaymentApis } from './PaymentApis';
+export { SetupIntentApis } from './SetupIntentApis';
+export { PaymentMethodApis } from './PaymentMethodApis';
 export default axiosInstance;

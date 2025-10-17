@@ -1,14 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StatusBar,
-  ScrollView,
   Image,
   ImageBackground,
+  FlatList,
+  RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
-import { ProfileModal } from '../../components/overlays';
+import { FavorDetailsModal } from '../../components/overlays';
+import { useFavors } from '../../services/queries/FavorQueries';
+import { Favor } from '../../services/apis/FavorApis';
 import FilterSvg from '../../assets/icons/Filter';
 import BellSvg from '../../assets/icons/Bell';
 import DollarSvg from '../../assets/icons/Dollar';
@@ -21,107 +25,98 @@ interface HomeListScreenProps {
 
 
 export function HomeListScreen({ onMapView, onFilter, onNotifications }: HomeListScreenProps) {
-  const [selectedProfile, setSelectedProfile] = useState<any>(null);
-  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [selectedFavorId, setSelectedFavorId] = useState<number | null>(null);
+  const [showFavorDetailsModal, setShowFavorDetailsModal] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [allFavors, setAllFavors] = useState<Favor[]>([]);
+  const [hasMorePages, setHasMorePages] = useState(true);
 
-  const mockFavors = [
-    {
-      id: '1',
-      name: 'Janet',
-      priority: 'Immediate',
-      category: 'Maintenance',
-      duration: '1 Hour',
-      location: 'Casper | Wyoming',
-      description: 'Clean Dog Poop And Take Out Trash.',
-      price: '$20',
-      image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop&crop=face',
-      profile: {
-        id: '1',
-        name: 'Janet Brooks',
-        email: 'janet.brooks@email.com',
-        
-        age: 74,
-        phone: '(629) 555-0129',
-        textNumber: '(406) 555-0120',
-        since: 'March 2023',
-        image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop&crop=face',
-        askedHours: '0/0:0 Hours',
-        providedHours: '0/0:0 Hours',
+  // Fetch favors using the new API
+  const { data: favorsData, isLoading, error, refetch } = useFavors(currentPage, 12);
+
+  // Update allFavors when new data arrives
+  React.useEffect(() => {
+    if (favorsData?.data.favors) {
+      if (currentPage === 1) {
+        // First page - replace all favors
+        setAllFavors(favorsData.data.favors);
+      } else {
+        // Additional pages - append to existing favors
+        setAllFavors(prev => [...prev, ...favorsData.data.favors]);
       }
-    },
-    {
-      id: '2',
-      name: 'Steven',
-      priority: 'Immediate',
-      category: 'Gardening',
-      duration: '30 Min',
-      location: 'Mills | Wyoming',
-      description: "I'm Blind And Need Assistance Cutting My Lawn. Lot Number A3",
-      price: '$0',
-      image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face',
-      profile: {
-        id: '2',
-        name: 'Steven Miller',
-        email: 'steven.miller@email.com',
-        age: 68,
-        phone: '(307) 555-0156',
-        textNumber: '(307) 555-0157',
-        since: 'January 2024',
-        image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=face',
-        askedHours: '2/1:5 Hours',
-        providedHours: '0/0:0 Hours',
-      }
+      
+      // Check if there are more pages
+      setHasMorePages(currentPage < favorsData.data.meta.total_pages);
     }
-  ];
+  }, [favorsData, currentPage]);
 
-  const handleProfileClick = (favor: any) => {
-    setSelectedProfile(favor.profile);
-    setShowProfileModal(true);
+  const loadMoreFavors = useCallback(() => {
+    if (!isLoading && hasMorePages) {
+      setCurrentPage(prev => prev + 1);
+    }
+  }, [isLoading, hasMorePages]);
+
+  const handleRefresh = useCallback(() => {
+    setCurrentPage(1);
+    setAllFavors([]);
+    setHasMorePages(true);
+    refetch();
+  }, [refetch]);
+
+  const handleFavorClick = (favor: Favor) => {
+    setSelectedFavorId(favor.id);
+    setShowFavorDetailsModal(true);
   };
 
-  const FavorCard = ({ favor }: { favor: any }) => (
+  const FavorCard = ({ favor }: { favor: Favor }) => (
     <View className="bg-[#F7FBF5] rounded-2xl p-4 mb-4 mx-4 shadow-sm border-2 border-b-4 border-b-[#44A27B] border-[#44A27B66]">
       <TouchableOpacity 
-        onPress={() => handleProfileClick(favor)}
+        onPress={() => handleFavorClick(favor)}
         activeOpacity={0.7}
       >
         <View className="flex-row mb-3">
           <Image
-            source={{ uri: favor.image }}
+            source={{ uri: favor.image_url || 'https://via.placeholder.com/112x112' }}
             className="w-28 h-28 rounded-2xl mr-4"
             style={{ backgroundColor: '#f3f4f6' }}
           />
           <View className="flex-1 justify-start">
             <View className="flex-row items-center mb-1">
-              <View className="mr-2">
-                <DollarSvg />
-              </View>
-              <Text className="text-lg font-semibold text-gray-800">{favor.name}</Text>
+              {!favor.favor_pay && (
+                <View className="mr-2">
+                  <DollarSvg />
+                </View>
+              )}
+              <Text className="text-lg font-semibold text-gray-800">
+                {favor.user.full_name.length > 15 
+                  ? `${favor.user.full_name.substring(0, 15)}...` 
+                  : favor.user.full_name}
+              </Text>
               <View className="ml-2 px-2 py-1 rounded">
-                <Text className="text-[#D12E34] text-sm font-medium">{favor.priority}</Text>
+                <Text className="text-[#D12E34] text-sm font-medium capitalize">{favor.priority}</Text>
               </View>
             </View>
             <Text className="text-sm text-gray-600 mb-1">
-              {favor.category} | {favor.duration}
+              {favor.title || favor.favor_subject.name} | {favor.time_to_complete || 'Time not specified'}
             </Text>
-            <Text className="text-sm text-gray-600">{favor.location}</Text>
-             <Text className="text-gray-700 text-sm mb-4 leading-5">
-          {favor.description}
-        </Text>
+            <Text className="text-sm text-gray-600">
+              {favor.city && favor.city !== 'undefined' ? favor.city : ''}{favor.city && favor.city !== 'undefined' && favor.state && favor.state !== 'undefined' ? ', ' : ''}{favor.state && favor.state !== 'undefined' ? favor.state : favor.address}
+            </Text>
+            <Text className="text-gray-700 text-sm mb-4 leading-5">
+              {favor.description}
+            </Text>
           </View>
         </View>
-        
-       
       </TouchableOpacity>
       
       <TouchableOpacity 
         className="bg-green-500 rounded-full py-3"
         onPress={() => {
-          console.log('Provide favor for:', favor.name);
+          console.log('Provide favor for:', favor.user.full_name);
         }}
       >
         <Text className="text-white text-center font-semibold text-base">
-          {favor.price} | Provide a Favor
+          {favor.favor_pay ? 'Volunteer' : `$${parseFloat((favor.tip || 0).toString()).toFixed(2)}`} | Provide a Favor
         </Text>
       </TouchableOpacity>
     </View>
@@ -170,27 +165,71 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications }: HomeLis
       </View>
 
       {/* Favor List */}
-      <ScrollView 
-        className="flex-1"
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingTop: 16, paddingBottom: 120 }}
-      >
-        {mockFavors.map((favor) => (
-          <FavorCard key={favor.id} favor={favor} />
-        ))}
-      </ScrollView>
-
-      {/* Profile Modal */}
-      {selectedProfile && (
-        <ProfileModal
-          visible={showProfileModal}
-          onClose={() => {
-            setShowProfileModal(false);
-            setSelectedProfile(null);
-          }}
-          user={selectedProfile}
+      {isLoading ? (
+        <View className="flex-1 justify-center items-center">
+          <ActivityIndicator size="large" color="#44A27B" />
+          <Text className="text-gray-600 mt-2">Loading favors...</Text>
+        </View>
+      ) : error ? (
+        <View className="flex-1 justify-center items-center px-4">
+          <Text className="text-red-600 text-center mb-4">Failed to load favors</Text>
+          <TouchableOpacity 
+            className="bg-[#44A27B] px-6 py-3 rounded-lg"
+            onPress={() => refetch()}
+          >
+            <Text className="text-white font-medium">Try Again</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <FlatList
+          data={allFavors}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={({ item }) => <FavorCard favor={item} />}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingTop: 16, paddingBottom: 120 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={isLoading && currentPage === 1}
+              onRefresh={handleRefresh}
+              colors={['#44A27B']}
+            />
+          }
+          onEndReached={loadMoreFavors}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={
+            isLoading && currentPage > 1 ? (
+              <View className="py-4 items-center">
+                <ActivityIndicator size="small" color="#44A27B" />
+                <Text className="text-gray-500 mt-2">Loading more...</Text>
+              </View>
+            ) : !hasMorePages && allFavors.length > 0 ? (
+              <View className="py-4 items-center">
+                <Text className="text-gray-500">No more favors to load</Text>
+              </View>
+            ) : null
+          }
+          ListEmptyComponent={
+            !isLoading ? (
+              <View className="flex-1 justify-center items-center py-20">
+                <Text className="text-gray-500 text-lg mb-2">No favors available</Text>
+                <Text className="text-gray-400 text-center px-4">
+                  Check back later or adjust your filters
+                </Text>
+              </View>
+            ) : null
+          }
         />
       )}
+
+      {/* Favor Details Modal */}
+      <FavorDetailsModal
+        visible={showFavorDetailsModal}
+        onClose={() => {
+          setShowFavorDetailsModal(false);
+          setSelectedFavorId(null);
+        }}
+        favorId={selectedFavorId}
+      />
     </ImageBackground>
   );
 }

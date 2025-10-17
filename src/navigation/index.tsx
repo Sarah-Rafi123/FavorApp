@@ -29,7 +29,8 @@ import { MainTabs } from './tabs/MainTabs';
 export default function Navigator() {
   const theme = useThemeStore((state) => state.theme);
   const user = useAuthStore((state) => state.user);
-  const setUser = useAuthStore((state) => state.setUser);
+  const accessToken = useAuthStore((state) => state.accessToken);
+  const initializeAuth = useAuthStore((state) => state.initializeAuth);
 
   const [appIsReady, setAppIsReady] = useState(false);
   const [showCustomSplash, setShowCustomSplash] = useState(false);
@@ -38,25 +39,17 @@ export default function Navigator() {
   useEffect(() => {
     const prepare = async () => {
       try {
-        // const token = await retrieveTokenSecurely();
-        // if (token) {
-        //   setTimeout(() => {
-        //     setUser({
-        //       id: '1',
-        //       firstName: 'John', 
-        //       email: 'john@example.com'
-        //     });
-        //   }, 3000);
-        // }
+        // Initialize auth tokens from storage
+        await initializeAuth();
       } catch (e) {
-        // await removeTokenSecurely();
+        console.error('Failed to initialize auth:', e);
       } finally {
         setAppIsReady(true);
       }
     };
 
     prepare();
-  }, []);
+  }, [initializeAuth]);
 
   // Show custom splash after app is ready
   useEffect(() => {
@@ -69,6 +62,15 @@ export default function Navigator() {
       }, 2000);
     }
   }, [appIsReady]);
+
+  // Debug auth state
+  useEffect(() => {
+    console.log('🔍 Navigation Auth State:');
+    console.log('User:', !!user, user?.firstName);
+    console.log('Access Token:', !!accessToken);
+    console.log('App Ready:', appIsReady);
+    console.log('Carousel Completed:', carouselCompleted);
+  }, [user, accessToken, appIsReady, carouselCompleted]);
 
   // Cleanup when component unmounts
   useEffect(()=>{
@@ -95,7 +97,7 @@ export default function Navigator() {
   return (
     <NavigationContainer>
       {
-        user ? (
+        user && accessToken ? (
           <>
             <StatusBar barStyle={'dark-content'} backgroundColor="transparent" translucent />
             <View className="flex-1">

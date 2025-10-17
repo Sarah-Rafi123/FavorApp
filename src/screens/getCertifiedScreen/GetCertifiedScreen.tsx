@@ -9,8 +9,9 @@ import {
 } from 'react-native';
 import { CarouselButton } from '../../components/buttons';
 import Svg, { Path, Circle } from 'react-native-svg';
-import FIcon from '../../assets/icons/FIcon';
+// Using main app logo for consistency
 import BackSvg from '../../assets/icons/Back';
+import FIcon from '../../assets/icons/FIcon';
 
 interface GetCertifiedScreenProps {
   navigation?: any;

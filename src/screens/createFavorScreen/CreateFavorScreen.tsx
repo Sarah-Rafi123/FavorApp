@@ -7,7 +7,8 @@ import {
   ImageBackground,
   ScrollView,
   Image,
-  FlatList,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { CarouselButton } from '../../components/buttons';
 import CreateFavorSvg from '../../assets/icons/ProvideFavor';
@@ -15,6 +16,9 @@ import PersonwithHeartSvg from '../../assets/icons/PersonwithHeart';
 import { TimerSvg } from '../../assets/icons/Timer';
 import FilterSvg from '../../assets/icons/Filter';
 import BellSvg from '../../assets/icons/Bell';
+import { useMyFavors } from '../../services/queries/FavorQueries';
+import { Favor } from '../../services/apis/FavorApis';
+import useAuthStore from '../../store/useAuthStore';
 
 interface CreateFavorScreenProps {
   navigation?: any;
@@ -22,232 +26,274 @@ interface CreateFavorScreenProps {
 
 export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
   const [activeTab, setActiveTab] = useState<'All' | 'Active' | 'History'>('All');
+  const [refreshing, setRefreshing] = useState(false);
+  const [page, setPage] = useState(1);
+  const per_page = 10;
 
-  // Mock data for different states
-  const mockFavors = {
-    All: [
-      {
-        id: '1',
-        priority: 'Immediate',
-        category: 'Maintenance',
-        duration: '1 Hour',
-        date: 'May 19,2025',
-        location: 'Casper | Wyoming',
-        description: 'Need Help With Small Household Maintenance Tasks',
-        status: 'request',
-        requestCount: 5,
-        image: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400&h=400&fit=crop',
-        requests: [
-          {
-            id: '1',
-            name: 'Janet',
-            reviews: '0 | 0 Reviews',
-            image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop&crop=face'
-          },
-          {
-            id: '2',
-            name: 'Michael',
-            reviews: '5 | 12 Reviews',
-            image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face'
-          },
-          {
-            id: '3',
-            name: 'Sarah',
-            reviews: '8 | 25 Reviews',
-            image: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=400&fit=crop&crop=face'
-          },
-          {
-            id: '4',
-            name: 'David',
-            reviews: '3 | 7 Reviews',
-            image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face'
-          },
-          {
-            id: '5',
-            name: 'Emma',
-            reviews: '12 | 45 Reviews',
-            image: 'https://images.unsplash.com/photo-1489424731084-a5d8b219a5bb?w=400&h=400&fit=crop&crop=face'
-          }
-        ]
-      }
-    ],
-    Active: [
-      {
-        id: '1',
-        priority: 'Immediate',
-        category: 'Maintenance',
-        duration: '1 Hour',
-        date: 'May 19,2025',
-        location: 'Casper | Wyoming',
-        description: 'Need Help With Small Household Maintenance Tasks',
-        status: 'active',
-        image: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400&h=400&fit=crop',
-      }
-    ],
-    History: [
-      {
-        id: '1',
-        priority: 'Immediate',
-        category: 'Maintenance',
-        duration: '1 Hour',
-        date: 'May 19,2025',
-        location: 'Casper | Wyoming',
-        description: 'Need Help With Small Household Maintenance Tasks',
-        status: 'completed',
-        image: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400&h=400&fit=crop',
-      }
-    ]
+  // Get auth store state
+  const { user, accessToken } = useAuthStore();
+
+  // API calls for different tabs
+  // All tab: active favors (shows requests)
+  const {
+    data: allFavorsResponse,
+    isLoading: allFavorsLoading,
+    error: allFavorsError,
+    refetch: refetchAllFavors,
+  } = useMyFavors(
+    { type: 'requested', tab: 'active', page, per_page },
+    { enabled: activeTab === 'All' && !!user && !!accessToken }
+  );
+
+  // Active tab: combination of active and in-progress favors
+  const {
+    data: activeFavorsResponse,
+    isLoading: activeFavorsLoading,
+    error: activeFavorsError,
+    refetch: refetchActiveFavors,
+  } = useMyFavors(
+    { type: 'requested', tab: 'active', page, per_page },
+    { enabled: activeTab === 'Active' && !!user && !!accessToken }
+  );
+
+  const {
+    data: inProgressFavorsResponse,
+    isLoading: inProgressFavorsLoading,
+    error: inProgressFavorsError,
+    refetch: refetchInProgressFavors,
+  } = useMyFavors(
+    { type: 'requested', tab: 'in-progress', page, per_page },
+    { enabled: activeTab === 'Active' && !!user && !!accessToken }
+  );
+
+  // History tab: combination of completed and cancelled favors
+  const {
+    data: completedFavorsResponse,
+    isLoading: completedFavorsLoading,
+    error: completedFavorsError,
+    refetch: refetchCompletedFavors,
+  } = useMyFavors(
+    { type: 'requested', tab: 'completed', page, per_page },
+    { enabled: activeTab === 'History' && !!user && !!accessToken }
+  );
+
+  const {
+    data: cancelledFavorsResponse,
+    isLoading: cancelledFavorsLoading,
+    error: cancelledFavorsError,
+    refetch: refetchCancelledFavors,
+  } = useMyFavors(
+    { type: 'requested', tab: 'cancelled', page, per_page },
+    { enabled: activeTab === 'History' && !!user && !!accessToken }
+  );
+
+  // Get current data based on active tab
+  const getCurrentData = () => {
+    switch (activeTab) {
+      case 'All':
+        return allFavorsResponse?.data.favors || [];
+      case 'Active':
+        // Combine active and in-progress favors
+        const activeFavors = activeFavorsResponse?.data.favors || [];
+        const inProgressFavors = inProgressFavorsResponse?.data.favors || [];
+        return [...activeFavors, ...inProgressFavors];
+      case 'History':
+        // Combine completed and cancelled favors
+        const completedFavors = completedFavorsResponse?.data.favors || [];
+        const cancelledFavors = cancelledFavorsResponse?.data.favors || [];
+        return [...completedFavors, ...cancelledFavors];
+      default:
+        return [];
+    }
   };
 
-  const currentFavors = mockFavors[activeTab];
+  const getCurrentLoading = () => {
+    switch (activeTab) {
+      case 'All':
+        return allFavorsLoading;
+      case 'Active':
+        return activeFavorsLoading || inProgressFavorsLoading;
+      case 'History':
+        return completedFavorsLoading || cancelledFavorsLoading;
+      default:
+        return false;
+    }
+  };
+
+  const getCurrentError = () => {
+    switch (activeTab) {
+      case 'All':
+        return allFavorsError;
+      case 'Active':
+        return activeFavorsError || inProgressFavorsError;
+      case 'History':
+        return completedFavorsError || cancelledFavorsError;
+      default:
+        return null;
+    }
+  };
+
+  const currentFavors = getCurrentData();
+  const isLoading = getCurrentLoading();
+  const error = getCurrentError();
 
   const handleAskFavor = () => {
     navigation?.navigate('AskFavorScreen');
   };
 
-  const handleAcceptRequest = (favor: any) => {
-    console.log('Accept request for:', favor.name);
+  // Debug logging
+  React.useEffect(() => {
+    console.log('🔍 CreateFavorScreen Debug:');
+    console.log('Active Tab:', activeTab);
+    console.log('Current Favors Count:', currentFavors.length);
+    console.log('Is Loading:', isLoading);
+    console.log('Error:', error?.message || 'No error');
+    console.log('User:', !!user, user?.firstName);
+    console.log('Access Token:', !!accessToken);
+  }, [activeTab, currentFavors, isLoading, error, user, accessToken]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      switch (activeTab) {
+        case 'All':
+          await refetchAllFavors();
+          break;
+        case 'Active':
+          await Promise.all([refetchActiveFavors(), refetchInProgressFavors()]);
+          break;
+        case 'History':
+          await Promise.all([refetchCompletedFavors(), refetchCancelledFavors()]);
+          break;
+      }
+    } catch (error) {
+      console.error('Error refreshing:', error);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
 
 
-  const RequestCard = ({ favor }: { favor: any }) => {
-    const [currentIndex, setCurrentIndex] = useState(0);
-
-    const renderRequestItem = ({ item, index }: { item: any; index: number }) => (
-      <View className="bg-gray-50 rounded-xl p-3 flex-row items-center justify-between mx-4" style={{ width: 300 }}>
-        <View className="flex-row items-center flex-1">
-          <View className="bg-green-100 w-2 h-2 rounded-full mr-2" />
-          <Image
-            source={{ uri: item.image }}
-            className="w-12 h-12 rounded-full mr-3"
-            style={{ backgroundColor: '#f3f4f6' }}
-          />
-          <View className="flex-1">
-            <Text className="text-base font-semibold text-black">{item.name}</Text>
-            <View className="flex-row items-center">
-              <Text className="text-xs text-gray-500">⭐</Text>
-              <Text className="text-xs text-gray-600 ml-1">{item.reviews}</Text>
-            </View>
-            <Text className="text-xs text-[#44A27B] underline">View Profile</Text>
-          </View>
-        </View>
-        <TouchableOpacity 
-          className="bg-[#44A27B] rounded-full px-6 py-2"
-          onPress={() => handleAcceptRequest(item)}
-        >
-          <Text className="text-white font-semibold text-sm">Accept</Text>
-        </TouchableOpacity>
-      </View>
-    );
-
-    const onScroll = (event: any) => {
-      const contentOffset = event.nativeEvent.contentOffset;
-      const viewSize = event.nativeEvent.layoutMeasurement;
-      const pageNum = Math.floor(contentOffset.x / viewSize.width);
-      setCurrentIndex(pageNum);
-    };
-
-
+  const RequestCard = ({ favor }: { favor: Favor }) => {
     return (
-      <View className="bg-white rounded-2xl p-4 mb-4 mx-4 border-2 border-[#44A27B]">
-        <View className="flex-row mb-4">
-          <Image
-            source={{ uri: favor.image }}
-            className="w-16 h-16 rounded-xl mr-4"
-            style={{ backgroundColor: '#f3f4f6' }}
-          />
-          <View className="flex-1">
-            <Text className="text-[#D12E34] text-sm font-medium mb-1">{favor.priority}</Text>
-            <Text className="text-sm text-gray-600 mb-1">
-              {favor.category} | {favor.duration} | {favor.date}
-            </Text>
-            <Text className="text-sm text-gray-600">{favor.location}</Text>
-            <Text className="text-gray-700 text-sm mt-2 leading-4">
-              {favor.description}
+      <TouchableOpacity 
+        onPress={() => navigation?.navigate('FavorDetailsScreen', { favorId: favor.id })}
+        activeOpacity={0.7}
+      >
+        <View className="bg-white rounded-2xl p-4 mb-4 mx-4 border-2 border-[#44A27B]">
+          <View className="flex-row mb-4">
+            <Image
+              source={{ 
+                uri: favor.image_url || 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400&h=400&fit=crop'
+              }}
+              className="w-16 h-16 rounded-xl mr-4"
+              style={{ backgroundColor: '#f3f4f6' }}
+            />
+            <View className="flex-1">
+              <Text className="text-[#D12E34] text-sm font-medium mb-1 capitalize">{favor.priority}</Text>
+              <Text className="text-sm text-gray-600 mb-1">
+                {favor.favor_subject.name} | {favor.time_to_complete || '1 Hour'} | {new Date(favor.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </Text>
+              <Text className="text-sm text-gray-600">{favor.city}, {favor.state}</Text>
+              <Text className="text-gray-700 text-sm mt-2 leading-4">
+                {favor.description}
+              </Text>
+            </View>
+          </View>
+          
+          <Text className="text-lg font-bold text-black mb-3">
+            Requests ({favor.responses_count || 0})
+          </Text>
+
+          {/* Show request count and pending status */}
+          <View className="bg-gray-50 rounded-xl p-3">
+            <Text className="text-sm text-gray-600 text-center">
+              {favor.pending_responses_count > 0 
+                ? `${favor.pending_responses_count} pending request${favor.pending_responses_count > 1 ? 's' : ''}`
+                : 'No requests yet'
+              }
             </Text>
           </View>
         </View>
-        
-        <Text className="text-lg font-bold text-black mb-3">
-          Request ({favor.requestCount})
-        </Text>
-
-        {/* Horizontal Carousel of Request Cards */}
-        <FlatList
-          data={favor.requests}
-          renderItem={renderRequestItem}
-          keyExtractor={(item) => item.id}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          pagingEnabled
-          onScroll={onScroll}
-          scrollEventThrottle={16}
-          style={{ marginBottom: 12 }}
-        />
-
-        {/* Dots indicator */}
-        <View className="flex-row justify-center">
-          {favor.requests.map((_: any, index: number) => (
-            <View 
-              key={index}
-              className={`w-2 h-2 rounded-full mx-1 ${
-                index === currentIndex ? 'bg-[#44A27B]' : 'bg-gray-300'
-              }`} 
-            />
-          ))}
-        </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
-  const ActiveCard = ({ favor }: { favor: any }) => (
+  const ActiveCard = ({ favor }: { favor: Favor }) => (
     <TouchableOpacity 
-      onPress={() => navigation?.navigate('FavorDetailsScreen', { favor })}
+      onPress={() => navigation?.navigate('FavorDetailsScreen', { favorId: favor.id })}
       activeOpacity={0.7}
     >
       <View className="bg-white rounded-2xl p-4 mb-4 mx-4 border-2 border-[#44A27B]">
         <View className="flex-row">
           <Image
-            source={{ uri: favor.image }}
+            source={{ 
+              uri: favor.image_url || 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400&h=400&fit=crop'
+            }}
             className="w-16 h-16 rounded-xl mr-4"
             style={{ backgroundColor: '#f3f4f6' }}
           />
           <View className="flex-1">
-            <Text className="text-[#D12E34] text-sm font-medium mb-1">{favor.priority}</Text>
+            <Text className="text-[#D12E34] text-sm font-medium mb-1 capitalize">{favor.priority}</Text>
             <Text className="text-sm text-gray-600 mb-1">
-              {favor.category} | {favor.duration} | {favor.date}
+              {favor.favor_subject.name} | {favor.time_to_complete || '1 Hour'} | {new Date(favor.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
             </Text>
-            <Text className="text-sm text-gray-600 mb-1">{favor.location}</Text>
+            <Text className="text-sm text-gray-600 mb-1">{favor.city}, {favor.state}</Text>
             <Text className="text-gray-700 text-sm leading-4">
               {favor.description}
             </Text>
           </View>
         </View>
+        
+        {/* Status indicator */}
+        <View className="mt-3 px-3 py-2 bg-green-50 rounded-lg">
+          <Text className="text-sm text-green-700 font-medium capitalize">
+            Status: {favor.status.replace('_', ' ')}
+          </Text>
+        </View>
       </View>
     </TouchableOpacity>
   );
 
-  const HistoryCard = ({ favor }: { favor: any }) => (
-    <View className="bg-white rounded-2xl p-4 mb-4 mx-4 border-2 border-[#44A27B]">
-      <View className="flex-row">
-        <Image
-          source={{ uri: favor.image }}
-          className="w-16 h-16 rounded-xl mr-4"
-          style={{ backgroundColor: '#f3f4f6' }}
-        />
-        <View className="flex-1">
-          <Text className="text-[#D12E34] text-sm font-medium mb-1">{favor.priority}</Text>
-          <Text className="text-sm text-gray-600 mb-1">
-            {favor.category} | {favor.duration} | {favor.date}
-          </Text>
-          <Text className="text-sm text-gray-600 mb-1">{favor.location}</Text>
-          <Text className="text-gray-700 text-sm leading-4">
-            {favor.description}
+  const HistoryCard = ({ favor }: { favor: Favor }) => (
+    <TouchableOpacity 
+      onPress={() => navigation?.navigate('FavorDetailsScreen', { favorId: favor.id })}
+      activeOpacity={0.7}
+    >
+      <View className="bg-white rounded-2xl p-4 mb-4 mx-4 border-2 border-gray-200">
+        <View className="flex-row">
+          <Image
+            source={{ 
+              uri: favor.image_url || 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400&h=400&fit=crop'
+            }}
+            className="w-16 h-16 rounded-xl mr-4"
+            style={{ backgroundColor: '#f3f4f6' }}
+          />
+          <View className="flex-1">
+            <Text className="text-[#D12E34] text-sm font-medium mb-1 capitalize">{favor.priority}</Text>
+            <Text className="text-sm text-gray-600 mb-1">
+              {favor.favor_subject.name} | {favor.time_to_complete || '1 Hour'} | {new Date(favor.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            </Text>
+            <Text className="text-sm text-gray-600 mb-1">{favor.city}, {favor.state}</Text>
+            <Text className="text-gray-700 text-sm leading-4">
+              {favor.description}
+            </Text>
+          </View>
+        </View>
+        
+        {/* Status indicator */}
+        <View className={`mt-3 px-3 py-2 rounded-lg ${
+          favor.status === 'completed' ? 'bg-green-50' : 'bg-red-50'
+        }`}>
+          <Text className={`text-sm font-medium capitalize ${
+            favor.status === 'completed' ? 'text-green-700' : 'text-red-700'
+          }`}>
+            Status: {favor.status.replace('_', ' ')}
           </Text>
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   const TabButton = ({ title, isActive, onPress }: { title: string; isActive: boolean; onPress: () => void }) => (
@@ -312,11 +358,39 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
       </View>
 
       {/* Content Area */}
-      {currentFavors.length > 0 ? (
+      {isLoading ? (
+        <View className="flex-1 justify-center items-center">
+          <ActivityIndicator size="large" color="#44A27B" />
+          <Text className="text-gray-600 mt-4">Loading favors...</Text>
+        </View>
+      ) : error ? (
+        <View className="flex-1 justify-center items-center px-6">
+          <Text className="text-xl font-bold text-gray-800 mb-4 text-center">
+            Error Loading Favors
+          </Text>
+          <Text className="text-gray-600 text-center mb-4">
+            {error.message || 'Please check your connection and try again.'}
+          </Text>
+          <TouchableOpacity 
+            className="bg-[#44A27B] rounded-full py-3 px-8"
+            onPress={handleRefresh}
+          >
+            <Text className="text-white font-semibold text-lg">Retry</Text>
+          </TouchableOpacity>
+        </View>
+      ) : currentFavors.length > 0 ? (
         <ScrollView 
           className="flex-1"
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingTop: 16, paddingBottom: 120 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              colors={['#44A27B']}
+              tintColor="#44A27B"
+            />
+          }
         >
           {currentFavors.map((favor) => {
             if (activeTab === 'All') {

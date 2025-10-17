@@ -1,4 +1,4 @@
-import axiosInstance from './index';
+import { axiosInstance } from '../axiosConfig';
 import { RegistrationData, SkillsResponse, OtpVerificationData, OtpVerificationResponse, LoginData, LoginResponse, ResendOtpData, ResendOtpResponse, ForgotPasswordData, ForgotPasswordResponse, VerifyResetOtpData, VerifyResetOtpResponse, ResetPasswordData, ResetPasswordResponse } from '../../types';
 
 export const registerUser = async (data: RegistrationData) => {
@@ -54,5 +54,12 @@ export const resetPassword = async (data: ResetPasswordData): Promise<ResetPassw
   console.log(`[INIT] => /auth/reset_password`);
   const response = await axiosInstance.post('/auth/reset_password', data);
   console.log(`[OK] => /auth/reset_password`);
+  return response.data;
+};
+
+export const getCurrentUser = async () => {
+  console.log(`[INIT] => /auth/me`);
+  const response = await axiosInstance.get('/auth/me');
+  console.log(`[OK] => /auth/me`);
   return response.data;
 };

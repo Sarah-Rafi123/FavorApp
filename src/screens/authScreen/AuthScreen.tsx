@@ -15,7 +15,7 @@ import useAuthStore from '../../store/useAuthStore';
 import EyeSvg from '../../assets/icons/Eye';
 import { useLoginMutation } from '../../services/mutations/AuthMutations';
 import Toast from 'react-native-toast-message';
-import { storeTokenSecurely } from '../../utils';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface AuthScreenProps {
   onLogin: () => void;
@@ -42,6 +42,7 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const setUser = useAuthStore((state) => state.setUser);
+  const setTokens = useAuthStore((state) => state.setTokens);
   const setRegistrationData = useAuthStore((state) => state.setRegistrationData);
   const loginMutation = useLoginMutation();
 
@@ -121,19 +122,29 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
             password: formData.password,
           });
           
-          console.log('Login response:', response);
+          console.log('🔍 Full Login response:', JSON.stringify(response, null, 2));
+          console.log('🔍 Response.data:', JSON.stringify(response.data, null, 2));
+          console.log('🔍 Token from response:', response.data?.token);
+          console.log('🔍 Refresh token from response:', response.data?.refresh_token);
+          console.log('🔍 User from response:', response.data?.user);
           
-          // Store tokens if available
-          if (response.data?.access_token && response.data?.refresh_token) {
-            await storeTokenSecurely({
-              accessToken: response.data.access_token,
-              refreshToken: response.data.refresh_token,
-            });
+          // Store tokens if available (API returns 'token' not 'access_token')
+          if (response.data?.token) {
+            console.log('🔑 Storing tokens...');
+            await setTokens(response.data.token, response.data?.refresh_token);
+            console.log('✅ Tokens stored successfully');
+            
+            // Double check storage worked
+            const verifyToken = await AsyncStorage.getItem('auth_token');
+            console.log('🔍 Verification: Token in AsyncStorage:', !!verifyToken);
+          } else {
+            console.warn('⚠️ No token in login response');
+            console.warn('⚠️ Available response keys:', Object.keys(response.data || {}));
           }
           
           // Set user data
           setUser({
-            id: response.data?.user?.id || '1',
+            id: response.data?.user?.id?.toString() || '1',
             firstName: response.data?.user?.first_name || 'User',
             email: formData.email,
           });

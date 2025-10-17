@@ -7,6 +7,8 @@ import {
   ImageBackground,
   ScrollView,
   Image,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { CarouselButton } from '../../components/buttons';
 import Svg, { Path } from 'react-native-svg';
@@ -16,6 +18,10 @@ import { TimerSvg } from '../../assets/icons/Timer';
 import DollarSvg from '../../assets/icons/Dollar';
 import FilterSvg from '../../assets/icons/Filter';
 import BellSvg from '../../assets/icons/Bell';
+import { useMyFavors } from '../../services/queries/FavorQueries';
+import { Favor } from '../../services/apis/FavorApis';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import useAuthStore from '../../store/useAuthStore';
 
 interface ProvideFavorScreenProps {
   navigation?: any;
@@ -119,146 +125,263 @@ const PersonHeartIcon = () => (
 
 export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
   const [activeTab, setActiveTab] = useState<'All' | 'Active' | 'History'>('All');
+  const [refreshing, setRefreshing] = useState(false);
+  
+  // Get auth store state for debugging
+  const { user, accessToken, setTokens } = useAuthStore();
 
-  // Mock data for different states
-  const mockFavors = {
-    All: [
-      {
-        id: '1',
-        name: 'Janet',
-        priority: 'Immediate',
-        category: 'Maintenance',
-        duration: '1 Hour',
-        location: 'Casper | Wyoming',
-        description: 'Clean Dog Poop And Take Out Trash.',
-        price: '$20',
-        image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop&crop=face',
-        status: 'new'
-      },
-      {
-        id: '2',
-        name: 'Steven',
-        priority: 'Immediate',
-        category: 'Gardening',
-        duration: '30 Min',
-        location: 'Mills | Wyoming',
-        description: "I'm Blind And Need Assistance Cutting My Lawn. Lot Number A3",
-        price: '$0',
-        image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face',
-        status: 'new'
-      },
-      {
-        id: '3',
-        name: 'Steven',
-        priority: 'Immediate',
-        category: 'Gardening',
-        duration: '30 Min',
-        location: 'Mills | Wyoming',
-        description: "I'm Blind And Need Assistance Cutting My Lawn. Lot Number A3",
-        price: '$0',
-        image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face',
-        status: 'new'
-      }
-    ],
-    Active: [
-      {
-        id: '1',
-        name: 'Janet',
-        priority: 'Immediate',
-        category: 'Maintenance',
-        duration: '1 Hour',
-        location: 'Casper | Wyoming',
-        description: 'Clean Dog Poop And Take Out Trash.',
-        price: '$20',
-        image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop&crop=face',
-        status: 'active'
-      }
-    ],
-    History: [
-      {
-        id: '1',
-        name: 'Janet',
-        priority: 'Immediate',
-        category: 'Maintenance',
-        duration: '1 Hour',
-        location: 'Casper | Wyoming',
-        description: 'Clean Dog Poop And Take Out Trash.',
-        price: '$20',
-        image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop&crop=face',
-        status: 'completed'
-      }
-    ]
+  // Fetch data using my_favors API: /api/v1/favors/my_favors?type=providing&tab=active&page=1&per_page=10
+  const {
+    data: allMyFavorsResponse,
+    isLoading: allMyFavorsLoading,
+    error: allMyFavorsError,
+    refetch: refetchAllMyFavors,
+  } = useMyFavors(
+    { type: 'providing', page: 1, per_page: 10 },
+    { enabled: activeTab === 'All' }
+  );
+
+  const {
+    data: activeMyFavorsResponse,
+    isLoading: activeMyFavorsLoading,
+    error: activeMyFavorsError,
+    refetch: refetchActiveMyFavors,
+  } = useMyFavors(
+    { type: 'providing', tab: 'active', page: 1, per_page: 10 },
+    { enabled: activeTab === 'Active' }
+  );
+
+  const {
+    data: inProgressMyFavorsResponse,
+    isLoading: inProgressMyFavorsLoading,
+    error: inProgressMyFavorsError,
+    refetch: refetchInProgressMyFavors,
+  } = useMyFavors(
+    { type: 'providing', tab: 'in-progress', page: 1, per_page: 10 },
+    { enabled: activeTab === 'Active' }
+  );
+
+  const {
+    data: completedMyFavorsResponse,
+    isLoading: completedMyFavorsLoading,
+    error: completedMyFavorsError,
+    refetch: refetchCompletedMyFavors,
+  } = useMyFavors(
+    { type: 'providing', tab: 'completed', page: 1, per_page: 10 },
+    { enabled: activeTab === 'History' }
+  );
+
+  const {
+    data: cancelledMyFavorsResponse,
+    isLoading: cancelledMyFavorsLoading,
+    error: cancelledMyFavorsError,
+    refetch: refetchCancelledMyFavors,
+  } = useMyFavors(
+    { type: 'providing', tab: 'cancelled', page: 1, per_page: 10 },
+    { enabled: activeTab === 'History' }
+  );
+
+  // Get current data based on active tab
+  const getCurrentData = () => {
+    switch (activeTab) {
+      case 'All':
+        // Show all categories (no tab filter)
+        return allMyFavorsResponse?.data.favors || [];
+      case 'Active':
+        // Combine active and in-progress favors
+        const activeFavors = activeMyFavorsResponse?.data.favors || [];
+        const inProgressFavors = inProgressMyFavorsResponse?.data.favors || [];
+        return [...activeFavors, ...inProgressFavors];
+      case 'History':
+        // Combine completed and cancelled favors
+        const completedFavors = completedMyFavorsResponse?.data.favors || [];
+        const cancelledFavors = cancelledMyFavorsResponse?.data.favors || [];
+        return [...completedFavors, ...cancelledFavors];
+      default:
+        return [];
+    }
   };
 
-  const currentFavors = mockFavors[activeTab];
+  const getCurrentLoading = () => {
+    switch (activeTab) {
+      case 'All':
+        return allMyFavorsLoading;
+      case 'Active':
+        return activeMyFavorsLoading || inProgressMyFavorsLoading;
+      case 'History':
+        return completedMyFavorsLoading || cancelledMyFavorsLoading;
+      default:
+        return false;
+    }
+  };
+
+  const getCurrentError = () => {
+    switch (activeTab) {
+      case 'All':
+        return allMyFavorsError;
+      case 'Active':
+        return activeMyFavorsError || inProgressMyFavorsError;
+      case 'History':
+        return completedMyFavorsError || cancelledMyFavorsError;
+      default:
+        return null;
+    }
+  };
+
+  const currentFavors = getCurrentData();
+  const isLoading = getCurrentLoading();
+  const error = getCurrentError();
+
+  // Debug logging
+  React.useEffect(() => {
+    const debugAuth = async () => {
+      const token = await AsyncStorage.getItem('auth_token');
+      console.log('🔍 ProvideFavorScreen Debug:');
+      console.log('Active Tab:', activeTab);
+      console.log('Current Favors Count:', currentFavors.length);
+      console.log('Is Loading:', isLoading);
+      console.log('Error:', error?.message || 'No error');
+      console.log('AsyncStorage Token:', token ? `${token.substring(0, 20)}...` : 'null');
+      console.log('Auth Store User:', !!user, user?.firstName);
+      console.log('Auth Store Token:', !!accessToken, accessToken ? `${accessToken.substring(0, 20)}...` : 'null');
+      
+      if (activeTab === 'All') {
+        console.log('All Favors Response:', allMyFavorsResponse);
+        console.log('All Favors Error:', allMyFavorsError);
+      }
+    };
+    
+    debugAuth();
+  }, [activeTab, currentFavors, isLoading, error, allMyFavorsResponse, allMyFavorsError, user, accessToken]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      switch (activeTab) {
+        case 'All':
+          await refetchAllMyFavors();
+          break;
+        case 'Active':
+          await Promise.all([refetchActiveMyFavors(), refetchInProgressMyFavors()]);
+          break;
+        case 'History':
+          await Promise.all([refetchCompletedMyFavors(), refetchCancelledMyFavors()]);
+          break;
+      }
+    } catch (error) {
+      console.error('Error refreshing:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const handleAskFavor = () => {
     navigation?.navigate('AskFavorScreen');
   };
 
-  const handleProvideFavor = (favor: any) => {
-    console.log('Provide favor for:', favor.name);
+  // Temporary debug function to test token storage
+  const handleDebugToken = async () => {
+
+ 
+    
+    // Verify it was stored
+    
+    // Trigger a refetch
+    await refetchAllMyFavors();
   };
 
-  const handleCancelFavor = (favor: any) => {
-    console.log('Cancel favor for:', favor.name);
+  // Check if user needs to re-authenticate
+  React.useEffect(() => {
+    if (user && !accessToken) {
+      console.log('⚠️ User exists but no access token - authentication issue detected');
+      // The user somehow got past the login screen without proper token storage
+    }
+  }, [user, accessToken]);
+
+  const handleProvideFavor = (favor: Favor) => {
+    console.log('Provide favor for:', favor.user.full_name);
+    // TODO: Implement apply for favor API call
   };
 
-  const handleFavorCardPress = (favor: any) => {
-    navigation?.navigate('FavorDetailsScreen', { favor });
+  const handleCancelFavor = (favor: Favor) => {
+    console.log('Cancel favor for:', favor.user.full_name);
+    // TODO: Implement cancel favor API call
   };
 
-  const FavorCard = ({ favor }: { favor: any }) => (
-    <TouchableOpacity 
-      onPress={() => handleFavorCardPress(favor)}
-      activeOpacity={0.7}
-    >
-      <View className="bg-[#F7FBF5] rounded-2xl p-4 mb-4 mx-4 border-2 border-b-4 border-b-[#44A27B] border-[#44A27B66] ">
-        <View className="flex-row mb-3">
-          <Image
-            source={{ uri: favor.image }}
-            className="w-20 h-20 rounded-2xl mr-4"
-            style={{ backgroundColor: '#f3f4f6' }}
-          />
-          <View className="flex-1">
-            <View className="flex-row items-center mb-1">
-              <View className="mr-2">
-                <DollarSvg />
+  const handleFavorCardPress = (favor: Favor) => {
+    navigation?.navigate('FavorDetailsScreen', { favorId: favor.id });
+  };
+
+  const FavorCard = ({ favor }: { favor: Favor }) => {
+    const isActiveFavor = favor.status === 'in_progress' || favor.status === 'active';
+    
+    return (
+      <TouchableOpacity 
+        onPress={() => handleFavorCardPress(favor)}
+        activeOpacity={0.7}
+      >
+        <View className="bg-white rounded-2xl p-4 mb-4 mx-4 shadow-sm border border-gray-100">
+          {/* Header with user name and priority */}
+          <View className="flex-row items-center justify-between mb-3">
+            <View className="flex-row items-center">
+              <View className="w-8 h-8 bg-black rounded-full items-center justify-center mr-2">
+                <Text className="text-white text-sm font-bold">
+                  {favor.user.full_name.charAt(0)}
+                </Text>
               </View>
-              <Text className="text-lg font-semibold text-gray-800">{favor.name}</Text>
-              <View className="ml-2 px-2 py-1 rounded">
-                <Text className="text-[#D12E34] text-sm font-medium">{favor.priority}</Text>
-              </View>
+              <Text className="text-lg font-semibold text-gray-900">{favor.user.full_name}</Text>
             </View>
-            <Text className="text-sm text-gray-600 mb-1">
-              {favor.category} | {favor.duration}
-            </Text>
-            <Text className="text-sm text-gray-600 mb-2">{favor.location}</Text>
-            <Text className="text-gray-700 text-sm leading-4">
-              {favor.description}
-            </Text>
+            <Text className="text-red-500 text-sm font-medium capitalize">{favor.priority}</Text>
           </View>
+
+          <View className="flex-row mb-4">
+            <Image
+              source={{ 
+                uri: favor.image_url || 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400&h=400&fit=crop'
+              }}
+              className="w-16 h-16 rounded-xl mr-3"
+              style={{ backgroundColor: '#f3f4f6' }}
+            />
+            <View className="flex-1">
+              {/* Category and Time */}
+              <Text className="text-base font-medium text-gray-900 mb-1">
+                {favor.favor_subject.name} | {favor.time_to_complete || '1 Hour'}
+              </Text>
+              
+              {/* Location */}
+              <Text className="text-sm text-gray-600 mb-2">
+                {favor.city}, {favor.state}
+              </Text>
+              
+              {/* Description */}
+              <Text className="text-sm text-gray-700 leading-4">
+                {favor.description}
+              </Text>
+            </View>
+          </View>
+
+          {/* Show Cancel Favor button for active favors, Provide Favor button for others */}
+          {favor.status !== 'completed' && favor.status !== 'cancelled' && (
+            <TouchableOpacity 
+              className="bg-green-500 rounded-full py-3"
+              onPress={() => {
+                if (isActiveFavor) {
+                  handleCancelFavor(favor);
+                } else {
+                  handleProvideFavor(favor);
+                }
+              }}
+            >
+              <Text className="text-white text-center font-semibold text-base">
+                {isActiveFavor ? 'Cancel Favor' : 
+                 `$${favor.tip} | Provide a Favor`}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
-      
-      {favor.status !== 'completed' && (
-        <TouchableOpacity 
-          className="bg-green-500 rounded-full py-3"
-          onPress={() => {
-            if (favor.status === 'active') {
-              handleCancelFavor(favor);
-            } else {
-              handleProvideFavor(favor);
-            }
-          }}
-        >
-          <Text className="text-white text-center font-semibold text-base">
-            {favor.status === 'active' ? 'Cancel Favor' : `${favor.price} | Provide a Favor`}
-          </Text>
-        </TouchableOpacity>
-      )}
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   const TabButton = ({ title, isActive, onPress }: { title: string; isActive: boolean; onPress: () => void }) => (
     <TouchableOpacity
@@ -311,14 +434,47 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
             onPress={() => setActiveTab('History')}
           />
         </View>
+
+        
       </View>
 
       {/* Content Area */}
-      {currentFavors.length > 0 ? (
+      {isLoading ? (
+        <View className="flex-1 justify-center items-center">
+          <ActivityIndicator size="large" color="#44A27B" />
+          <Text className="text-gray-600 mt-4">Loading favors...</Text>
+        </View>
+      ) : error ? (
+        <View className="flex-1 justify-center items-center px-6">
+          <Text className="text-xl font-bold text-gray-800 mb-4 text-center">
+            Error Loading Favors
+          </Text>
+          <Text className="text-gray-600 text-center mb-4">
+            {error.message || 'Please check your connection and try again.'}
+          </Text>
+          <Text className="text-gray-500 text-center mb-8 text-sm">
+            Tap the button below to retry or check the console for more details.
+          </Text>
+          <TouchableOpacity 
+            className="bg-green-500 rounded-full py-3 px-8"
+            onPress={handleRefresh}
+          >
+            <Text className="text-white font-semibold text-lg">Retry</Text>
+          </TouchableOpacity>
+        </View>
+      ) : currentFavors.length > 0 ? (
         <ScrollView 
           className="flex-1"
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingTop: 16, paddingBottom: 120 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              colors={['#44A27B']}
+              tintColor="#44A27B"
+            />
+          }
         >
           {currentFavors.map((favor) => (
             <FavorCard key={favor.id} favor={favor} />

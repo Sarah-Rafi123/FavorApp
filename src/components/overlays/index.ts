@@ -3,3 +3,4 @@ export * from "./SuccessModal";
 export * from "./ProfileModal";
 export * from "./LogoutModal";
 export * from "./CountryDropdown";
+export * from "./FavorDetailsModal";

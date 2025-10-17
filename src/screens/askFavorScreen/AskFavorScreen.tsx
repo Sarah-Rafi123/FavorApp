@@ -7,10 +7,13 @@ import {
   ScrollView,
   TextInput,
   Modal,
+  Alert,
 } from 'react-native';
 import { CarouselButton } from '../../components/buttons';
 import Svg, { Path } from 'react-native-svg';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
+import { useCreateFavor } from '../../services/mutations/FavorMutations';
+import { CreateFavorRequest } from '../../services/apis/FavorApis';
 
 interface AskFavorScreenProps {
   navigation?: any;
@@ -30,23 +33,47 @@ const BackIcon = () => (
 
 export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
   const [formData, setFormData] = useState({
-    priority: 'Delayed',
-    subject: 'Gardening',
+    priority: 'delayed' as 'immediate' | 'delayed' | 'no_rush',
+    favorSubjectId: null as number | null,
+    otherSubjectName: '',
     timeToComplete: '20 minutes',
     favorPrice: 'Free',
+    tip: 0,
+    additionalTip: 0,
     address: '',
     description: '',
+    city: '',
+    state: '',
+    latLng: '',
   });
 
   const [showTimeDropdown, setShowTimeDropdown] = useState(false);
 
-  const priorityOptions = ['Immediate', 'Delayed', 'No Rush'];
-  const subjectOptions = ['Lifting', 'Gardening', 'Opening', 'Moving', 'Assisting', 'Maintenance', 'Technical', 'Other'];
+  // Hardcoded favor subjects with their IDs
+  const favorSubjects = [
+    { id: 1, name: 'Lifting' },
+    { id: 2, name: 'Gardening' },
+    { id: 3, name: 'Technical' },
+    { id: 4, name: 'Moving' },
+    { id: 5, name: 'Assisting' },
+    { id: 6, name: 'Opening' },
+    { id: 7, name: 'Maintenance' }
+  ];
+
+  // Create favor mutation
+  const createFavorMutation = useCreateFavor();
+
+  const priorityOptions = [
+    { label: 'Immediate', value: 'immediate' as const },
+    { label: 'Delayed', value: 'delayed' as const },
+    { label: 'No Rush', value: 'no_rush' as const }
+  ];
   const timeOptions = ['15 minutes', '20 minutes', '30 minutes', '1 hour', '2 hours', '3 hours', '4+ hours'];
 
-  const updateFormData = (field: string, value: string) => {
+  const updateFormData = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
+
 
   const RadioButton = ({ 
     selected, 
@@ -70,17 +97,66 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
     </TouchableOpacity>
   );
 
-  const handleCreateFavor = () => {
-    console.log('Creating favor:', formData);
-    navigation?.goBack();
+  const handleCreateFavor = async () => {
+    // Validate form
+    if (!formData.favorSubjectId) {
+      Alert.alert('Error', 'Please select a subject for your favor.');
+      return;
+    }
+    if (formData.favorSubjectId === 8 && !formData.otherSubjectName.trim()) {
+      Alert.alert('Error', 'Please provide a custom subject name.');
+      return;
+    }
+    if (!formData.description.trim()) {
+      Alert.alert('Error', 'Please provide a description for your favor.');
+      return;
+    }
+    if (!formData.address.trim()) {
+      Alert.alert('Error', 'Please provide an address for your favor.');
+      return;
+    }
+    if (formData.favorPrice === 'Paid' && (formData.tip <= 0 || isNaN(formData.tip))) {
+      Alert.alert('Error', 'Please provide a valid tip amount greater than 0 for paid favors.');
+      return;
+    }
+    if (!formData.city.trim() || !formData.state.trim()) {
+      Alert.alert('Error', 'Please ensure city and state are provided.');
+      return;
+    }
+
+    try {
+      const createRequest: CreateFavorRequest = {
+        description: formData.description.trim(),
+        address: formData.address.trim(),
+        priority: formData.priority,
+        favor_subject_id: formData.favorSubjectId === 8 ? 'other' : formData.favorSubjectId!,
+        favor_pay: formData.favorPrice === 'Paid' ? '0' : '1', // 0 = paid, 1 = free
+        city: formData.city.trim(),
+        state: formData.state.trim(),
+        time_to_complete: formData.timeToComplete,
+        tip: formData.favorPrice === 'Paid' ? formData.tip : 0,
+        additional_tip: formData.favorPrice === 'Paid' && formData.additionalTip > 0 ? formData.additionalTip : undefined,
+        lat_lng: formData.latLng || undefined,
+        other_subject_name: formData.favorSubjectId === 8 ? formData.otherSubjectName.trim() : undefined,
+      };
+
+      // Debug logging to verify request format
+      console.log('🚀 Creating Favor Request:', createRequest);
+      console.log('📤 Sending JSON request');
+      await createFavorMutation.mutateAsync(createRequest);
+      
+      navigation?.goBack();
+    } catch (error) {
+      console.error('Error creating favor:', error);
+    }
   };
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View className="flex-1 bg-[#E8F5E8]"> {/* Light green background */}
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       
       {/* Header */}
-      <View className="pt-16 pb-6 px-6 bg-white">
+      <View className="pt-16 pb-6 px-6 bg-[#E8F5E8]">
         <View className="flex-row items-center">
           <TouchableOpacity 
             className="mr-4 p-2"
@@ -101,14 +177,14 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
           
           {/* Priority Section */}
           <View className="mb-8">
-            <Text className="text-lg font-semibold text-gray-800 mb-4">Priority</Text>
+            <Text className="text-xl font-bold text-black mb-6">Priority</Text>
             <View className="flex-row flex-wrap">
               {priorityOptions.map((option) => (
                 <RadioButton
-                  key={option}
-                  selected={formData.priority === option}
-                  onPress={() => updateFormData('priority', option)}
-                  label={option}
+                  key={option.value}
+                  selected={formData.priority === option.value}
+                  onPress={() => updateFormData('priority', option.value)}
+                  label={option.label}
                 />
               ))}
             </View>
@@ -116,24 +192,66 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
 
           {/* Subject Section */}
           <View className="mb-8">
-            <Text className="text-lg font-semibold text-gray-800 mb-4">Subject</Text>
+            <Text className="text-xl font-bold text-black mb-6">Subject</Text>
             <View className="flex-row flex-wrap">
-              {subjectOptions.map((option) => (
-                <RadioButton
-                  key={option}
-                  selected={formData.subject === option}
-                  onPress={() => updateFormData('subject', option)}
-                  label={option}
-                />
+              {favorSubjects.map((subject) => (
+                <TouchableOpacity
+                  key={subject.id}
+                  className={`border-2 rounded-2xl px-6 py-4 mr-3 mb-3 ${
+                    formData.favorSubjectId === subject.id
+                      ? 'bg-[#44A27B] border-[#44A27B]'
+                      : 'bg-white border-black'
+                  }`}
+                  onPress={() => updateFormData('favorSubjectId', subject.id)}
+                >
+                  <Text className={`text-base font-medium ${
+                    formData.favorSubjectId === subject.id ? 'text-white' : 'text-black'
+                  }`}>
+                    {subject.name}
+                  </Text>
+                </TouchableOpacity>
               ))}
+              <TouchableOpacity
+                className={`border-2 rounded-2xl px-6 py-4 mr-3 mb-3 ${
+                  formData.favorSubjectId === 8
+                    ? 'bg-[#44A27B] border-[#44A27B]'
+                    : 'bg-white border-black'
+                }`}
+                onPress={() => updateFormData('favorSubjectId', 8)}
+              >
+                <Text className={`text-base font-medium ${
+                  formData.favorSubjectId === 8 ? 'text-white' : 'text-black'
+                }`}>
+                  Other
+                </Text>
+              </TouchableOpacity>
             </View>
+            
+            {/* Custom Subject Name Input - Only show when Other is selected */}
+            {formData.favorSubjectId === 8 && (
+              <View className="mt-4">
+                <Text className="text-lg font-semibold text-black mb-3">Please specify:</Text>
+                <View className="bg-white border-2 border-gray-300 rounded-2xl px-4 py-4">
+                  <TextInput
+                    className="text-black text-base min-h-[60px]"
+                    placeholder="Enter custom subject name"
+                    placeholderTextColor="#9CA3AF"
+                    value={formData.otherSubjectName}
+                    onChangeText={(text) => updateFormData('otherSubjectName', text)}
+                    multiline
+                    textAlignVertical="top"
+                  />
+                </View>
+                <Text className="text-gray-500 text-sm mt-2">/50 characters</Text>
+              </View>
+            )}
           </View>
 
           {/* Time To Complete Section */}
           <View className="mb-8">
-            <Text className="text-lg font-semibold text-gray-800 mb-4">Time To Complete</Text>
+            <Text className="text-xl font-bold text-black mb-6">Time To Complete</Text>
             <TouchableOpacity
-              className="bg-white border border-gray-200 rounded-xl px-4 py-4 flex-row justify-between items-center"
+              className="bg-white border-2 border-gray-300 rounded-2xl px-4 py-4 flex-row justify-between items-center"
               onPress={() => setShowTimeDropdown(true)}
             >
               <View>
@@ -146,8 +264,8 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
 
           {/* Favor Price Section */}
           <View className="mb-8">
-            <Text className="text-lg font-semibold text-gray-800 mb-4">Favor Price</Text>
-            <View className="flex-row">
+            <Text className="text-xl font-bold text-black mb-6">Favor Price</Text>
+            <View className="flex-row mb-4">
               <RadioButton
                 selected={formData.favorPrice === 'Free'}
                 onPress={() => updateFormData('favorPrice', 'Free')}
@@ -159,20 +277,79 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
                 label="Paid"
               />
             </View>
+            
+            {/* Tip Inputs - Only show when Paid is selected */}
+            {formData.favorPrice === 'Paid' && (
+              <View>
+                <View className="bg-white border-2 border-gray-300 rounded-2xl px-4 py-4 mb-4">
+                  <Text className="text-gray-500 text-sm mb-2">Tip Amount ($) *</Text>
+                  <TextInput
+                    className="text-gray-800 text-base"
+                    placeholder="Enter tip amount"
+                    placeholderTextColor="#9CA3AF"
+                    value={formData.tip.toString()}
+                    onChangeText={(text) => {
+                      const numValue = parseFloat(text) || 0;
+                      updateFormData('tip', numValue);
+                    }}
+                    keyboardType="numeric"
+                  />
+                </View>
+                
+                <View className="bg-white border-2 border-gray-300 rounded-2xl px-4 py-4">
+                  <Text className="text-gray-500 text-sm mb-2">Additional Tip ($) - Optional</Text>
+                  <TextInput
+                    className="text-gray-800 text-base"
+                    placeholder="Enter additional tip (optional)"
+                    placeholderTextColor="#9CA3AF"
+                    value={formData.additionalTip.toString()}
+                    onChangeText={(text) => {
+                      const numValue = parseFloat(text) || 0;
+                      updateFormData('additionalTip', numValue);
+                    }}
+                    keyboardType="numeric"
+                  />
+                </View>
+              </View>
+            )}
           </View>
 
           {/* Address Section */}
           <View className="mb-8">
-            <Text className="text-lg font-semibold text-gray-800 mb-4">Address</Text>
-            <View className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+            <Text className="text-xl font-bold text-black mb-6">Address</Text>
+            <View className="bg-white border-2 border-gray-300 rounded-2xl overflow-hidden">
               <Text className="text-gray-500 text-sm px-4 pt-4 pb-2">Address</Text>
               <GooglePlacesAutocomplete
                 placeholder="Enter a location"
-                onPress={(data, details = null) => {
+                onPress={(data, details) => {
                   updateFormData('address', data.description);
+                  
+                  // Extract city, state, and coordinates from details if available
+                  if (details?.address_components) {
+                    let city = '';
+                    let state = '';
+                    
+                    details.address_components.forEach(component => {
+                      if (component.types.includes('locality')) {
+                        city = component.long_name;
+                      }
+                      if (component.types.includes('administrative_area_level_1')) {
+                        state = component.short_name;
+                      }
+                    });
+                    
+                    updateFormData('city', city);
+                    updateFormData('state', state);
+                  }
+                  
+                  // Extract coordinates if available
+                  if (details?.geometry?.location) {
+                    const { lat, lng } = details.geometry.location;
+                    updateFormData('latLng', `${lat},${lng}`);
+                  }
                 }}
                 query={{
-                  key: 'AIzaSyDt1zyVSt1snXRBteLuH9ngKmE8ABve268',
+                  key: process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY || 'AIzaSyDt1zyVSt1snXRBteLuH9ngKmE8ABve268',
                   language: 'en',
                 }}
                 fetchDetails={true}
@@ -188,35 +365,48 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
                     backgroundColor: 'transparent',
                     borderWidth: 0,
                     paddingHorizontal: 0,
-                    color: '#374151',
+                    color: '#000000',
+                    fontWeight: '400',
                   },
                   predefinedPlacesDescription: {
-                    color: '#1faadb',
+                    color: '#44A27B',
                   },
                   listView: {
                     backgroundColor: 'white',
                     marginTop: 0,
-                    borderTopWidth: 1,
-                    borderTopColor: '#e5e7eb',
+                    borderTopWidth: 2,
+                    borderTopColor: '#d1d5db',
+                    borderBottomLeftRadius: 16,
+                    borderBottomRightRadius: 16,
+                    elevation: 3,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 4,
                   },
                   row: {
                     backgroundColor: 'white',
-                    padding: 13,
-                    height: 44,
+                    paddingHorizontal: 16,
+                    paddingVertical: 12,
+                    minHeight: 48,
                     flexDirection: 'row',
+                    alignItems: 'center',
                   },
                   separator: {
-                    height: 0.5,
-                    backgroundColor: '#e5e7eb',
+                    height: 1,
+                    backgroundColor: '#f3f4f6',
+                    marginHorizontal: 16,
                   },
                   description: {
-                    fontSize: 14,
+                    fontSize: 15,
                     color: '#374151',
+                    fontWeight: '400',
                   },
                   loader: {
                     flexDirection: 'row',
                     justifyContent: 'flex-end',
                     height: 20,
+                    paddingRight: 16,
                   },
                 }}
                 enablePoweredByContainer={false}
@@ -227,8 +417,8 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
 
           {/* Description Section */}
           <View className="mb-8">
-            <Text className="text-lg font-semibold text-gray-800 mb-4">Description</Text>
-            <View className="bg-white border border-gray-200 rounded-xl px-4 py-4">
+            <Text className="text-xl font-bold text-black mb-6">Description</Text>
+            <View className="bg-white border-2 border-gray-300 rounded-2xl px-4 py-4">
               <Text className="text-gray-500 text-sm mb-2">Description</Text>
               <TextInput
                 className="text-gray-800 text-base min-h-[100px]"
@@ -242,26 +432,16 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
             </View>
           </View>
 
-          {/* File Upload Section */}
-          <View className="mb-8">
-            <View className="bg-white border-2 border-dashed border-gray-300 rounded-xl p-8 items-center">
-              <Text className="text-gray-500 text-center mb-4">
-                Choose a file or drag & drop it here{'\n'}JPEG and PNG formats up to 10 MB.
-              </Text>
-              <TouchableOpacity className="border border-green-500 rounded-xl px-6 py-3">
-                <Text className="text-green-500 font-semibold">Browse File</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
 
         </View>
       </ScrollView>
 
       {/* Bottom Button */}
-      <View className="absolute bottom-0 left-0 right-0 bg-white pt-6 pb-8 px-6 border-t border-gray-100">
+      <View className="absolute bottom-0 left-0 right-0 bg-[#E8F5E8] pt-6 pb-8 px-6">
         <CarouselButton
-          title="Create Favor"
+          title={createFavorMutation.isPending ? "Creating..." : "Create Favor"}
           onPress={handleCreateFavor}
+          disabled={createFavorMutation.isPending}
         />
       </View>
 
@@ -298,6 +478,7 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
           </View>
         </TouchableOpacity>
       </Modal>
+
     </View>
   );
 }

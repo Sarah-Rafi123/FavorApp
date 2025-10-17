@@ -9,10 +9,13 @@ import {
   ImageBackground,
   Modal,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import BackSvg from '../../assets/icons/Back';
 import CancelSvg from '../../assets/icons/Cancel';
+import { useFavor } from '../../services/queries/FavorQueries';
+import { Favor } from '../../services/apis/FavorApis';
 
 interface FavorDetailsScreenProps {
   navigation?: any;
@@ -42,21 +45,85 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState('');
 
-  const favor = route?.params?.favor || {
-    name: 'Janet',
-    priority: 'Immediate',
-    category: 'Maintenance',
-    duration: '1 Hour',
-    location: 'Casper, Wyoming',
-    description: 'Clean dog poop and take out trash.',
-    price: '$0',
-    image: 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=200&h=200&fit=crop&crop=face',
-    status: 'active'
-  };
+  // Get favor ID from route params
+  const favorId = route?.params?.favorId || route?.params?.favor?.id;
+  
+  // Fetch favor data using the API
+  const { data: favorResponse, isLoading, error } = useFavor(favorId, {
+    enabled: !!favorId
+  });
+
+  const favor = favorResponse?.data.favor;
 
   const handleGoBack = () => {
     navigation?.goBack();
   };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <ImageBackground
+        source={require('../../assets/images/Wallpaper.png')}
+        className="flex-1"
+        resizeMode="cover"
+      >
+        <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+        <View className="pt-16 pb-6 px-6">
+          <View className="flex-row items-center">
+            <TouchableOpacity 
+              className="mr-4"
+              onPress={handleGoBack}
+            >
+              <BackSvg />
+            </TouchableOpacity>
+            <Text className="text-2xl font-bold text-black">Favor Details</Text>
+          </View>
+        </View>
+        <View className="flex-1 justify-center items-center">
+          <ActivityIndicator size="large" color="#44A27B" />
+          <Text className="text-gray-600 mt-4">Loading favor details...</Text>
+        </View>
+      </ImageBackground>
+    );
+  }
+
+  // Error state
+  if (error || !favor) {
+    return (
+      <ImageBackground
+        source={require('../../assets/images/Wallpaper.png')}
+        className="flex-1"
+        resizeMode="cover"
+      >
+        <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+        <View className="pt-16 pb-6 px-6">
+          <View className="flex-row items-center">
+            <TouchableOpacity 
+              className="mr-4"
+              onPress={handleGoBack}
+            >
+              <BackSvg />
+            </TouchableOpacity>
+            <Text className="text-2xl font-bold text-black">Favor Details</Text>
+          </View>
+        </View>
+        <View className="flex-1 justify-center items-center px-6">
+          <Text className="text-xl font-bold text-gray-800 mb-4 text-center">
+            {error ? 'Error Loading Favor' : 'Favor Not Found'}
+          </Text>
+          <Text className="text-gray-600 text-center mb-8">
+            {error ? 'Please try again later.' : 'This favor may have been removed or does not exist.'}
+          </Text>
+          <TouchableOpacity 
+            className="bg-green-500 rounded-full py-3 px-8"
+            onPress={handleGoBack}
+          >
+            <Text className="text-white font-semibold text-lg">Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </ImageBackground>
+    );
+  }
 
   const handleCancelFavor = () => {
     setShowCancelModal(true);
@@ -129,7 +196,9 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
           <View className="items-center mb-6">
             <View className="w-24 h-24 bg-gray-200 rounded-2xl overflow-hidden">
               <Image
-                source={{ uri: favor.image }}
+                source={{ 
+                  uri: favor.image_url || 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400&h=400&fit=crop' 
+                }}
                 className="w-full h-full"
                 resizeMode="cover"
               />
@@ -141,25 +210,33 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
             <View className="flex-row">
               <Text className="text-gray-700 text-lg w-24">Priority</Text>
               <Text className="text-gray-700 text-lg mr-2">:</Text>
-              <Text className="text-gray-800 text-lg flex-1">{favor.priority}</Text>
+              <Text className="text-gray-800 text-lg flex-1 capitalize">{favor.priority}</Text>
             </View>
 
             <View className="flex-row">
               <Text className="text-gray-700 text-lg w-24">Category</Text>
               <Text className="text-gray-700 text-lg mr-2">:</Text>
-              <Text className="text-gray-800 text-lg flex-1">{favor.category}</Text>
+              <Text className="text-gray-800 text-lg flex-1">{favor.favor_subject.name}</Text>
             </View>
 
             <View className="flex-row">
               <Text className="text-gray-700 text-lg w-24">Duration</Text>
               <Text className="text-gray-700 text-lg mr-2">:</Text>
-              <Text className="text-gray-800 text-lg flex-1">{favor.duration}</Text>
+              <Text className="text-gray-800 text-lg flex-1">{favor.time_to_complete || 'Not specified'}</Text>
             </View>
 
             <View className="flex-row">
               <Text className="text-gray-700 text-lg w-24">Location</Text>
               <Text className="text-gray-700 text-lg mr-2">:</Text>
-              <Text className="text-gray-800 text-lg flex-1">{favor.location}</Text>
+              <Text className="text-gray-800 text-lg flex-1">{favor.city}, {favor.state}</Text>
+            </View>
+
+            <View className="flex-row">
+              <Text className="text-gray-700 text-lg w-24">Tip</Text>
+              <Text className="text-gray-700 text-lg mr-2">:</Text>
+              <Text className="text-gray-800 text-lg flex-1">
+                {favor.favor_pay ? `$${favor.tip}` : 'Free'}
+              </Text>
             </View>
 
             <View className="flex-row items-start">
@@ -179,23 +256,29 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
             <View className="relative">
               <View className="w-16 h-16 bg-gray-200 rounded-full overflow-hidden">
                 <Image
-                  source={{ uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face' }}
+                  source={{ 
+                    uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face' 
+                  }}
                   className="w-full h-full"
                   resizeMode="cover"
                 />
               </View>
-              <View className="absolute -top-1 -right-1">
-                <VerifiedIcon />
-              </View>
+              {favor.user.is_certified && (
+                <View className="absolute -top-1 -right-1">
+                  <VerifiedIcon />
+                </View>
+              )}
             </View>
 
             <View className="ml-4 flex-1">
-              <Text className="text-lg font-semibold text-black">David Warner</Text>
+              <Text className="text-lg font-semibold text-black">{favor.user.full_name}</Text>
               <View className="flex-row items-center">
-                <Text className="text-gray-600 text-sm">⭐ 4.5 | </Text>
-                <Text className="text-gray-600 text-sm">456 Reviews</Text>
+                <Text className="text-gray-600 text-sm">⭐ {favor.user.rating || '0'} | </Text>
+                <Text className="text-gray-600 text-sm">Member since {favor.user.member_since || 'N/A'}</Text>
               </View>
-              <Text className="text-gray-600 text-sm">2 Mins Away</Text>
+              {favor.user.years_of_experience && (
+                <Text className="text-gray-600 text-sm">{favor.user.years_of_experience} years experience</Text>
+              )}
               <TouchableOpacity>
                 <Text className="text-green-600 text-sm font-medium underline">View Profile</Text>
               </TouchableOpacity>
@@ -272,7 +355,7 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
 
             {/* Modal Text */}
             <Text className="text-gray-700 text-lg text-center mb-8 leading-6">
-              Are you sure you want to cancel this Favor request to help David Warner?
+              Are you sure you want to cancel this Favor request to help {favor.user.full_name}?
             </Text>
 
             {/* Buttons */}
@@ -313,7 +396,7 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
 
             {/* Modal Title */}
             <Text className="text-gray-800 text-lg font-semibold text-center mb-6 mt-4">
-              Give "David Warner" Feedback
+              Give "{favor.user.full_name}" Feedback
             </Text>
 
             {/* Star Rating */}

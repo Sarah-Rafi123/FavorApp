@@ -14,6 +14,7 @@ import { LogoutModal } from '../../components/overlays';
 import FilterSvg from '../../assets/icons/Filter';
 import BellSvg from '../../assets/icons/Bell';
 import GetCertifiedSvg from '../../assets/icons/GetCertified';
+import PaymentSvg from '../../assets/icons/Payment';
 import ChangePasswordSvg from '../../assets/icons/ChangePassword';
 import NotificationsSvg from '../../assets/icons/Notifications';
 import HelpandSupportSvg from '../../assets/icons/HelpandSupport';
@@ -122,6 +123,17 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
             icon={<GetCertifiedSvg />}
             title="Get Certified"
             onPress={() => navigation?.navigate('GetCertifiedScreen')}
+          />
+
+          <SettingItem
+            icon={<PaymentSvg />}
+            title="Payment Methods"
+            onPress={() => navigation?.navigate('StripePaymentScreen', {
+              amount: 1000, // $10.00 example
+              currency: 'usd',
+              title: 'Test Payment',
+              description: 'Complete your test payment with Stripe'
+            })}
           />
 
           <SettingItem

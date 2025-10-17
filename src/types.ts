@@ -69,12 +69,35 @@ export interface LoginResponse {
   message: string;
   data?: {
     user?: {
-      id: string;
-      first_name: string;
+      id: number;
       email: string;
+      first_name: string;
+      last_name: string;
+      middle_name?: string;
+      full_name: string;
+      phone_no_call: string;
+      phone_no_text: string;
+      date_of_birth: string;
+      age: number;
+      years_of_experience: number;
+      about_me: string;
+      skills: string[];
+      other_skills?: string;
+      raw_skills: string[];
+      member_since: string;
+      is_active: boolean;
+      is_certified?: boolean;
+      address: {
+        city: string;
+        state: string;
+        full_address: string;
+      };
+      created_at: string;
+      updated_at: string;
     };
-    access_token?: string;
-    refresh_token?: string;
+    token: string;
+    refresh_token: string;
+    expires_at: string;
   };
 }
 

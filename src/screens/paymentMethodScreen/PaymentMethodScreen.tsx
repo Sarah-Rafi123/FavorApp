@@ -8,8 +8,13 @@ import {
   TextInput,
   ImageBackground,
   Modal,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
+import { useCreateSetupIntent } from '../../services/mutations/SetupIntentMutations';
+import { useSavePaymentMethod } from '../../services/mutations/PaymentMethodMutations';
+import { useSetupIntentStore } from '../../store/useSetupIntentStore';
 import BackSvg from '../../assets/icons/Back';
 import EyeSvg from '../../assets/icons/Eye';
 
@@ -79,6 +84,12 @@ export function PaymentMethodScreen({ navigation, route }: PaymentMethodScreenPr
   const [showCountryModal, setShowCountryModal] = useState(false);
   const [zip, setZip] = useState('');
   const [zipError, setZipError] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // API hooks
+  const createSetupIntentMutation = useCreateSetupIntent();
+  const savePaymentMethodMutation = useSavePaymentMethod();
+  const { setupIntentData, setSetupIntentData } = useSetupIntentStore();
 
   const { plan } = route?.params || { plan: '1 Year' };
   const price = plan === '1 Year' ? '$30' : '$4.99';
@@ -154,11 +165,112 @@ export function PaymentMethodScreen({ navigation, route }: PaymentMethodScreenPr
     }
   };
 
-  const handlePayNow = () => {
-    if (nameError || zipError) {
+  const validateForm = () => {
+    let isValid = true;
+    
+    if (!nameOnCard.trim()) {
+      setNameError('Name on card is required');
+      isValid = false;
+    }
+    if (!cardNumber || cardNumber.replace(/\s/g, '').length < 16) {
+      Alert.alert('Error', 'Please enter a valid card number');
+      isValid = false;
+    }
+    if (!expirationDate || expirationDate.length < 5) {
+      Alert.alert('Error', 'Please enter a valid expiration date');
+      isValid = false;
+    }
+    if (!securityCode || securityCode.length < 3) {
+      Alert.alert('Error', 'Please enter a valid security code');
+      isValid = false;
+    }
+    if (!country) {
+      Alert.alert('Error', 'Please select a country');
+      isValid = false;
+    }
+    if (!zip.trim()) {
+      setZipError('Zip code is required');
+      isValid = false;
+    }
+    
+    return isValid;
+  };
+
+  const handlePayNow = async () => {
+    if (!validateForm() || nameError || zipError) {
       return;
     }
-    navigation?.navigate('PaymentSuccessScreen', { plan, price });
+
+    setIsProcessing(true);
+
+    try {
+      // Step 1: Create SetupIntent if we don't have one
+      let currentSetupIntent = setupIntentData;
+      
+      if (!currentSetupIntent) {
+        console.log('Creating SetupIntent...');
+        const setupIntentResponse = await createSetupIntentMutation.mutateAsync();
+        currentSetupIntent = setupIntentResponse.data;
+        setSetupIntentData(currentSetupIntent);
+      }
+
+      // Step 2: Simulate Stripe SDK card collection and confirmation
+      // In a real app, you would use Stripe SDK here:
+      // const { error } = await confirmSetupIntent(currentSetupIntent.client_secret, {
+      //   payment_method: {
+      //     card: cardElement,
+      //     billing_details: { 
+      //       name: nameOnCard,
+      //       address: {
+      //         country: country,
+      //         postal_code: zip
+      //       }
+      //     }
+      //   }
+      // });
+
+      console.log('🔄 Simulating Stripe SetupIntent confirmation...');
+      console.log('Card Details:', {
+        name: nameOnCard,
+        cardNumber: cardNumber.replace(/\s/g, '').slice(-4),
+        expirationDate,
+        country,
+        zip
+      });
+
+      // For demo purposes, simulate successful Stripe confirmation
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Step 3: Save payment method via our API
+      console.log('💾 Saving payment method via API...');
+      const result = await savePaymentMethodMutation.mutateAsync({
+        setup_intent_id: currentSetupIntent.setup_intent_id,
+      });
+
+      console.log('✅ Payment method saved:', result);
+
+      setIsProcessing(false);
+      
+      Alert.alert(
+        'Success!',
+        'Your payment method has been saved successfully.',
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation?.navigate('PaymentMethodsScreen')
+          }
+        ]
+      );
+
+    } catch (error) {
+      setIsProcessing(false);
+      console.error('Payment method setup failed:', error);
+      Alert.alert(
+        'Error',
+        'Failed to save payment method. Please try again.',
+        [{ text: 'OK' }]
+      );
+    }
   };
 
   return (
@@ -402,13 +514,27 @@ export function PaymentMethodScreen({ navigation, route }: PaymentMethodScreenPr
           </Modal>
         )}
 
-        {/* Pay Now Button */}
+        {/* Manage Payment Methods Button */}
         <TouchableOpacity 
-          className="bg-[#44A27B] rounded-full py-4 mx-2"
-          onPress={handlePayNow}
+          className="bg-blue-600 rounded-full py-4 mx-2 mb-4"
+          onPress={() => navigation?.navigate('PaymentMethodsScreen')}
         >
           <Text className="text-white text-center text-lg font-semibold">
-            Pay Now
+            Manage Payment Methods
+          </Text>
+        </TouchableOpacity>
+
+        {/* Pay Now Button */}
+        <TouchableOpacity 
+          className={`${isProcessing ? 'bg-gray-400' : 'bg-[#44A27B]'} rounded-full py-4 mx-2 flex-row justify-center items-center`}
+          onPress={handlePayNow}
+          disabled={isProcessing}
+        >
+          {isProcessing && (
+            <ActivityIndicator size="small" color="white" style={{ marginRight: 8 }} />
+          )}
+          <Text className="text-white text-center text-lg font-semibold">
+            {isProcessing ? 'Saving Payment Method...' : 'Save Payment Method'}
           </Text>
         </TouchableOpacity>
       </ScrollView>

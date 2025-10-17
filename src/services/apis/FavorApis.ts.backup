@@ -1,0 +1,575 @@
+import { axiosInstance } from '../axiosConfig';
+
+// Types
+export interface FavorUser {
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+  full_name: string;
+  is_certified: boolean;
+  years_of_experience?: number;
+  about_me?: string;
+  skills?: string[];
+  member_since?: string;
+  rating?: number;
+}
+
+export interface FavorSubject {
+  id: number;
+  name: string;
+  is_active: boolean;
+}
+
+export interface Favor {
+  id: number;
+  title?: string;
+  description: string;
+  address: string;
+  tip: number;
+  additional_tip?: number;
+  favor_pay: boolean;
+  priority: 'immediate' | 'delayed' | 'no_rush';
+  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
+  is_active: boolean;
+  time_to_complete?: string;
+  city: string;
+  state: string;
+  lat_lng?: string;
+  created_at: string;
+  updated_at: string;
+  user: FavorUser;
+  favor_subject: FavorSubject;
+  image_url?: string;
+  responses_count: number;
+  pending_responses_count: number;
+  accepted_response?: any;
+  can_edit: boolean;
+  can_apply: boolean;
+  has_applied: boolean;
+}
+
+export interface FavorApplicant {
+  id: number;
+  status: 'pending' | 'accepted' | 'rejected';
+  created_at: string;
+  updated_at: string;
+  user: FavorUser;
+}
+
+// Request/Response Types
+export interface ListFavorsResponse {
+  success: boolean;
+  data: {
+    favors: Favor[];
+    meta: {
+      current_page: number;
+      per_page: number;
+      total_pages: number;
+      total_count: number;
+      next_page: number | null;
+      prev_page: number | null;
+    };
+  };
+  message?: string;
+}
+
+export interface GetFavorResponse {
+  success: boolean;
+  data: {
+    favor: Favor;
+  };
+}
+
+export interface GetFavorApplicantsResponse {
+  success: boolean;
+  data: {
+    favor: {
+      id: number;
+      title?: string;
+      status: string;
+    };
+    applicants: FavorApplicant[];
+  };
+}
+
+export interface CreateFavorRequest {
+  description: string;
+  address: string;
+  priority: 'immediate' | 'delayed' | 'no_rush';
+  favor_subject_id: number | 'other';
+  favor_pay: '0' | '1'; // 0 = paid, 1 = free
+  city: string;
+  state: string;
+  time_to_complete?: string;
+  tip?: number;
+  additional_tip?: number;
+  lat_lng?: string;
+  other_subject_name?: string;
+}
+
+export interface CreateFavorFormData extends FormData {
+  // For multipart/form-data requests with images
+}
+
+export interface UpdateFavorRequest {
+  description?: string;
+  address?: string;
+  priority?: 'immediate' | 'delayed' | 'no_rush';
+  favor_subject_id?: number | 'other';
+  favor_pay?: '0' | '1';
+  city?: string;
+  state?: string;
+  time_to_complete?: string;
+  tip?: number;
+  additional_tip?: number;
+  lat_lng?: string;
+  other_subject_name?: string;
+  remove_image?: '1';
+}
+
+export interface BrowseFavorsParams {
+  priority?: ('immediate' | 'delayed' | 'no_rush')[];
+  type?: ('paid' | 'unpaid')[];
+  member_type?: ('verified' | 'non_verified')[];
+  category?: string[];
+  page?: number;
+  per_page?: number;
+}
+
+export interface MyFavorsParams {
+  type?: 'requested' | 'providing';
+  tab?: 'active' | 'in-progress' | 'completed' | 'cancelled';
+  page?: number;
+  per_page?: number;
+}
+
+// API Implementation
+export const FavorApis = {
+  // 1. List Available Favors (Basic)
+  listFavors: async (page = 1, per_page = 12): Promise<ListFavorsResponse> => {
+    const response = await axiosInstance.get('/favors', {
+      params: { page, per_page }
+    });
+    return response.data;
+  },
+
+  // 2. Browse Favors (Advanced with Filters)
+  browseFavors: async (params: BrowseFavorsParams): Promise<ListFavorsResponse> => {
+    const queryParams = new URLSearchParams();
+    
+    if (params.priority) {
+      params.priority.forEach(p => queryParams.append('priority[]', p));
+    }
+    if (params.type) {
+      params.type.forEach(t => queryParams.append('type[]', t));
+    }
+    if (params.member_type) {
+      params.member_type.forEach(mt => queryParams.append('member_type[]', mt));
+    }
+    if (params.category) {
+      params.category.forEach(c => queryParams.append('category[]', c));
+    }
+    if (params.page) queryParams.append('page', params.page.toString());
+    if (params.per_page) queryParams.append('per_page', params.per_page.toString());
+
+    const response = await axiosInstance.get(`/favors/browse?${queryParams.toString()}`);
+    return response.data;
+  },
+
+  // 3. Get My Favors
+  getMyFavors: async (params: MyFavorsParams): Promise<ListFavorsResponse> => {
+    const response = await axiosInstance.get('/favors/my_favors', {
+      params: {
+        type: params.type || 'requested',
+        tab: params.tab || 'active',
+        page: params.page || 1,
+        per_page: params.per_page || 10
+      }
+    });
+    return response.data;
+  },
+
+  // 4. View Specific Favor
+  getFavor: async (id: number): Promise<GetFavorResponse> => {
+    const response = await axiosInstance.get(`/favors/${id}`);
+    return response.data;
+  },
+
+  // 5. View Favor Applicants (Owner Only)
+  getFavorApplicants: async (id: number): Promise<GetFavorApplicantsResponse> => {
+    const response = await axiosInstance.get(`/favors/${id}/applicants`);
+    return response.data;
+  },
+
+  // 6. Create Favor (JSON)
+  createFavor: async (data: CreateFavorRequest): Promise<GetFavorResponse> => {
+    const response = await axiosInstance.post('/favors', { favor: data });
+    return response.data;
+  },
+
+  // 6. Create Favor (Form Data with Image)
+  createFavorWithImage: async (formData: CreateFavorFormData): Promise<GetFavorResponse> => {
+    const response = await axiosInstance.post('/favors', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
+  // 7. Edit Favor
+  updateFavor: async (id: number, data: UpdateFavorRequest): Promise<GetFavorResponse> => {
+    const response = await axiosInstance.patch(`/favors/${id}`, { favor: data });
+    return response.data;
+  },
+
+  // 7. Edit Favor with Image (Form Data)
+  updateFavorWithImage: async (id: number, formData: FormData): Promise<GetFavorResponse> => {
+    const response = await axiosInstance.patch(`/favors/${id}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+};
+
+// Mock Services for Development
+export const FavorMockService = {
+  listFavors: async (page = 1, per_page = 12): Promise<ListFavorsResponse> => {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    const mockFavors: Favor[] = [
+      {
+        id: 1,
+        title: 'Moving Help Needed',
+        description: 'Need help moving furniture from apartment to truck',
+        address: '123 Main St, Apt 4B, New York, NY',
+        tip: 50.0,
+        additional_tip: 10.0,
+        favor_pay: false,
+        priority: 'immediate',
+        status: 'pending',
+        is_active: true,
+        time_to_complete: '2 hours',
+        city: 'New York',
+        state: 'NY',
+        lat_lng: '40.7128,-74.0060',
+        created_at: '2024-10-13T10:00:00Z',
+        updated_at: '2024-10-13T10:00:00Z',
+        user: {
+          id: 1,
+          email: 'jane@example.com',
+          first_name: 'Jane',
+          last_name: 'Smith',
+          full_name: 'Jane Smith',
+          is_certified: true,
+        },
+        favor_subject: {
+          id: 1,
+          name: 'Moving Help',
+          is_active: true,
+        },
+        image_url: 'https://via.placeholder.com/300x200',
+        responses_count: 5,
+        pending_responses_count: 3,
+        accepted_response: null,
+        can_edit: false,
+        can_apply: true,
+        has_applied: false,
+      },
+      {
+        id: 2,
+        title: 'Garden Cleanup',
+        description: 'Help with autumn garden cleanup and leaf removal',
+        address: '456 Oak Ave, Boston, MA',
+        tip: 0,
+        favor_pay: true,
+        priority: 'delayed',
+        status: 'pending',
+        is_active: true,
+        time_to_complete: '3 hours',
+        city: 'Boston',
+        state: 'MA',
+        created_at: '2024-10-13T09:00:00Z',
+        updated_at: '2024-10-13T09:00:00Z',
+        user: {
+          id: 2,
+          email: 'bob@example.com',
+          first_name: 'Bob',
+          last_name: 'Johnson',
+          full_name: 'Bob Johnson',
+          is_certified: false,
+        },
+        favor_subject: {
+          id: 2,
+          name: 'Yard Work',
+          is_active: true,
+        },
+        responses_count: 2,
+        pending_responses_count: 2,
+        accepted_response: null,
+        can_edit: false,
+        can_apply: true,
+        has_applied: false,
+      },
+    ];
+
+    return {
+      success: true,
+      data: {
+        favors: mockFavors,
+        meta: {
+          current_page: page,
+          per_page,
+          total_pages: 3,
+          total_count: 25,
+          next_page: page < 3 ? page + 1 : null,
+          prev_page: page > 1 ? page - 1 : null,
+        },
+      },
+    };
+  },
+
+  browseFavors: async (params: BrowseFavorsParams): Promise<ListFavorsResponse> => {
+    await new Promise(resolve => setTimeout(resolve, 800));
+    // Return filtered mock data based on params
+    return FavorMockService.listFavors(params.page, params.per_page);
+  },
+
+  getMyFavors: async (params: MyFavorsParams): Promise<ListFavorsResponse> => {
+    await new Promise(resolve => setTimeout(resolve, 900));
+    // Return user's favors based on type and tab
+    return FavorMockService.listFavors(params.page, params.per_page);
+  },
+
+  getFavor: async (id: number): Promise<GetFavorResponse> => {
+    await new Promise(resolve => setTimeout(resolve, 600));
+    
+    return {
+      success: true,
+      data: {
+        favor: {
+          id,
+          title: 'Moving Help Needed',
+          description: 'Need help moving furniture from apartment to truck. Heavy items include sofa, dining table, and bedroom set.',
+          address: '123 Main St, Apt 4B, New York, NY',
+          tip: 50.0,
+          additional_tip: 10.0,
+          favor_pay: false,
+          priority: 'immediate',
+          status: 'pending',
+          is_active: true,
+          time_to_complete: '2 hours',
+          city: 'New York',
+          state: 'NY',
+          lat_lng: '40.7128,-74.0060',
+          created_at: '2024-10-13T10:00:00Z',
+          updated_at: '2024-10-13T10:00:00Z',
+          user: {
+            id: 1,
+            email: 'jane@example.com',
+            first_name: 'Jane',
+            last_name: 'Smith',
+            full_name: 'Jane Smith',
+            is_certified: true,
+          },
+          favor_subject: {
+            id: 1,
+            name: 'Moving Help',
+            is_active: true,
+          },
+          image_url: 'https://via.placeholder.com/300x200',
+          responses_count: 5,
+          pending_responses_count: 3,
+          accepted_response: null,
+          can_edit: false,
+          can_apply: true,
+          has_applied: false,
+        },
+      },
+    };
+  },
+
+  getFavorApplicants: async (id: number): Promise<GetFavorApplicantsResponse> => {
+    await new Promise(resolve => setTimeout(resolve, 700));
+    
+    return {
+      success: true,
+      data: {
+        favor: {
+          id,
+          title: 'Moving Help Needed',
+          status: 'pending',
+        },
+        applicants: [
+          {
+            id: 10,
+            status: 'pending',
+            created_at: '2024-10-13T11:00:00Z',
+            updated_at: '2024-10-13T11:00:00Z',
+            user: {
+              id: 5,
+              email: 'john@example.com',
+              first_name: 'John',
+              last_name: 'Doe',
+              full_name: 'John Doe',
+              is_certified: false,
+              years_of_experience: 5,
+              about_me: 'Experienced mover with professional equipment',
+              skills: ['Manual Labor', 'Moving'],
+              member_since: 'September 2024',
+              rating: 4.5,
+            },
+          },
+        ],
+      },
+    };
+  },
+
+  getFavor: async (id: number): Promise<GetFavorResponse> => {
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    return {
+      success: true,
+      data: {
+        favor: {
+          id,
+          description: 'Help me with yard work and maintenance tasks around the house.',
+          address: '123 Main Street, Casper, WY 82601',
+          tip: 25,
+          additional_tip: 0,
+          favor_pay: true,
+          priority: 'immediate',
+          status: 'pending',
+          is_active: true,
+          time_to_complete: '2 hours',
+          city: 'Casper',
+          state: 'WY',
+          lat_lng: '42.8401,-106.3222',
+          created_at: '2024-10-13T10:00:00Z',
+          updated_at: '2024-10-13T10:30:00Z',
+          user: {
+            id: 2,
+            email: 'janet@example.com',
+            first_name: 'Janet',
+            last_name: 'Smith',
+            full_name: 'Janet Smith',
+            is_certified: true,
+            years_of_experience: 3,
+            about_me: 'Friendly neighbor who enjoys helping others with household tasks.',
+            skills: ['Gardening', 'Maintenance', 'Cleaning'],
+            member_since: 'June 2024',
+            rating: 4.8,
+          },
+          favor_subject: {
+            id: 1,
+            name: 'Maintenance',
+            is_active: true,
+          },
+          image_url: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400&h=400&fit=crop',
+          responses_count: 5,
+          pending_responses_count: 3,
+          accepted_response: null,
+          can_edit: false,
+          can_apply: true,
+          has_applied: false,
+        },
+      },
+    };
+  },
+
+  createFavor: async (data: CreateFavorRequest): Promise<GetFavorResponse> => {
+    await new Promise(resolve => setTimeout(resolve, 1200));
+    
+    return {
+      success: true,
+      data: {
+        favor: {
+          id: Math.floor(Math.random() * 1000) + 100,
+          description: data.description,
+          address: data.address,
+          tip: data.tip || 0,
+          additional_tip: data.additional_tip || 0,
+          favor_pay: data.favor_pay === '1',
+          priority: data.priority,
+          status: 'pending',
+          is_active: true,
+          time_to_complete: data.time_to_complete,
+          city: data.city,
+          state: data.state,
+          lat_lng: data.lat_lng,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          user: {
+            id: 1,
+            email: 'user@example.com',
+            first_name: 'Current',
+            last_name: 'User',
+            full_name: 'Current User',
+            is_certified: true,
+          },
+          favor_subject: {
+            id: typeof data.favor_subject_id === 'number' ? data.favor_subject_id : 999,
+            name: data.other_subject_name || 'Custom Category',
+            is_active: true,
+          },
+          responses_count: 0,
+          pending_responses_count: 0,
+          accepted_response: null,
+          can_edit: true,
+          can_apply: false,
+          has_applied: false,
+        },
+      },
+    };
+  },
+
+  updateFavor: async (id: number, data: UpdateFavorRequest): Promise<GetFavorResponse> => {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    return {
+      success: true,
+      data: {
+        favor: {
+          id,
+          description: data.description || 'Updated favor description',
+          address: data.address || '123 Updated St',
+          tip: data.tip || 50,
+          additional_tip: data.additional_tip || 0,
+          favor_pay: data.favor_pay === '1',
+          priority: data.priority || 'immediate',
+          status: 'pending',
+          is_active: true,
+          time_to_complete: data.time_to_complete || '2 hours',
+          city: data.city || 'Updated City',
+          state: data.state || 'NY',
+          lat_lng: data.lat_lng,
+          created_at: '2024-10-13T10:00:00Z',
+          updated_at: new Date().toISOString(),
+          user: {
+            id: 1,
+            email: 'user@example.com',
+            first_name: 'Current',
+            last_name: 'User',
+            full_name: 'Current User',
+            is_certified: true,
+          },
+          favor_subject: {
+            id: typeof data.favor_subject_id === 'number' ? data.favor_subject_id : 1,
+            name: data.other_subject_name || 'Updated Category',
+            is_active: true,
+          },
+          image_url: data.remove_image === '1' ? undefined : 'https://via.placeholder.com/300x200',
+          responses_count: 3,
+          pending_responses_count: 1,
+          accepted_response: null,
+          can_edit: true,
+          can_apply: false,
+          has_applied: false,
+        },
+      },
+    };
+  },
+};

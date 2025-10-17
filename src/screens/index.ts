@@ -15,6 +15,7 @@ export * from "./settingsScreen";
 export * from "./askFavorScreen";
 export * from "./getCertifiedScreen";
 export * from "./paymentMethodScreen";
+export * from "./stripePaymentScreen";
 export * from "./changePasswordScreen";
 export * from "./helpSupportScreen";
 export * from "./faqScreen";
