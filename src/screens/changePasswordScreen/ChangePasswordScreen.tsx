@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import BackSvg from '../../assets/icons/Back';
+import { useUpdatePasswordMutation } from '../../services/mutations/ProfileMutations';
 
 interface ChangePasswordScreenProps {
   navigation?: any;
@@ -56,14 +57,15 @@ export function ChangePasswordScreen({ navigation }: ChangePasswordScreenProps) 
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  
+  const updatePasswordMutation = useUpdatePasswordMutation();
 
   const validatePassword = (password: string) => {
-    const hasMinLength = password.length >= 8;
+    const hasMinLength = password.length >= 8 && password.length <= 50;
     const hasUpperCase = /[A-Z]/.test(password);
     const hasLowerCase = /[a-z]/.test(password);
     const hasNumbers = /\d/.test(password);
-    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(password);
     
     return {
       hasMinLength,
@@ -98,26 +100,19 @@ export function ChangePasswordScreen({ navigation }: ChangePasswordScreenProps) 
       return;
     }
 
-    setIsLoading(true);
-    
-    try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      Alert.alert(
-        'Success', 
-        'Your password has been changed successfully',
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation?.goBack()
-          }
-        ]
-      );
-    } catch (error) {
-      Alert.alert('Error', 'Failed to change password. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
+    const passwordData = {
+      profile: {
+        current_password: currentPassword,
+        password: newPassword,
+        password_confirmation: confirmPassword,
+      },
+    };
+
+    updatePasswordMutation.mutate(passwordData, {
+      onSuccess: () => {
+        navigation?.goBack();
+      },
+    });
   };
 
   const PasswordInput = ({ 
@@ -243,15 +238,15 @@ export function ChangePasswordScreen({ navigation }: ChangePasswordScreenProps) 
           <View className="mt-12">
             <TouchableOpacity 
               className={`rounded-full py-4 ${
-                isLoading 
+                updatePasswordMutation.isPending 
                   ? 'bg-gray-400' 
                   : 'bg-green-500'
               }`}
               onPress={handleChangePassword}
-              disabled={isLoading}
+              disabled={updatePasswordMutation.isPending}
             >
               <Text className="text-white text-center text-lg font-semibold">
-                {isLoading ? 'Updating...' : 'Update Password'}
+                {updatePasswordMutation.isPending ? 'Updating...' : 'Update Password'}
               </Text>
             </TouchableOpacity>
           </View>

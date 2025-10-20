@@ -1,6 +1,21 @@
 import { axiosInstance } from '../axiosConfig';
 import { RegistrationData, SkillsResponse, OtpVerificationData, OtpVerificationResponse, LoginData, LoginResponse, ResendOtpData, ResendOtpResponse, ForgotPasswordData, ForgotPasswordResponse, VerifyResetOtpData, VerifyResetOtpResponse, ResetPasswordData, ResetPasswordResponse } from '../../types';
 
+// Delete Account Types
+export interface DeleteAccountData {
+  password: string;
+}
+
+export interface DeleteAccountResponse {
+  success: boolean;
+  data: {
+    deleted: boolean;
+    email: string;
+    deleted_at: string;
+  };
+  message: string;
+}
+
 export const registerUser = async (data: RegistrationData) => {
   console.log(`[INIT] => /auth/register`);
   const response = await axiosInstance.post('/auth/register', data);
@@ -62,4 +77,52 @@ export const getCurrentUser = async () => {
   const response = await axiosInstance.get('/auth/me');
   console.log(`[OK] => /auth/me`);
   return response.data;
+};
+
+export const deleteAccount = async (data: DeleteAccountData): Promise<DeleteAccountResponse> => {
+  try {
+    console.log(`🚀 Making Delete Account API call to: /auth/account`);
+    const response = await axiosInstance.delete('/auth/account', {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: data
+    });
+    
+    console.log('🎉 Delete Account API Success!');
+    console.log('📊 Response Status:', response.status);
+    console.log('📄 Full API Response:', JSON.stringify(response.data, null, 2));
+    
+    return response.data;
+  } catch (error: any) {
+    console.error('❌ Delete Account API Error!');
+    console.error('📄 Full API Error:', error);
+    console.error('📊 Error Response Status:', error.response?.status);
+    console.error('📄 Error Response Data:', JSON.stringify(error.response?.data, null, 2));
+    
+    // Handle specific error scenarios based on status codes
+    if (error.response?.status === 401) {
+      const errorData = error.response?.data;
+      if (errorData?.errors?.includes('Password is required to delete account')) {
+        throw new Error('Password is required to delete account');
+      } else if (errorData?.errors?.includes('Incorrect password')) {
+        throw new Error('Incorrect password. Please enter your current password.');
+      } else if (errorData?.errors?.includes('Unauthorized')) {
+        throw new Error('Session expired. Please log in again.');
+      } else {
+        throw new Error('Authentication failed. Please try again.');
+      }
+    } else if (error.response?.status === 500) {
+      const errorData = error.response?.data;
+      if (errorData?.errors?.includes('Failed to delete account')) {
+        throw new Error('Failed to delete account. Please try again later.');
+      } else {
+        throw new Error('Server error occurred. Please try again later.');
+      }
+    } else if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    } else {
+      throw new Error('Failed to delete account. Please check your connection and try again.');
+    }
+  }
 };

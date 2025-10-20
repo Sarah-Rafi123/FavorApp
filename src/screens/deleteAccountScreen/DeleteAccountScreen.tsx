@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import BackSvg from '../../assets/icons/Back';
+import { useDeleteAccountMutation } from '../../services/mutations/AuthMutations';
 
 interface DeleteAccountScreenProps {
   navigation?: any;
@@ -51,11 +52,18 @@ const deleteReasons = [
 export function DeleteAccountScreen({ navigation }: DeleteAccountScreenProps) {
   const [selectedReason, setSelectedReason] = useState("Other(Please Specify)");
   const [customReason, setCustomReason] = useState("I appreciated the idea behind the app, but it doesn't fully match my needs at this time. I may return if future updates better align with what I'm looking for.");
-  const [isLoading, setIsLoading] = useState(false);
+  const [password, setPassword] = useState("");
+  
+  const deleteAccountMutation = useDeleteAccountMutation();
 
   const handleDeleteAccount = async () => {
     if (selectedReason === "Other(Please Specify)" && !customReason.trim()) {
       Alert.alert('Error', 'Please specify your reason for deleting the account');
+      return;
+    }
+
+    if (!password.trim()) {
+      Alert.alert('Error', 'Please enter your password to confirm account deletion');
       return;
     }
 
@@ -71,9 +79,8 @@ export function DeleteAccountScreen({ navigation }: DeleteAccountScreenProps) {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            setIsLoading(true);
             try {
-              await new Promise(resolve => setTimeout(resolve, 2000));
+              await deleteAccountMutation.mutateAsync({ password });
               
               Alert.alert(
                 'Account Deleted', 
@@ -89,9 +96,7 @@ export function DeleteAccountScreen({ navigation }: DeleteAccountScreenProps) {
                 ]
               );
             } catch (error) {
-              Alert.alert('Error', 'Failed to delete account. Please try again.');
-            } finally {
-              setIsLoading(false);
+              // Error handling is done in the mutation hook
             }
           }
         }
@@ -177,6 +182,21 @@ export function DeleteAccountScreen({ navigation }: DeleteAccountScreenProps) {
             </View>
           )}
 
+          {/* Password Confirmation */}
+          <View className="mb-6 relative">
+            <TextInput
+              className="bg-transparent border border-[#D0D5DD] rounded-xl px-4 py-4 text-base text-black"
+              placeholder="Enter your password to confirm"
+              placeholderTextColor="#9CA3AF"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+            />
+            <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700 bg-[#FBFFF0]">
+              Password Confirmation
+            </Text>
+          </View>
+
           {/* Action Buttons */}
           <View className="flex-row gap-x-4 mt-6">
             <TouchableOpacity
@@ -190,15 +210,15 @@ export function DeleteAccountScreen({ navigation }: DeleteAccountScreenProps) {
 
             <TouchableOpacity
               className={`flex-1 rounded-full py-4 ${
-                isLoading 
+                deleteAccountMutation.isPending 
                   ? 'bg-gray-400' 
                   : 'bg-[#44A27B]'
               }`}
               onPress={handleDeleteAccount}
-              disabled={isLoading}
+              disabled={deleteAccountMutation.isPending}
             >
               <Text className="text-white text-center text-lg font-semibold">
-                {isLoading ? 'Deleting...' : 'Delete Account'}
+                {deleteAccountMutation.isPending ? 'Deleting...' : 'Delete Account'}
               </Text>
             </TouchableOpacity>
           </View>

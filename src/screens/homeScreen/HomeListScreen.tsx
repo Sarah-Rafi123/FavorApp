@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,13 +9,17 @@ import {
   FlatList,
   RefreshControl,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { FavorDetailsModal } from '../../components/overlays';
-import { useFavors } from '../../services/queries/FavorQueries';
+import { useFavors, useBrowseFavors } from '../../services/queries/FavorQueries';
 import { Favor } from '../../services/apis/FavorApis';
+import { useApplyToFavor } from '../../services/mutations/FavorMutations';
+import { StripeConnectManager } from '../../services/StripeConnectManager';
 import FilterSvg from '../../assets/icons/Filter';
 import BellSvg from '../../assets/icons/Bell';
 import DollarSvg from '../../assets/icons/Dollar';
+import useFilterStore from '../../store/useFilterStore';
 
 interface HomeListScreenProps {
   onMapView: () => void;
@@ -30,25 +34,77 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications }: HomeLis
   const [currentPage, setCurrentPage] = useState(1);
   const [allFavors, setAllFavors] = useState<Favor[]>([]);
   const [hasMorePages, setHasMorePages] = useState(true);
+  
+  // Stripe Connect Manager
+  const stripeConnectManager = StripeConnectManager.getInstance();
+  
+  // Get filter store state
+  const { getFilterCount, hasActiveFilters, toBrowseParams } = useFilterStore();
 
-  // Fetch favors using the new API
-  const { data: favorsData, isLoading, error, refetch } = useFavors(currentPage, 12);
+  // Apply to Favor mutation
+  const applyToFavorMutation = useApplyToFavor();
+
+  // Use browseFavors when filters are active, useFavors when not
+  const useFilteredData = hasActiveFilters();
+
+  // Fetch filtered favors when filters are active
+  const { 
+    data: browseFavorsData, 
+    isLoading: browseFavorsLoading, 
+    error: browseFavorsError, 
+    refetch: refetchBrowseFavors 
+  } = useBrowseFavors(
+    toBrowseParams(currentPage, 12),
+    { enabled: useFilteredData }
+  );
+
+  // Fetch regular favors when no filters are active
+  const { 
+    data: favorsData, 
+    isLoading: favorsLoading, 
+    error: favorsError, 
+    refetch: refetchFavors 
+  } = useFavors(
+    currentPage, 
+    12,
+    { enabled: !useFilteredData }
+  );
+
+  // Use the appropriate data source
+  const currentData = useFilteredData ? browseFavorsData : favorsData;
+  const isLoading = useFilteredData ? browseFavorsLoading : favorsLoading;
+  const error = useFilteredData ? browseFavorsError : favorsError;
+  const refetch = useFilteredData ? refetchBrowseFavors : refetchFavors;
+
+  // Cleanup Stripe Connect listeners on unmount
+  useEffect(() => {
+    return () => {
+      stripeConnectManager.cleanup();
+    };
+  }, [stripeConnectManager]);
+
+  // Reset data when switching between filtered and unfiltered
+  React.useEffect(() => {
+    setCurrentPage(1);
+    setAllFavors([]);
+    setHasMorePages(true);
+  }, [useFilteredData]);
 
   // Update allFavors when new data arrives
   React.useEffect(() => {
-    if (favorsData?.data.favors) {
+    if (currentData?.data.favors) {
       if (currentPage === 1) {
         // First page - replace all favors
-        setAllFavors(favorsData.data.favors);
+        setAllFavors(currentData.data.favors);
       } else {
         // Additional pages - append to existing favors
-        setAllFavors(prev => [...prev, ...favorsData.data.favors]);
+        setAllFavors(prev => [...prev, ...currentData.data.favors]);
       }
       
       // Check if there are more pages
-      setHasMorePages(currentPage < favorsData.data.meta.total_pages);
+      setHasMorePages(currentPage < currentData.data.meta.total_pages);
     }
-  }, [favorsData, currentPage]);
+  }, [currentData, currentPage]);
 
   const loadMoreFavors = useCallback(() => {
     if (!isLoading && hasMorePages) {
@@ -63,9 +119,89 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications }: HomeLis
     refetch();
   }, [refetch]);
 
+  // Helper function to format priority text
+  const formatPriority = (priority: string) => {
+    switch (priority) {
+      case 'no_rush':
+        return 'No Rush';
+      case 'immediate':
+        return 'Immediate';
+      case 'delayed':
+        return 'Delayed';
+      default:
+        return priority.charAt(0).toUpperCase() + priority.slice(1);
+    }
+  };
+
   const handleFavorClick = (favor: Favor) => {
     setSelectedFavorId(favor.id);
     setShowFavorDetailsModal(true);
+  };
+
+  const handleProvideFavor = async (favor: Favor) => {
+    console.log('🎯 Provide favor clicked for:', favor.user.full_name);
+    console.log('💰 Favor tip amount:', favor.tip);
+    
+    try {
+      // Check if this is a paid favor and validate Stripe Connect status
+      const tipAmount = typeof favor.tip === 'string' ? parseFloat(favor.tip) : (favor.tip || 0);
+      
+      // Create callback that will apply to favor after payment setup is complete
+      const onSetupComplete = async () => {
+        console.log('🎉 Payment setup complete, now applying to favor automatically');
+        try {
+          await applyToFavorMutation.mutateAsync(favor.id);
+          console.log('✅ Auto-application after payment setup successful');
+        } catch (error: any) {
+          console.error('❌ Auto-application after payment setup failed:', error.message);
+          // The mutation's onError callback will handle the toast
+        }
+      };
+      
+      const canProceed = await stripeConnectManager.validateBeforeApplying(tipAmount, onSetupComplete);
+      
+      if (canProceed) {
+        console.log('✅ User can apply to this favor');
+        
+        // Show confirmation dialog and apply to favor
+        Alert.alert(
+          'Apply to Favor',
+          `Apply to provide favor for ${favor.user.full_name}?${tipAmount > 0 ? ` You'll receive $${tipAmount.toFixed(2)}.` : ' This is a volunteer favor.'}`,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { 
+              text: 'Apply',
+              onPress: async () => {
+                try {
+                  console.log('📝 Applying to favor:', favor.id);
+                  
+                  // Call the Apply to Favor API
+                  await applyToFavorMutation.mutateAsync(favor.id);
+                  
+                  // Success is handled by the mutation's onSuccess callback
+                  console.log('✅ Application submitted successfully');
+                  
+                } catch (error: any) {
+                  // Error is handled by the mutation's onError callback
+                  console.error('❌ Application failed:', error.message);
+                }
+              }
+            }
+          ]
+        );
+      } else {
+        console.log('⚠️ User cannot apply - payment account setup required');
+        // stripeConnectManager.validateBeforeApplying already shows the setup dialog
+        // If user proceeds with setup, the onSetupComplete callback will automatically apply to the favor
+      }
+    } catch (error) {
+      console.error('❌ Error handling provide favor:', error);
+      Alert.alert(
+        'Error',
+        'Something went wrong. Please try again.',
+        [{ text: 'OK' }]
+      );
+    }
   };
 
   const FavorCard = ({ favor }: { favor: Favor }) => (
@@ -75,11 +211,19 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications }: HomeLis
         activeOpacity={0.7}
       >
         <View className="flex-row mb-3">
-          <Image
-            source={{ uri: favor.image_url || 'https://via.placeholder.com/112x112' }}
-            className="w-28 h-28 rounded-2xl mr-4"
-            style={{ backgroundColor: '#f3f4f6' }}
-          />
+          {favor.image_url ? (
+            <Image
+              source={{ uri: favor.image_url }}
+              className="w-28 h-28 rounded-2xl mr-4"
+              style={{ backgroundColor: '#f3f4f6' }}
+            />
+          ) : (
+            <View className="w-28 h-28 rounded-2xl mr-4 bg-gray-200 items-center justify-center border border-gray-300">
+              <View className="items-center">
+                <Text className="text-4xl text-gray-400 mb-1">📋</Text>
+              </View>
+            </View>
+          )}
           <View className="flex-1 justify-start">
             <View className="flex-row items-center mb-1">
               {!favor.favor_pay && (
@@ -93,7 +237,7 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications }: HomeLis
                   : favor.user.full_name}
               </Text>
               <View className="ml-2 px-2 py-1 rounded">
-                <Text className="text-[#D12E34] text-sm font-medium capitalize">{favor.priority}</Text>
+                <Text className="text-[#D12E34] text-sm font-medium">{formatPriority(favor.priority)}</Text>
               </View>
             </View>
             <Text className="text-sm text-gray-600 mb-1">
@@ -111,12 +255,10 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications }: HomeLis
       
       <TouchableOpacity 
         className="bg-green-500 rounded-full py-3"
-        onPress={() => {
-          console.log('Provide favor for:', favor.user.full_name);
-        }}
+        onPress={() => handleProvideFavor(favor)}
       >
         <Text className="text-white text-center font-semibold text-base">
-          {favor.favor_pay ? 'Volunteer' : `$${parseFloat((favor.tip || 0).toString()).toFixed(2)}`} | Provide a Favor
+          ${parseFloat((favor.tip || 0).toString()).toFixed(2)} | Provide a Favor
         </Text>
       </TouchableOpacity>
     </View>
@@ -136,10 +278,15 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications }: HomeLis
           <Text className="text-2xl font-bold text-black">Home</Text>
           <View className="flex-row gap-x-2">
             <TouchableOpacity
-              className="items-center justify-center"
+              className="items-center justify-center relative w-10 h-10 rounded-full"
               onPress={onFilter}
             >
               <FilterSvg />
+              {getFilterCount() > 0 && (
+                <View className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full items-center justify-center">
+                  <Text className="text-white text-xs font-bold">{getFilterCount()}</Text>
+                </View>
+              )}
             </TouchableOpacity>
             <TouchableOpacity
               className="items-center justify-center"

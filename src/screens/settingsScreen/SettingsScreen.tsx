@@ -104,6 +104,7 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
           <View className="flex-row gap-x-3">
             <TouchableOpacity
               className="items-center justify-center"
+              onPress={() => navigation?.navigate('FilterScreen')}
             >
               <FilterSvg />
             </TouchableOpacity>

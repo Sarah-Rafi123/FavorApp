@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Modal, TouchableOpacity, ScrollView, Image, TextInput } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, ScrollView, Image, TextInput, Alert, ActionSheetIOS, Platform } from 'react-native';
 import { CustomButton } from '../buttons/CustomButton';
 import { useProfileQuery } from '../../services/queries/ProfileQueries';
+import { useUpdateProfileMutation, useUploadProfileImageMutation, useRemoveProfileImageMutation } from '../../services/mutations/ProfileMutations';
+import ImagePicker from 'react-native-image-crop-picker';
 import CalendarSvg from '../../assets/icons/Calender';
 import PhoneSvg from '../../assets/icons/Phone';
 import ChatSvg from '../../assets/icons/Chat';
@@ -16,15 +18,26 @@ interface UpdateProfileModalProps {
 interface ProfileData {
   firstName: string;
   lastName: string;
+  middleName?: string;
   dateOfBirth: string;
   address: string;
   phoneCall: string;
   phoneText: string;
+  yearsOfExperience?: number;
+  aboutMe?: string;
+  skills?: string[];
+  otherSkills?: string;
+  city?: string;
+  state?: string;
 }
 
 export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: UpdateProfileModalProps) {
   const { data: profileResponse } = useProfileQuery();
   const profile = profileResponse?.data?.profile;
+  
+  const updateProfileMutation = useUpdateProfileMutation();
+  const uploadImageMutation = useUploadProfileImageMutation();
+  const removeImageMutation = useRemoveProfileImageMutation();
 
   // Helper function to format date from API to MM/DD/YYYY
   const formatDateForForm = (dateString: string) => {
@@ -47,12 +60,19 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
   };
 
   const [profileData, setProfileData] = useState<ProfileData>({
-    firstName: initialData?.firstName || 'Kathryn',
-    lastName: initialData?.lastName || 'Murphy',
-    dateOfBirth: initialData?.dateOfBirth || '8/2/2001',
-    address: initialData?.address || '4140 Parker Rd, Allentown, New Mexico 31134',
-    phoneCall: initialData?.phoneCall || '(629) 555-0129',
-    phoneText: initialData?.phoneText || '(406) 555-0120',
+    firstName: initialData?.firstName || '',
+    lastName: initialData?.lastName || '',
+    middleName: initialData?.middleName || '',
+    dateOfBirth: initialData?.dateOfBirth || '',
+    address: initialData?.address || '',
+    phoneCall: initialData?.phoneCall || '',
+    phoneText: initialData?.phoneText || '',
+    yearsOfExperience: initialData?.yearsOfExperience || 0,
+    aboutMe: initialData?.aboutMe || '',
+    skills: initialData?.skills || [],
+    otherSkills: initialData?.otherSkills || '',
+    city: initialData?.city || '',
+    state: initialData?.state || '',
   });
 
   // Update form data when profile data is loaded from API
@@ -61,10 +81,17 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
       setProfileData({
         firstName: profile.first_name || '',
         lastName: profile.last_name || '',
+        middleName: profile.middle_name || '',
         dateOfBirth: formatDateForForm(profile.date_of_birth) || '',
         address: profile.address?.full_address || '',
         phoneCall: formatPhoneForForm(profile.phone_no_call) || '',
         phoneText: formatPhoneForForm(profile.phone_no_text) || '',
+        yearsOfExperience: profile.years_of_experience || 0,
+        aboutMe: profile.about_me || '',
+        skills: profile.skills || [],
+        otherSkills: profile.other_skills || '',
+        city: profile.address?.city || '',
+        state: profile.address?.state || '',
       });
     }
   }, [profile]);
@@ -72,10 +99,15 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
   const [errors, setErrors] = useState({
     firstName: '',
     lastName: '',
+    middleName: '',
     dateOfBirth: '',
     address: '',
     phoneCall: '',
     phoneText: '',
+    yearsOfExperience: '',
+    aboutMe: '',
+    city: '',
+    state: '',
   });
 
   const [showCalendar, setShowCalendar] = useState(false);
@@ -205,14 +237,30 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
     }
   };
 
+  const validateExperience = (experience: string) => {
+    const num = Number(experience);
+    if (isNaN(num) || num < 0 || num > 99) return 'Must be between 0 and 99';
+    return '';
+  };
+
+  const validateAboutMe = (text: string) => {
+    if (text.length > 1000) return 'Maximum 1000 characters allowed';
+    return '';
+  };
+
   const validateForm = () => {
     const newErrors = {
       firstName: validateName(profileData.firstName),
       lastName: validateName(profileData.lastName),
+      middleName: profileData.middleName ? validateName(profileData.middleName) : '',
       dateOfBirth: validateDate(profileData.dateOfBirth),
       address: validateAddress(profileData.address),
       phoneCall: validatePhone(profileData.phoneCall),
       phoneText: validatePhone(profileData.phoneText),
+      yearsOfExperience: validateExperience(profileData.yearsOfExperience?.toString() || '0'),
+      aboutMe: validateAboutMe(profileData.aboutMe || ''),
+      city: !profileData.city?.trim() ? 'City is required' : '',
+      state: !profileData.state?.trim() ? 'State is required' : '',
     };
 
     setErrors(newErrors);
@@ -221,16 +269,41 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
 
   const handleUpdate = () => {
     if (validateForm()) {
-      onUpdate(profileData);
-      onClose();
+      // Transform form data to API format
+      const updateData = {
+        profile: {
+          first_name: profileData.firstName,
+          last_name: profileData.lastName,
+          middle_name: profileData.middleName || '',
+          phone_no_call: profileData.phoneCall.replace(/\D/g, ''),
+          phone_no_text: profileData.phoneText.replace(/\D/g, ''),
+          years_of_experience: profileData.yearsOfExperience || 0,
+          about_me: profileData.aboutMe || '',
+          skills: profileData.skills || [],
+          other_skills: profileData.otherSkills || '',
+          remove_image: "0" as "0" | "1",
+          address_attributes: {
+            full_address: profileData.address,
+            city: profileData.city || '',
+            state: profileData.state || '',
+          },
+        },
+      };
+
+      updateProfileMutation.mutate(updateData, {
+        onSuccess: () => {
+          onUpdate(profileData);
+          onClose();
+        },
+      });
     }
   };
 
-  const updateField = (field: keyof ProfileData, value: string) => {
+  const updateField = (field: keyof ProfileData, value: string | number | string[]) => {
     let formattedValue = value;
     
     // Format phone numbers
-    if (field === 'phoneCall' || field === 'phoneText') {
+    if ((field === 'phoneCall' || field === 'phoneText') && typeof value === 'string') {
       formattedValue = formatPhoneNumber(value);
     }
     
@@ -240,6 +313,129 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
     if (errors[field as keyof typeof errors]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
+  };
+
+  const handleImageOptions = () => {
+    const options = profile?.image_url 
+      ? ['Take Photo', 'Choose from Library', 'Remove Photo', 'Cancel']
+      : ['Take Photo', 'Choose from Library', 'Cancel'];
+    
+    const cancelButtonIndex = options.length - 1;
+    const destructiveButtonIndex = profile?.image_url ? 2 : -1;
+
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options,
+          cancelButtonIndex,
+          destructiveButtonIndex,
+        },
+        (buttonIndex) => {
+          handleImageAction(buttonIndex, options);
+        }
+      );
+    } else {
+      Alert.alert(
+        'Profile Photo',
+        'Choose an option',
+        options.slice(0, -1).map((option, index) => ({
+          text: option,
+          onPress: () => handleImageAction(index, options),
+          style: index === destructiveButtonIndex ? 'destructive' as 'destructive' : 'default' as 'default',
+        })).concat([
+          { text: 'Cancel', style: 'cancel' as 'cancel' }
+        ])
+      );
+    }
+  };
+
+  const handleImageAction = (buttonIndex: number, options: string[]) => {
+    switch (options[buttonIndex]) {
+      case 'Take Photo':
+        launchCamera();
+        break;
+      case 'Choose from Library':
+        launchImageLibrary();
+        break;
+      case 'Remove Photo':
+        handleRemoveImage();
+        break;
+    }
+  };
+
+  const launchCamera = async () => {
+    try {
+      const image = await ImagePicker.openCamera({
+        width: 800,
+        height: 800,
+        cropping: true,
+        compressImageQuality: 0.8,
+        mediaType: 'photo',
+        includeBase64: false,
+      });
+
+      // Check file size (10MB limit)
+      if (image.size && image.size > 10 * 1024 * 1024) {
+        Alert.alert('Error', 'Image file is too large. Please choose an image smaller than 10MB.');
+        return;
+      }
+
+      await handleImageUpload(image);
+    } catch (error: any) {
+      if (error.code !== 'E_PICKER_CANCELLED') {
+        Alert.alert('Error', 'Failed to take photo. Please try again.');
+      }
+    }
+  };
+
+  const launchImageLibrary = async () => {
+    try {
+      const image = await ImagePicker.openPicker({
+        width: 800,
+        height: 800,
+        cropping: true,
+        compressImageQuality: 0.8,
+        mediaType: 'photo',
+        includeBase64: false,
+      });
+
+      // Check file size (10MB limit)
+      if (image.size && image.size > 10 * 1024 * 1024) {
+        Alert.alert('Error', 'Image file is too large. Please choose an image smaller than 10MB.');
+        return;
+      }
+
+      await handleImageUpload(image);
+    } catch (error: any) {
+      if (error.code !== 'E_PICKER_CANCELLED') {
+        Alert.alert('Error', 'Failed to select image. Please try again.');
+      }
+    }
+  };
+
+  const handleImageUpload = async (image: any) => {
+    const imageFile = {
+      uri: image.path,
+      type: image.mime,
+      name: image.filename || `profile_image_${Date.now()}.jpg`,
+    };
+
+    uploadImageMutation.mutate(imageFile);
+  };
+
+  const handleRemoveImage = () => {
+    Alert.alert(
+      'Remove Photo',
+      'Are you sure you want to remove your profile photo?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Remove', 
+          style: 'destructive',
+          onPress: () => removeImageMutation.mutate()
+        }
+      ]
+    );
   };
 
   return (
@@ -280,8 +476,17 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
                     </View>
                   )}
                 </View>
-                <TouchableOpacity className="bg-transparent border-2 border-[#71DFB1] rounded-full px-4 py-2">
-                  <Text className="text-[#71DFB1] font-medium">Change Photo</Text>
+                <TouchableOpacity 
+                  className={`bg-transparent border-2 border-[#71DFB1] rounded-full px-4 py-2 ${
+                    uploadImageMutation.isPending || removeImageMutation.isPending ? 'opacity-50' : ''
+                  }`}
+                  onPress={handleImageOptions}
+                  disabled={uploadImageMutation.isPending || removeImageMutation.isPending}
+                >
+                  <Text className="text-[#71DFB1] font-medium">
+                    {uploadImageMutation.isPending ? 'Uploading...' : 
+                     removeImageMutation.isPending ? 'Removing...' : 'Change Photo'}
+                  </Text>
                 </TouchableOpacity>
               </View>
 
@@ -424,9 +629,10 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
 
               <View className="mt-6">
                 <CustomButton
-                  title="Update"
+                  title={updateProfileMutation.isPending ? "Updating..." : "Update"}
                   onPress={handleUpdate}
                   className="w-full"
+                  disabled={updateProfileMutation.isPending}
                 />
               </View>
             </View>

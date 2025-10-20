@@ -69,7 +69,10 @@ export function ProfileScreen() {
         <View className="flex-row justify-between items-center">
           <Text className="text-2xl font-bold text-black">Profile</Text>
           <View className="flex-row gap-x-2">
-            <TouchableOpacity className="w-10 h-10  rounded-full items-center justify-center">
+            <TouchableOpacity 
+              className="w-10 h-10  rounded-full items-center justify-center"
+              onPress={() => navigation.navigate('FilterScreen' as never)}
+            >
               <FilterSvg />
             </TouchableOpacity>
             <TouchableOpacity 

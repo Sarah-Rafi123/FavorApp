@@ -7,6 +7,7 @@ import {
   BrowseFavorsParams,
   MyFavorsParams
 } from '../apis/FavorApis';
+import { FavorSubjectApis, ListFavorSubjectsResponse } from '../apis/FavorSubjectApis';
 import useAuthStore from '../../store/useAuthStore';
 
 /**
@@ -169,5 +170,22 @@ export const useInfiniteFavors = (params: BrowseFavorsParams) => {
     queryFn: () => FavorApis.browseFavors({ ...params, page: 1 }),
     staleTime: 3 * 60 * 1000,
     gcTime: 8 * 60 * 1000,
+  });
+};
+
+/**
+ * Hook for fetching favor subjects/categories
+ */
+export const useFavorSubjects = (
+  options?: Partial<UseQueryOptions<ListFavorSubjectsResponse, Error>>
+) => {
+  return useQuery<ListFavorSubjectsResponse, Error>({
+    queryKey: ['favor-subjects'],
+    queryFn: () => FavorSubjectApis.listFavorSubjects(),
+    staleTime: 60 * 60 * 1000, // Consider data fresh for 1 hour (categories don't change often)
+    gcTime: 2 * 60 * 60 * 1000, // Keep in cache for 2 hours
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    ...options,
   });
 };

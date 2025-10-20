@@ -4,7 +4,9 @@ import {
   CreateFavorRequest,
   CreateFavorFormData,
   UpdateFavorRequest,
-  GetFavorResponse
+  GetFavorResponse,
+  ReassignFavorResponse,
+  ApplyToFavorResponse
 } from '../apis/FavorApis';
 import Toast from 'react-native-toast-message';
 
@@ -248,6 +250,164 @@ export const convertPriority = (priority: string): 'immediate' | 'delayed' | 'no
     default:
       return 'delayed';
   }
+};
+
+/**
+ * Hook for applying to a favor
+ */
+export const useApplyToFavor = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<ApplyToFavorResponse, Error, number>({
+    mutationFn: (favorId: number) => FavorApis.applyToFavor(favorId),
+    onSuccess: (data, favorId) => {
+      console.log('Apply to favor successful:', data.data.application.id);
+      
+      // Invalidate and refetch relevant queries
+      queryClient.invalidateQueries({ queryKey: ['favors'] });
+      queryClient.invalidateQueries({ queryKey: ['favors', 'my'] });
+      queryClient.invalidateQueries({ queryKey: ['favor', favorId] });
+      queryClient.invalidateQueries({ queryKey: ['favor', favorId, 'applicants'] });
+      
+      Toast.show({
+        type: 'success',
+        text1: 'Application Submitted! 🎉',
+        text2: data.message || 'Your application has been submitted successfully!',
+        visibilityTime: 4000,
+      });
+    },
+    onError: (error, favorId) => {
+      console.error('Apply to favor failed:', error);
+      
+      // Determine toast type based on error
+      let toastType: 'error' | 'info' = 'error';
+      let title = 'Application Failed';
+      
+      // Some errors are more informational than critical
+      if (error.message.includes('already applied') || 
+          error.message.includes('already the accepted provider') ||
+          error.message.includes('cannot apply to your own favor')) {
+        toastType = 'info';
+        title = 'Cannot Apply';
+      }
+      
+      Toast.show({
+        type: toastType,
+        text1: title,
+        text2: error.message,
+        visibilityTime: 4000,
+      });
+    },
+  });
+};
+
+/**
+ * Hook for deleting a favor
+ */
+export const useDeleteFavor = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<{ success: boolean; message: string }, Error, { favorId: number; type?: 'active' | 'history' }>({
+    mutationFn: ({ favorId, type = 'active' }) => FavorApis.deleteFavor(favorId, type),
+    onSuccess: (data, { favorId, type }) => {
+      console.log('Delete favor successful:', favorId);
+      
+      // Invalidate and refetch relevant queries
+      queryClient.invalidateQueries({ queryKey: ['favors'] });
+      queryClient.invalidateQueries({ queryKey: ['favors', 'my'] });
+      queryClient.invalidateQueries({ queryKey: ['favor', favorId] });
+      
+      Toast.show({
+        type: 'success',
+        text1: 'Favor Cancelled ✅',
+        text2: data.message || 'Your favor has been cancelled successfully!',
+        visibilityTime: 4000,
+      });
+    },
+    onError: (error, { favorId }) => {
+      console.error('Delete favor failed:', error);
+      
+      Toast.show({
+        type: 'error',
+        text1: 'Failed to Cancel Favor',
+        text2: error.message,
+        visibilityTime: 4000,
+      });
+    },
+  });
+};
+
+/**
+ * Hook for reassigning a favor to a different provider
+ */
+export const useReassignFavor = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<ReassignFavorResponse, Error, { favorId: number; newProviderId: number }>({
+    mutationFn: ({ favorId, newProviderId }) => FavorApis.reassignFavor(favorId, newProviderId),
+    onSuccess: (data, { favorId }) => {
+      console.log('Reassign favor successful:', favorId);
+      
+      // Invalidate and refetch relevant queries
+      queryClient.invalidateQueries({ queryKey: ['favors'] });
+      queryClient.invalidateQueries({ queryKey: ['favors', 'my'] });
+      queryClient.invalidateQueries({ queryKey: ['favor', favorId] });
+      queryClient.invalidateQueries({ queryKey: ['favor', favorId, 'applicants'] });
+      
+      Toast.show({
+        type: 'success',
+        text1: 'Favor Reassigned! 🔄',
+        text2: data.message || 'Favor has been reassigned to new provider successfully!',
+        visibilityTime: 4000,
+      });
+    },
+    onError: (error) => {
+      console.error('Reassign favor failed:', error);
+      
+      Toast.show({
+        type: 'error',
+        text1: 'Failed to Reassign Favor',
+        text2: error.message,
+        visibilityTime: 4000,
+      });
+    },
+  });
+};
+
+/**
+ * Hook for canceling a favor request (by provider)
+ */
+export const useCancelRequest = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<{ success: boolean; data: {}; message: string }, Error, number>({
+    mutationFn: (favorId: number) => FavorApis.cancelRequest(favorId),
+    onSuccess: (data, favorId) => {
+      console.log('Cancel request successful:', favorId);
+      
+      // Invalidate and refetch relevant queries
+      queryClient.invalidateQueries({ queryKey: ['favors'] });
+      queryClient.invalidateQueries({ queryKey: ['favors', 'my'] });
+      queryClient.invalidateQueries({ queryKey: ['favor', favorId] });
+      
+      Toast.show({
+        type: 'success',
+        text1: 'Request Cancelled ✅',
+        text2: data.message || 'Your favor request has been cancelled successfully!',
+        visibilityTime: 4000,
+      });
+    },
+    onError: (error, favorId) => {
+      console.error('Cancel request failed:', error);
+      
+      Toast.show({
+        type: 'error',
+        text1: 'Failed to Cancel Request',
+        text2: error.message,
+        visibilityTime: 4000,
+      });
+    },
+  });
 };
 
 /**

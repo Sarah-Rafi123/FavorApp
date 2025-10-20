@@ -9,6 +9,7 @@ import {
   Image,
   ActivityIndicator,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { CarouselButton } from '../../components/buttons';
 import CreateFavorSvg from '../../assets/icons/ProvideFavor';
@@ -17,6 +18,7 @@ import { TimerSvg } from '../../assets/icons/Timer';
 import FilterSvg from '../../assets/icons/Filter';
 import BellSvg from '../../assets/icons/Bell';
 import { useMyFavors } from '../../services/queries/FavorQueries';
+import { useDeleteFavor } from '../../services/mutations/FavorMutations';
 import { Favor } from '../../services/apis/FavorApis';
 import useAuthStore from '../../store/useAuthStore';
 
@@ -32,6 +34,9 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
 
   // Get auth store state
   const { user, accessToken } = useAuthStore();
+
+  // Delete favor mutation for canceling favors
+  const deleteFavorMutation = useDeleteFavor();
 
   // API calls for different tabs
   // All tab: active favors (shows requests)
@@ -173,6 +178,40 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
     }
   };
 
+  const handleCancelFavor = async (favor: Favor) => {
+    console.log('Cancel favor:', favor.user.full_name);
+    
+    // Show confirmation alert before canceling favor
+    Alert.alert(
+      'Cancel Favor',
+      `Are you sure you want to cancel this favor request? This action cannot be undone.`,
+      [
+        { text: 'No', style: 'cancel' },
+        { 
+          text: 'Yes, Cancel',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              console.log('🗑️ Canceling favor:', favor.id);
+              await deleteFavorMutation.mutateAsync({ 
+                favorId: favor.id, 
+                type: 'active' 
+              });
+              
+              // Immediately refresh the current data after successful deletion
+              console.log('✅ Favor cancelled successfully, refreshing data...');
+              await handleRefresh();
+              
+            } catch (error: any) {
+              console.error('❌ Cancel favor failed:', error.message);
+              // Error handling is done by the mutation's onError callback
+            }
+          }
+        }
+      ]
+    );
+  };
+
 
 
   const RequestCard = ({ favor }: { favor: Favor }) => {
@@ -221,12 +260,12 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
   };
 
   const ActiveCard = ({ favor }: { favor: Favor }) => (
-    <TouchableOpacity 
-      onPress={() => navigation?.navigate('FavorDetailsScreen', { favorId: favor.id })}
-      activeOpacity={0.7}
-    >
-      <View className="bg-white rounded-2xl p-4 mb-4 mx-4 border-2 border-[#44A27B]">
-        <View className="flex-row">
+    <View className="bg-white rounded-2xl p-4 mb-4 mx-4 border-2 border-[#44A27B]">
+      <TouchableOpacity 
+        onPress={() => navigation?.navigate('FavorDetailsScreen', { favorId: favor.id })}
+        activeOpacity={0.7}
+      >
+        <View className="flex-row mb-3">
           <Image
             source={{ 
               uri: favor.image_url || 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400&h=400&fit=crop'
@@ -247,13 +286,23 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
         </View>
         
         {/* Status indicator */}
-        <View className="mt-3 px-3 py-2 bg-green-50 rounded-lg">
+        <View className="px-3 py-2 bg-green-50 rounded-lg mb-3">
           <Text className="text-sm text-green-700 font-medium capitalize">
             Status: {favor.status.replace('_', ' ')}
           </Text>
         </View>
-      </View>
-    </TouchableOpacity>
+      </TouchableOpacity>
+      
+      {/* Cancel Favor Button */}
+      <TouchableOpacity 
+        className="bg-green-500 rounded-full py-3"
+        onPress={() => handleCancelFavor(favor)}
+      >
+        <Text className="text-white text-center font-semibold text-base">
+          Cancel Favor
+        </Text>
+      </TouchableOpacity>
+    </View>
   );
 
   const HistoryCard = ({ favor }: { favor: Favor }) => (
@@ -320,7 +369,10 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
         <View className="flex-row justify-between items-center mb-6">
           <Text className="text-2xl font-bold text-black">Create Favor</Text>
           <View className="flex-row gap-x-2">
-            <TouchableOpacity className="items-center justify-center">
+            <TouchableOpacity 
+              className="items-center justify-center"
+              onPress={() => navigation?.navigate('FilterScreen')}
+            >
               <FilterSvg />
             </TouchableOpacity>
             <TouchableOpacity 

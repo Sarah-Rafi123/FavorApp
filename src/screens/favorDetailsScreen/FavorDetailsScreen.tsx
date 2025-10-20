@@ -10,11 +10,13 @@ import {
   Modal,
   TextInput,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import BackSvg from '../../assets/icons/Back';
 import CancelSvg from '../../assets/icons/Cancel';
 import { useFavor } from '../../services/queries/FavorQueries';
+import { useDeleteFavor, useReassignFavor } from '../../services/mutations/FavorMutations';
 import { Favor } from '../../services/apis/FavorApis';
 
 interface FavorDetailsScreenProps {
@@ -52,6 +54,10 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
   const { data: favorResponse, isLoading, error } = useFavor(favorId, {
     enabled: !!favorId
   });
+
+  // Delete favor mutation and Reassign favor mutation
+  const deleteFavorMutation = useDeleteFavor();
+  const reassignFavorMutation = useReassignFavor();
 
   const favor = favorResponse?.data.favor;
 
@@ -129,10 +135,26 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
     setShowCancelModal(true);
   };
 
-  const handleConfirmCancel = () => {
-    setShowCancelModal(false);
-    console.log('Favor cancelled');
-    navigation?.goBack();
+  const handleConfirmCancel = async () => {
+    if (!favor) return;
+
+    try {
+      console.log('🗑️ Confirming cancel for favor:', favor.id);
+      await deleteFavorMutation.mutateAsync({ 
+        favorId: favor.id, 
+        type: 'active' 
+      });
+      
+      // Close modal and navigate back on success
+      setShowCancelModal(false);
+      navigation?.goBack();
+      
+      console.log('✅ Favor cancelled successfully');
+    } catch (error: any) {
+      console.error('❌ Cancel favor failed:', error.message);
+      // Error handling is done by the mutation's onError callback
+      // Keep modal open on error so user can try again
+    }
   };
 
   const handleCancelModalClose = () => {
@@ -156,6 +178,57 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
     setShowReviewModal(false);
     setRating(0);
     setReviewText('');
+  };
+
+  const handleCancelAndRepost = () => {
+    if (!favor) return;
+
+    // For now, we'll need the new provider ID to be input manually
+    // In a real app, this would show a list of applicants to choose from
+    Alert.alert(
+      'Cancel & Repost Favor',
+      'This will cancel the current provider and reassign to another provider. Do you want to continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Continue',
+          onPress: () => {
+            // For demo purposes, we'll prompt for provider ID
+            // In a real implementation, this would show a list of applicants
+            Alert.prompt(
+              'Enter New Provider ID',
+              'Enter the ID of the new provider to assign this favor to:',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Reassign',
+                  onPress: async (newProviderId) => {
+                    if (!newProviderId || isNaN(Number(newProviderId))) {
+                      Alert.alert('Error', 'Please enter a valid provider ID');
+                      return;
+                    }
+
+                    try {
+                      console.log('🔄 Reassigning favor to provider:', newProviderId);
+                      await reassignFavorMutation.mutateAsync({
+                        favorId: favor.id,
+                        newProviderId: Number(newProviderId)
+                      });
+                      console.log('✅ Favor reassigned successfully');
+                      navigation?.goBack();
+                    } catch (error: any) {
+                      console.error('❌ Reassign favor failed:', error.message);
+                      // Error handling is done by the mutation's onError callback
+                    }
+                  }
+                }
+              ],
+              'plain-text'
+            );
+          }
+        }
+      ]
+    );
   };
 
   const handleReviewModalClose = () => {
@@ -306,7 +379,7 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
           <View className="flex-row ">
             <TouchableOpacity 
               className="flex-1 bg-transparent border border-black justify-center mr-3 rounded-xl py-1 px-1"
-              onPress={() => console.log('Cancel & Repost pressed')}
+              onPress={handleCancelAndRepost}
             >
               <Text className="text-center text-gray-800 font-medium text-base">Cancel & Repost</Text>
             </TouchableOpacity>

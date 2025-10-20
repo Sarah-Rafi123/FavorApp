@@ -13,6 +13,7 @@ import * as Location from 'expo-location';
 import { ProfileModal } from '../../components/overlays';
 import FilterSvg from '../../assets/icons/Filter';
 import BellSvg from '../../assets/icons/Bell';
+import useFilterStore from '../../store/useFilterStore';
 
 interface HomeMapScreenProps {
   onListView: () => void;
@@ -23,6 +24,9 @@ interface HomeMapScreenProps {
 
 export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMapScreenProps) {
   const [location, setLocation] = useState<any>(null);
+  
+  // Get filter store state
+  const { getFilterCount } = useFilterStore();
   const [selectedProfile, setSelectedProfile] = useState<any>(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showLocationPermissionModal, setShowLocationPermissionModal] = useState(false);
@@ -175,10 +179,15 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
         <Text className="text-2xl font-bold text-gray-800">Home</Text>
         <View className="flex-row gap-x-2">
           <TouchableOpacity
-            className="items-center justify-center"
+            className="items-center justify-center relative w-10 h-10 rounded-full"
             onPress={onFilter}
           >
             <FilterSvg />
+            {getFilterCount() > 0 && (
+              <View className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full items-center justify-center">
+                <Text className="text-white text-xs font-bold">{getFilterCount()}</Text>
+              </View>
+            )}
           </TouchableOpacity>
           <TouchableOpacity
             className="items-center justify-center"
