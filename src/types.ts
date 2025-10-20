@@ -172,4 +172,48 @@ export type AppRoutes = {
   'ProvideFavorMain': any;
   'AskFavorScreen': any;
 
+  // Shared screens
+  'NotificationsScreen': any;
+
 };
+
+export interface ProfileAddress {
+  id: number;
+  city: string;
+  state: string;
+  full_address: string;
+}
+
+export interface Profile {
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+  middle_name: string | null;
+  full_name: string;
+  phone_no_call: string;
+  phone_no_text: string;
+  date_of_birth: string;
+  age: number;
+  years_of_experience: number;
+  about_me: string;
+  skills: string[];
+  other_skills: string | null;
+  member_since: string;
+  is_active: boolean;
+  is_certified: boolean | null;
+  has_payment_method: boolean;
+  has_stripe_account: boolean;
+  address: ProfileAddress;
+  image_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProfileResponse {
+  success: boolean;
+  data: {
+    profile: Profile;
+  };
+  message: string | null;
+}

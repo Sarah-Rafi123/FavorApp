@@ -14,8 +14,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
   };
 
   const handleNotifications = () => {
-    // Handle notifications - can be implemented later
-    console.log('Notifications pressed');
+    navigation.navigate('NotificationsScreen');
   };
 
   if (viewMode === 'list') {

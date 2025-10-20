@@ -323,7 +323,10 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
             <TouchableOpacity className="items-center justify-center">
               <FilterSvg />
             </TouchableOpacity>
-            <TouchableOpacity className="items-center justify-center">
+            <TouchableOpacity 
+              className="items-center justify-center"
+              onPress={() => navigation?.navigate('NotificationsScreen')}
+            >
               <BellSvg />
             </TouchableOpacity>
           </View>

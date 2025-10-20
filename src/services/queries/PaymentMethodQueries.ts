@@ -15,14 +15,7 @@ export const usePaymentMethods = () => {
     enabled: !!user, // Only fetch when user is logged in
     staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
     gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
-    retry: (failureCount, error) => {
-      // Don't retry authentication errors
-      if (error.message.includes('Authentication required')) {
-        return false;
-      }
-      // Retry up to 2 times for other errors
-      return failureCount < 2;
-    },
+    retry: false, // Disable all retries to prevent repeated API calls
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
   });
 };

@@ -48,33 +48,33 @@ interface FAQItem {
 const faqData: FAQItem[] = [
   {
     id: 1,
-    question: "What is Lorem Ipsum?",
-    answer: "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book."
+    question: "Why is my Stripe payment taking so long?",
+    answer: "Stripe has a mandatory 7 day waiting period for all first time transactions. After your first transaction, Stripe will release funds as desired. The waiting period is to ensure no initial fraud, incorrect banking, and overall protection of the customers."
   },
   {
     id: 2,
-    question: "Why do we use it?",
-    answer: "It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters, as opposed to using 'Content here, content here', making it look like readable English."
+    question: "Once a favor is accepted, will the address of the Favor show on the main screen along with contact info?",
+    answer: "Yes, once a favor is accepted, the address and contact information will be displayed on the main screen. If this feature is not currently available, we will be adding the address display functionality to improve the user experience."
   },
   {
     id: 3,
-    question: "Where does it come from?",
-    answer: "Contrary to popular belief, Lorem Ipsum is not simply random text. It has roots in a piece of classical Latin literature from 45 BC, making it over 2000 years old. Richard McClintock, a Latin professor at Hampden-Sydney College in Virginia, looked up one of the more obscure Latin words, consectetur, from a Lorem Ipsum passage."
+    question: "Why am I charged 15% to the final amount?",
+    answer: "FavorApp charges 15% to ensure we can keep the platform running and maintain a marketplace for everyone to use. Other similar platforms charge 30-40% but we believe in keeping charges minimal for our community."
   },
   {
     id: 4,
-    question: "Where can I get some?",
-    answer: "There are many variations of passages of Lorem Ipsum available, but the majority have suffered alteration in some form, by injected humour, or randomised words which don't look even slightly believable. If you are going to use a passage of Lorem Ipsum, you need to be sure there isn't anything embarrassing hidden in the middle of text. All the Lorem Ipsum generators on the Internet tend to repeat predefined chunks as necessary, making this the first true generator on the Internet."
+    question: "What to do if my favor costs a lot of money and I dont want to pay the 15% admin fee?",
+    answer: "We encourage that the favor amount is paid through our online system, however, if you are also paying for materials for a contractor/handyman we recommend going offline to pay for materials to save you money and only pay for the labor through our platform."
   },
   {
     id: 5,
-    question: "How do I create an account?",
-    answer: "To create an account, tap the 'Sign Up' button on the login screen, fill in your details including email and password, verify your email address, and complete your profile setup."
+    question: "If I am doing a favor, will my final amount be taxed?",
+    answer: "No, if you are completing a favor and are being paid for it, you will receive the exact amount that is posted and tipped at the end of the transaction."
   },
   {
     id: 6,
-    question: "How do I request a favor?",
-    answer: "To request a favor, go to the 'Provide Favor' tab, tap 'Ask Favor', fill out the form with your request details, set the priority and timeframe, and submit your request to the community."
+    question: "Will there be an app to download in the iOS and Android store?",
+    answer: "Yes, our next goal is to develop the iOS and Android app by mid year of 2025."
   }
 ];
 

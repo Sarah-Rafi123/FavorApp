@@ -13,6 +13,10 @@
       "bundleIdentifier": "com.bobeveleth.tsarn",
       "config": {
         "googleMapsApiKey": "AIzaSyDt1zyVSt1snXRBteLuH9ngKmE8ABve268"
+      },
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app needs access to camera to take photos for favor requests.",
+        "NSPhotoLibraryUsageDescription": "This app needs access to photo library to select images for favor requests."
       }
     },
     "android": {
@@ -25,7 +29,12 @@
         "googleMaps": {
           "apiKey": "AIzaSyDt1zyVSt1snXRBteLuH9ngKmE8ABve268"
         }
-      }
+      },
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
     },
     "web": {
       "bundler": "metro",

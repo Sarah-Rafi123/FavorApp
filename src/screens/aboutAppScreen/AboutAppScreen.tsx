@@ -55,17 +55,25 @@ export function AboutAppScreen({ navigation }: AboutAppScreenProps) {
 
           <View className="px-6">
             <Text className="text-base text-gray-700 leading-6 mb-6">
-              Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.
+              Favor was created to bring a safe, open marketplace, to request and do favors needed throughout our communities.
             </Text>
 
-            <Text className="text-lg font-bold text-gray-800 mb-3">Where does it come from?</Text>
             <Text className="text-base text-gray-700 leading-6 mb-6">
-              Contrary to popular belief, Lorem Ipsum is not simply random text. It has roots in a piece of classical Latin literature from 45 BC, making it over 2000 years old. Richard McClintock, a Latin professor at Hampden-Sydney College in Virginia, looked up one of the more obscure Latin words, consectetur, from a Lorem Ipsum passage, and going through the cites of the word in classical literature, discovered the undoubtable source. Lorem Ipsum comes from sections 1.10.32 and 1.10.33 of "de Finibus Bonorum et Malorum" (The Extremes of Good and Evil) by Cicero, written in 45 BC. This book is a treatise on the theory of ethics, very popular during the Renaissance. The first line of Lorem Ipsum, "Lorem ipsum dolor sit amet..", comes from a line in section 1.10.32.
+              We recognize that not every person needs a contractor to do a large job, but there are many smaller jobs that can be completed by our neighbors and people in the community.
             </Text>
 
-            <Text className="text-lg font-bold text-gray-800 mb-3">Why do we use it?</Text>
+            <Text className="text-lg font-bold text-gray-800 mb-3">Our Mission</Text>
             <Text className="text-base text-gray-700 leading-6 mb-6">
-              It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters, as opposed to using 'Content here, content here', making it look like readable English. Many desktop publishing packages and web page editors now use Lorem Ipsum as their default model text, and a search for 'lorem ipsum' will uncover many web sites still in their infancy. Various versions have evolved over the years, sometimes by accident, sometimes on purpose (injected humour and the like).
+              Our goal is to strengthen our neighborhoods, improve societal restrictions, and help those that could benefit greatly from the smallest Favor.
+            </Text>
+
+            <Text className="text-base text-gray-700 leading-6 mb-6">
+              We also hope to employ more free favors to those less fortunate and without the means to pay while offering community service hours for favors done. Not everything has a price, and sometimes a free favor is worth more to both parties than a paid experience.
+            </Text>
+
+            <Text className="text-lg font-bold text-gray-800 mb-3">Join Our Community</Text>
+            <Text className="text-base text-gray-700 leading-6 mb-6">
+              Lets all come together, help our communities, provide a helping hand and do a Favor for those in need!
             </Text>
           </View>
           <View className="items-center">

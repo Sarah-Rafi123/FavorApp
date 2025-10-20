@@ -8,28 +8,20 @@ import {
   TextInput,
   Modal,
   Alert,
+  ImageBackground,
+  Image,
 } from 'react-native';
-import { CarouselButton } from '../../components/buttons';
 import Svg, { Path } from 'react-native-svg';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
-import { useCreateFavor } from '../../services/mutations/FavorMutations';
+import { useCreateFavor, useCreateFavorWithImage, buildFavorFormData } from '../../services/mutations/FavorMutations';
 import { CreateFavorRequest } from '../../services/apis/FavorApis';
+import { usePaymentMethods } from '../../services/queries/PaymentMethodQueries';
+import ImagePicker from 'react-native-image-crop-picker';
+import BackSvg from '../../assets/icons/Back';
 
 interface AskFavorScreenProps {
   navigation?: any;
 }
-
-const BackIcon = () => (
-  <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-    <Path
-      d="M19 12H5M12 19L5 12L12 5"
-      stroke="#374151"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </Svg>
-);
 
 export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
   const [formData, setFormData] = useState({
@@ -40,14 +32,21 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
     favorPrice: 'Free',
     tip: 0,
     additionalTip: 0,
-    address: '',
+    address: '1600 Amphitheatre Pkwy, Mountain View, CA 94043, USA',
     description: '',
-    city: '',
-    state: '',
+    city: 'Mountain View',
+    state: 'CA',
     latLng: '',
   });
 
   const [showTimeDropdown, setShowTimeDropdown] = useState(false);
+  const [showImageOptions, setShowImageOptions] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<{
+    uri: string;
+    type: string;
+    name: string;
+    fileSize?: number;
+  } | null>(null);
 
   // Hardcoded favor subjects with their IDs
   const favorSubjects = [
@@ -60,8 +59,13 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
     { id: 7, name: 'Maintenance' }
   ];
 
-  // Create favor mutation
+  // Create favor mutations
   const createFavorMutation = useCreateFavor();
+  const createFavorWithImageMutation = useCreateFavorWithImage();
+  const { data: paymentMethodsData } = usePaymentMethods();
+
+  // Check if user has payment methods for paid favors
+  const hasPaymentMethods = paymentMethodsData?.data?.payment_methods && paymentMethodsData.data.payment_methods.length > 0;
 
   const priorityOptions = [
     { label: 'Immediate', value: 'immediate' as const },
@@ -71,9 +75,124 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
   const timeOptions = ['15 minutes', '20 minutes', '30 minutes', '1 hour', '2 hours', '3 hours', '4+ hours'];
 
   const updateFormData = (field: string, value: any) => {
+    // Check if user is trying to select "Paid" but doesn't have payment methods
+    if (field === 'favorPrice' && value === 'Paid' && !hasPaymentMethods) {
+      Alert.alert(
+        'Payment Method Required',
+        'You need to add a payment method before creating paid favors. Would you like to add one now?',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+          {
+            text: 'Add Payment Method',
+            onPress: () => {
+              // Navigate to Settings tab, then to PaymentMethodScreen
+              navigation?.navigate('Settings', {
+                screen: 'PaymentMethodScreen'
+              });
+            },
+          },
+        ]
+      );
+      return; // Don't update to "Paid" if no payment methods
+    }
+    
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const pickImage = async () => {
+    try {
+      setShowImageOptions(true);
+    } catch (error) {
+      console.error('❌ Image picker not available:', error);
+      Alert.alert(
+        'Not Available',
+        'Image picker is not available on this device.'
+      );
+    }
+  };
+
+  const launchImageLibrary = async () => {
+    try {
+      setShowImageOptions(false);
+      
+      const image = await ImagePicker.openPicker({
+        width: 800,
+        height: 600,
+        cropping: true,
+        compressImageQuality: 0.8,
+        mediaType: 'photo',
+        includeBase64: false,
+      });
+
+      // Check file size (10MB limit)
+      if (image.size && image.size > 10 * 1024 * 1024) {
+        Alert.alert(
+          'File Too Large',
+          'Please select an image smaller than 10MB.'
+        );
+        return;
+      }
+
+      // Set the selected image
+      setSelectedImage({
+        uri: image.path,
+        type: image.mime || 'image/jpeg',
+        name: image.filename || `photo_${Date.now()}.jpg`,
+        fileSize: image.size,
+      });
+    } catch (error: any) {
+      console.error('❌ Error in launchImageLibrary:', error);
+      if (error.code !== 'E_PICKER_CANCELLED') {
+        Alert.alert(
+          'Image Picker Error',
+          'There was an issue with the photo library. Please try again.'
+        );
+      }
+    }
+  };
+
+  const launchCamera = async () => {
+    try {
+      setShowImageOptions(false);
+      
+      const image = await ImagePicker.openCamera({
+        width: 800,
+        height: 600,
+        cropping: true,
+        compressImageQuality: 0.8,
+        mediaType: 'photo',
+        includeBase64: false,
+      });
+
+      // Check file size (10MB limit)
+      if (image.size && image.size > 10 * 1024 * 1024) {
+        Alert.alert(
+          'File Too Large',
+          'Please take a photo with smaller file size.'
+        );
+        return;
+      }
+
+      // Set the selected image
+      setSelectedImage({
+        uri: image.path,
+        type: image.mime || 'image/jpeg',
+        name: `camera_${Date.now()}.jpg`,
+        fileSize: image.size,
+      });
+    } catch (error: any) {
+      console.error('❌ Error in launchCamera:', error);
+      if (error.code !== 'E_PICKER_CANCELLED') {
+        Alert.alert(
+          'Camera Error',
+          `Failed to open camera: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+      }
+    }
+  };
 
   const RadioButton = ({ 
     selected, 
@@ -89,15 +208,45 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
       onPress={onPress}
     >
       <View className={`w-5 h-5 rounded-full border-2 mr-3 items-center justify-center ${
-        selected ? 'border-green-500' : 'border-gray-300'
+        selected ? 'border-green-500' : 'border-gray-400'
       }`}>
         {selected && <View className="w-2.5 h-2.5 rounded-full bg-green-500" />}
       </View>
-      <Text className="text-gray-700 text-base">{label}</Text>
+      <Text className="text-black text-base">{label}</Text>
     </TouchableOpacity>
   );
 
   const handleCreateFavor = async () => {
+    console.log('💳 Payment Methods Check:', {
+      favorPrice: formData.favorPrice,
+      hasPaymentMethods,
+      paymentMethodsCount: paymentMethodsData?.data?.payment_methods?.length || 0
+    });
+
+    // Additional check for paid favors requiring payment methods
+    if (formData.favorPrice === 'Paid' && !hasPaymentMethods) {
+      Alert.alert(
+        'Payment Method Required',
+        'You need to add a payment method before creating paid favors. Please add a payment method first.',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+          {
+            text: 'Add Payment Method',
+            onPress: () => {
+              // Navigate to Settings tab, then to PaymentMethodScreen
+              navigation?.navigate('Settings', {
+                screen: 'PaymentMethodScreen'
+              });
+            },
+          },
+        ]
+      );
+      return;
+    }
+
     // Validate form
     if (!formData.favorSubjectId) {
       Alert.alert('Error', 'Please select a subject for your favor.');
@@ -142,8 +291,23 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
 
       // Debug logging to verify request format
       console.log('🚀 Creating Favor Request:', createRequest);
-      console.log('📤 Sending JSON request');
-      await createFavorMutation.mutateAsync(createRequest);
+      if (selectedImage) {
+        console.log('📷 With Image:', {
+          name: selectedImage.name,
+          type: selectedImage.type,
+          size: selectedImage.fileSize ? `${(selectedImage.fileSize / (1024 * 1024)).toFixed(2)}MB` : 'Unknown'
+        });
+      }
+
+      // Use appropriate mutation based on whether image is selected
+      if (selectedImage) {
+        const formDataObj = buildFavorFormData(createRequest, selectedImage);
+        console.log('📤 Sending FormData with image to https://api.favorapp.net/api/v1/favors');
+        await createFavorWithImageMutation.mutateAsync(formDataObj);
+      } else {
+        console.log('📤 Sending JSON request to https://api.favorapp.net/api/v1/favors');
+        await createFavorMutation.mutateAsync(createRequest);
+      }
       
       navigation?.goBack();
     } catch (error) {
@@ -152,26 +316,30 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
   };
 
   return (
-    <View className="flex-1 bg-[#E8F5E8]"> {/* Light green background */}
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+    <ImageBackground
+      source={require('../../assets/images/Wallpaper.png')}
+      style={{ flex: 1 }}
+      resizeMode="cover"
+    >
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       
       {/* Header */}
-      <View className="pt-16 pb-6 px-6 bg-[#E8F5E8]">
+      <View className="pt-16 pb-6 px-6">
         <View className="flex-row items-center">
           <TouchableOpacity 
-            className="mr-4 p-2"
+            className="mr-4"
             onPress={() => navigation?.goBack()}
           >
-            <BackIcon />
+            <BackSvg />
           </TouchableOpacity>
-          <Text className="text-2xl font-bold text-gray-800">Ask Favor</Text>
+          <Text className="text-2xl font-bold text-black">Ask Favor</Text>
         </View>
       </View>
 
       <ScrollView 
         className="flex-1"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 120 }}
+        contentContainerStyle={{ paddingBottom: 20 }}
       >
         <View className="px-6 pt-6">
           
@@ -194,44 +362,45 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
           <View className="mb-8">
             <Text className="text-xl font-bold text-black mb-6">Subject</Text>
             <View className="flex-row flex-wrap">
-              {favorSubjects.map((subject) => (
-                <TouchableOpacity
-                  key={subject.id}
-                  className={`border-2 rounded-2xl px-6 py-4 mr-3 mb-3 ${
-                    formData.favorSubjectId === subject.id
-                      ? 'bg-[#44A27B] border-[#44A27B]'
-                      : 'bg-white border-black'
-                  }`}
-                  onPress={() => updateFormData('favorSubjectId', subject.id)}
-                >
-                  <Text className={`text-base font-medium ${
-                    formData.favorSubjectId === subject.id ? 'text-white' : 'text-black'
-                  }`}>
-                    {subject.name}
-                  </Text>
-                </TouchableOpacity>
+              {favorSubjects.map((subject, index) => (
+                <View key={subject.id} className="w-1/3 mb-4">
+                  <TouchableOpacity 
+                    className="flex-row items-center"
+                    onPress={() => updateFormData('favorSubjectId', subject.id)}
+                  >
+                    <View className={`w-6 h-6 rounded-full border-2 mr-3 items-center justify-center ${
+                      formData.favorSubjectId === subject.id ? 'border-[#44A27B]' : 'border-gray-400'
+                    }`}>
+                      {formData.favorSubjectId === subject.id && (
+                        <View className="w-3 h-3 rounded-full bg-[#44A27B]" />
+                      )}
+                    </View>
+                    <Text className="text-black text-base flex-1">{subject.name}</Text>
+                  </TouchableOpacity>
+                </View>
               ))}
-              <TouchableOpacity
-                className={`border-2 rounded-2xl px-6 py-4 mr-3 mb-3 ${
-                  formData.favorSubjectId === 8
-                    ? 'bg-[#44A27B] border-[#44A27B]'
-                    : 'bg-white border-black'
-                }`}
-                onPress={() => updateFormData('favorSubjectId', 8)}
-              >
-                <Text className={`text-base font-medium ${
-                  formData.favorSubjectId === 8 ? 'text-white' : 'text-black'
-                }`}>
-                  Other
-                </Text>
-              </TouchableOpacity>
+              <View className="w-1/3 mb-4">
+                <TouchableOpacity 
+                  className="flex-row items-center"
+                  onPress={() => updateFormData('favorSubjectId', 8)}
+                >
+                  <View className={`w-6 h-6 rounded-full border-2 mr-3 items-center justify-center ${
+                    formData.favorSubjectId === 8 ? 'border-[#44A27B]' : 'border-gray-400'
+                  }`}>
+                    {formData.favorSubjectId === 8 && (
+                      <View className="w-3 h-3 rounded-full bg-[#44A27B]" />
+                    )}
+                  </View>
+                  <Text className="text-black text-base flex-1">Other</Text>
+                </TouchableOpacity>
+              </View>
             </View>
             
             {/* Custom Subject Name Input - Only show when Other is selected */}
             {formData.favorSubjectId === 8 && (
               <View className="mt-4">
                 <Text className="text-lg font-semibold text-black mb-3">Please specify:</Text>
-                <View className="bg-white border-2 border-gray-300 rounded-2xl px-4 py-4">
+                <View className="bg-white border-2 border-white rounded-2xl px-4 py-4">
                   <TextInput
                     className="text-black text-base min-h-[60px]"
                     placeholder="Enter custom subject name"
@@ -242,7 +411,7 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
                     textAlignVertical="top"
                   />
                 </View>
-                <Text className="text-gray-500 text-sm mt-2">/50 characters</Text>
+                <Text className="text-gray-300 text-sm mt-2">/50 characters</Text>
               </View>
             )}
           </View>
@@ -250,16 +419,19 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
           {/* Time To Complete Section */}
           <View className="mb-8">
             <Text className="text-xl font-bold text-black mb-6">Time To Complete</Text>
-            <TouchableOpacity
-              className="bg-white border-2 border-gray-300 rounded-2xl px-4 py-4 flex-row justify-between items-center"
-              onPress={() => setShowTimeDropdown(true)}
-            >
-              <View>
-                <Text className="text-gray-500 text-sm mb-1">Time to complete</Text>
-                <Text className="text-gray-800 text-base">{formData.timeToComplete}</Text>
-              </View>
-              <Text className="text-gray-400">▼</Text>
-            </TouchableOpacity>
+            <View className="relative">
+              <TouchableOpacity
+                className="px-4 py-3 rounded-xl border border-gray-200 bg-transparent flex-row justify-between items-center"
+                style={{ height: 56 }}
+                onPress={() => setShowTimeDropdown(true)}
+              >
+                <Text className="text-base text-gray-800">{formData.timeToComplete}</Text>
+                <Text className="text-gray-400">▼</Text>
+              </TouchableOpacity>
+              <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700 bg-transparent">
+                Time to complete
+              </Text>
+            </View>
           </View>
 
           {/* Favor Price Section */}
@@ -281,10 +453,15 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
             {/* Tip Inputs - Only show when Paid is selected */}
             {formData.favorPrice === 'Paid' && (
               <View>
-                <View className="bg-white border-2 border-gray-300 rounded-2xl px-4 py-4 mb-4">
-                  <Text className="text-gray-500 text-sm mb-2">Tip Amount ($) *</Text>
+                <View className="relative mb-4">
                   <TextInput
-                    className="text-gray-800 text-base"
+                    className="px-4 py-3 rounded-xl border border-gray-200 text-base bg-transparent"
+                    style={{
+                      backgroundColor: 'transparent',
+                      fontSize: 16,
+                      lineHeight: 22,
+                      height: 56
+                    }}
                     placeholder="Enter tip amount"
                     placeholderTextColor="#9CA3AF"
                     value={formData.tip.toString()}
@@ -294,12 +471,20 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
                     }}
                     keyboardType="numeric"
                   />
+                  <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700 bg-transparent">
+                    Tip Amount ($) *
+                  </Text>
                 </View>
                 
-                <View className="bg-white border-2 border-gray-300 rounded-2xl px-4 py-4">
-                  <Text className="text-gray-500 text-sm mb-2">Additional Tip ($) - Optional</Text>
+                <View className="relative">
                   <TextInput
-                    className="text-gray-800 text-base"
+                    className="px-4 py-3 rounded-xl border border-gray-200 text-base bg-transparent"
+                    style={{
+                      backgroundColor: 'transparent',
+                      fontSize: 16,
+                      lineHeight: 22,
+                      height: 56
+                    }}
                     placeholder="Enter additional tip (optional)"
                     placeholderTextColor="#9CA3AF"
                     value={formData.additionalTip.toString()}
@@ -309,6 +494,9 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
                     }}
                     keyboardType="numeric"
                   />
+                  <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700 bg-transparent">
+                    Additional Tip ($) - Optional
+                  </Text>
                 </View>
               </View>
             )}
@@ -317,111 +505,39 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
           {/* Address Section */}
           <View className="mb-8">
             <Text className="text-xl font-bold text-black mb-6">Address</Text>
-            <View className="bg-white border-2 border-gray-300 rounded-2xl overflow-hidden">
-              <Text className="text-gray-500 text-sm px-4 pt-4 pb-2">Address</Text>
-              <GooglePlacesAutocomplete
-                placeholder="Enter a location"
-                onPress={(data, details) => {
-                  updateFormData('address', data.description);
-                  
-                  // Extract city, state, and coordinates from details if available
-                  if (details?.address_components) {
-                    let city = '';
-                    let state = '';
-                    
-                    details.address_components.forEach(component => {
-                      if (component.types.includes('locality')) {
-                        city = component.long_name;
-                      }
-                      if (component.types.includes('administrative_area_level_1')) {
-                        state = component.short_name;
-                      }
-                    });
-                    
-                    updateFormData('city', city);
-                    updateFormData('state', state);
-                  }
-                  
-                  // Extract coordinates if available
-                  if (details?.geometry?.location) {
-                    const { lat, lng } = details.geometry.location;
-                    updateFormData('latLng', `${lat},${lng}`);
-                  }
+            <View className="relative">
+              <TextInput
+                className="px-4 py-3 rounded-xl border border-gray-200 text-base bg-transparent"
+                style={{
+                  backgroundColor: 'transparent',
+                  fontSize: 16,
+                  lineHeight: 22,
+                  height: 56
                 }}
-                query={{
-                  key: process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY || 'AIzaSyDt1zyVSt1snXRBteLuH9ngKmE8ABve268',
-                  language: 'en',
-                }}
-                fetchDetails={true}
-                styles={{
-                  textInputContainer: {
-                    paddingHorizontal: 16,
-                    paddingBottom: 16,
-                    backgroundColor: 'transparent',
-                  },
-                  textInput: {
-                    height: 40,
-                    fontSize: 16,
-                    backgroundColor: 'transparent',
-                    borderWidth: 0,
-                    paddingHorizontal: 0,
-                    color: '#000000',
-                    fontWeight: '400',
-                  },
-                  predefinedPlacesDescription: {
-                    color: '#44A27B',
-                  },
-                  listView: {
-                    backgroundColor: 'white',
-                    marginTop: 0,
-                    borderTopWidth: 2,
-                    borderTopColor: '#d1d5db',
-                    borderBottomLeftRadius: 16,
-                    borderBottomRightRadius: 16,
-                    elevation: 3,
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.1,
-                    shadowRadius: 4,
-                  },
-                  row: {
-                    backgroundColor: 'white',
-                    paddingHorizontal: 16,
-                    paddingVertical: 12,
-                    minHeight: 48,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                  },
-                  separator: {
-                    height: 1,
-                    backgroundColor: '#f3f4f6',
-                    marginHorizontal: 16,
-                  },
-                  description: {
-                    fontSize: 15,
-                    color: '#374151',
-                    fontWeight: '400',
-                  },
-                  loader: {
-                    flexDirection: 'row',
-                    justifyContent: 'flex-end',
-                    height: 20,
-                    paddingRight: 16,
-                  },
-                }}
-                enablePoweredByContainer={false}
-                debounce={200}
+                placeholder="Enter your address"
+                placeholderTextColor="#9CA3AF"
+                value={formData.address}
+                onChangeText={(text) => updateFormData('address', text)}
+                editable={false}
               />
+              <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700 bg-transparent">
+                Address
+              </Text>
             </View>
           </View>
 
           {/* Description Section */}
           <View className="mb-8">
             <Text className="text-xl font-bold text-black mb-6">Description</Text>
-            <View className="bg-white border-2 border-gray-300 rounded-2xl px-4 py-4">
-              <Text className="text-gray-500 text-sm mb-2">Description</Text>
+            <View className="relative">
               <TextInput
-                className="text-gray-800 text-base min-h-[100px]"
+                className="px-4 py-3 rounded-xl border border-gray-200 text-base bg-transparent"
+                style={{
+                  backgroundColor: 'transparent',
+                  fontSize: 16,
+                  lineHeight: 22,
+                  minHeight: 120
+                }}
                 placeholder="Enter description about the work"
                 placeholderTextColor="#9CA3AF"
                 value={formData.description}
@@ -429,20 +545,94 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
                 multiline
                 textAlignVertical="top"
               />
+              <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700 bg-transparent">
+                Description
+              </Text>
             </View>
           </View>
 
+          {/* File Upload Section */}
+          <View className="mb-8">
+            <View className="bg-transparent border border-gray-200 rounded-2xl p-8 items-center">
+              {selectedImage ? (
+                <View className="items-center">
+                  <Image 
+                    source={{ uri: selectedImage.uri }} 
+                    className="w-40 h-40 rounded-2xl mb-4"
+                    style={{ backgroundColor: '#f3f4f6' }}
+                    resizeMode="cover"
+                  />
+                  <Text className="text-gray-700 font-medium mb-1 text-center">{selectedImage.name}</Text>
+                  {selectedImage.fileSize && (
+                    <Text className="text-gray-500 text-sm mb-3">
+                      {(selectedImage.fileSize / (1024 * 1024)).toFixed(2)} MB
+                    </Text>
+                  )}
+                  <TouchableOpacity 
+                    className="border-2 border-red-500 rounded-full px-8 py-3"
+                    onPress={() => setSelectedImage(null)}
+                  >
+                    <Text className="text-red-500 font-semibold">Remove Image</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View className="items-center w-full">
+                  <Text className="text-black text-center mb-2 text-sm">
+                    Choose a file or drag & drop it here
+                  </Text>
+                  <Text className="text-black text-sm text-center mb-8">
+                    JPEG and PNG formats up to 10 MB.
+                  </Text>
+                  <TouchableOpacity 
+                    className="border-2 border-[#44A27B] rounded-full px-12 py-4 w-full max-w-xs"
+                    onPress={pickImage}
+                  >
+                    <Text className="text-[#44A27B] font-semibold text-lg text-center">Browse File</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          </View>
+
+          {/* Additional Create Favor Button */}
+          <View className="mb-8 px-4">
+            <TouchableOpacity
+              className="bg-[#44A27B] rounded-full py-5 items-center"
+              onPress={handleCreateFavor}
+              disabled={createFavorMutation.isPending || createFavorWithImageMutation.isPending}
+              style={{
+                opacity: createFavorMutation.isPending || createFavorWithImageMutation.isPending ? 0.6 : 1
+              }}
+            >
+              <Text className="text-white font-bold text-lg">
+                {createFavorMutation.isPending || createFavorWithImageMutation.isPending 
+                  ? "Creating..." 
+                  : "Create Favor"
+                }
+              </Text>
+            </TouchableOpacity>
+          </View>
 
         </View>
       </ScrollView>
 
       {/* Bottom Button */}
-      <View className="absolute bottom-0 left-0 right-0 bg-[#E8F5E8] pt-6 pb-8 px-6">
-        <CarouselButton
-          title={createFavorMutation.isPending ? "Creating..." : "Create Favor"}
+      <View className="px-6 pb-8">
+        <TouchableOpacity
+          className="bg-[#44A27B] rounded-full py-5 items-center mx-4"
           onPress={handleCreateFavor}
-          disabled={createFavorMutation.isPending}
-        />
+          disabled={createFavorMutation.isPending || createFavorWithImageMutation.isPending}
+          style={{
+            opacity: createFavorMutation.isPending || createFavorWithImageMutation.isPending ? 0.6 : 1
+          }}
+        >
+          <Text className="text-white font-bold text-lg">
+            {createFavorMutation.isPending || createFavorWithImageMutation.isPending 
+              ? "Creating..." 
+              : "Create Favor"
+            }
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* Time Dropdown Modal */}
@@ -479,6 +669,77 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
         </TouchableOpacity>
       </Modal>
 
-    </View>
+      {/* Image Options Modal */}
+      <Modal
+        visible={showImageOptions}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowImageOptions(false)}
+      >
+        <TouchableOpacity 
+          className="flex-1 bg-black/50 justify-center px-6"
+          activeOpacity={1}
+          onPress={() => setShowImageOptions(false)}
+        >
+          <View className="bg-white rounded-2xl max-w-sm mx-auto w-full">
+            <View className="py-6 border-b border-gray-200">
+              <Text className="text-xl font-bold text-gray-800 text-center">
+                Select Image
+              </Text>
+            </View>
+            
+            <TouchableOpacity
+              className="py-4 px-6 border-b border-gray-100 flex-row items-center"
+              onPress={launchCamera}
+            >
+              <View className="w-10 h-10 rounded-full bg-blue-100 items-center justify-center mr-4">
+                <Svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <Path
+                    d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2v11z"
+                    stroke="#3B82F6"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <Path
+                    d="M12 17a4 4 0 100-8 4 4 0 000 8z"
+                    stroke="#3B82F6"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </Svg>
+              </View>
+              <View>
+                <Text className="text-lg font-medium text-gray-800">Take Photo</Text>
+                <Text className="text-sm text-gray-500">Use camera to take a new photo</Text>
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              className="py-4 px-6 flex-row items-center"
+              onPress={launchImageLibrary}
+            >
+              <View className="w-10 h-10 rounded-full bg-green-100 items-center justify-center mr-4">
+                <Svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <Path
+                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    stroke="#44A27B"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </Svg>
+              </View>
+              <View>
+                <Text className="text-lg font-medium text-gray-800">Choose from Gallery</Text>
+                <Text className="text-sm text-gray-500">Select from your photo library</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+    </ImageBackground>
   );
 }

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Modal, TouchableOpacity, ScrollView, Image, TextInput } from 'react-native';
 import { CustomButton } from '../buttons/CustomButton';
+import { useProfileQuery } from '../../services/queries/ProfileQueries';
 import CalendarSvg from '../../assets/icons/Calender';
 import PhoneSvg from '../../assets/icons/Phone';
 import ChatSvg from '../../assets/icons/Chat';
@@ -22,6 +23,29 @@ interface ProfileData {
 }
 
 export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: UpdateProfileModalProps) {
+  const { data: profileResponse } = useProfileQuery();
+  const profile = profileResponse?.data?.profile;
+
+  // Helper function to format date from API to MM/DD/YYYY
+  const formatDateForForm = (dateString: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${month}/${day}/${year}`;
+  };
+
+  // Helper function to format phone number for form display
+  const formatPhoneForForm = (phone: string) => {
+    if (!phone) return '';
+    const numbers = phone.replace(/\D/g, '');
+    if (numbers.length === 10) {
+      return `(${numbers.slice(0, 3)}) ${numbers.slice(3, 6)}-${numbers.slice(6)}`;
+    }
+    return phone;
+  };
+
   const [profileData, setProfileData] = useState<ProfileData>({
     firstName: initialData?.firstName || 'Kathryn',
     lastName: initialData?.lastName || 'Murphy',
@@ -30,6 +54,20 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
     phoneCall: initialData?.phoneCall || '(629) 555-0129',
     phoneText: initialData?.phoneText || '(406) 555-0120',
   });
+
+  // Update form data when profile data is loaded from API
+  useEffect(() => {
+    if (profile) {
+      setProfileData({
+        firstName: profile.first_name || '',
+        lastName: profile.last_name || '',
+        dateOfBirth: formatDateForForm(profile.date_of_birth) || '',
+        address: profile.address?.full_address || '',
+        phoneCall: formatPhoneForForm(profile.phone_no_call) || '',
+        phoneText: formatPhoneForForm(profile.phone_no_text) || '',
+      });
+    }
+  }, [profile]);
 
   const [errors, setErrors] = useState({
     firstName: '',
@@ -227,11 +265,20 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
 
               <View className="flex-row items-center mb-6">
                 <View className="w-20 h-20 bg-gray-200 rounded-2xl overflow-hidden mr-4">
-                  <Image 
-                    source={{ uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face' }}
-                    className="w-full h-full"
-                    resizeMode="cover"
-                  />
+                  {profile?.image_url ? (
+                    <Image 
+                      source={{ uri: profile.image_url }}
+                      className="w-full h-full"
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View className="w-full h-full bg-[#44A27B] items-center justify-center">
+                      <Text className="text-white text-lg font-bold">
+                        {profile?.first_name?.[0]?.toUpperCase() || 'K'}
+                        {profile?.last_name?.[0]?.toUpperCase() || 'M'}
+                      </Text>
+                    </View>
+                  )}
                 </View>
                 <TouchableOpacity className="bg-transparent border-2 border-[#71DFB1] rounded-full px-4 py-2">
                   <Text className="text-[#71DFB1] font-medium">Change Photo</Text>
@@ -244,7 +291,7 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
                     value={profileData.firstName}
                     onChangeText={(text) => updateField('firstName', text)}
                     className="bg-transparent border border-gray-300 rounded-xl px-4 py-3 text-black"
-                    placeholder="Kathryn"
+                    placeholder={profile?.first_name || "Kathryn"}
                     placeholderTextColor="#9CA3AF"
                     style={{ 
                       backgroundColor: 'transparent',
@@ -266,7 +313,7 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
                     value={profileData.lastName}
                     onChangeText={(text) => updateField('lastName', text)}
                     className="bg-transparent border border-gray-300 rounded-xl px-4 py-3 text-black"
-                    placeholder="Murphy"
+                    placeholder={profile?.last_name || "Murphy"}
                     placeholderTextColor="#9CA3AF"
                     style={{ 
                       backgroundColor: 'transparent',
@@ -290,7 +337,7 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
                     style={{ height: 56 }}
                   >
                     <Text className="flex-1 text-black" style={{ fontSize: 16, lineHeight: 20 }}>
-                      {profileData.dateOfBirth || '8/2/2001'}
+                      {profileData.dateOfBirth || formatDateForForm(profile?.date_of_birth || '') || '8/2/2001'}
                     </Text>
                     <CalendarSvg />
                   </TouchableOpacity>
@@ -307,7 +354,7 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
                     value={profileData.address}
                     onChangeText={(text) => updateField('address', text)}
                     className="bg-transparent border border-gray-300 rounded-xl px-4 py-3 text-black"
-                    placeholder="4140 Parker Rd, Allentown, New Mexico 31134"
+                    placeholder={profile?.address?.full_address || "4140 Parker Rd, Allentown, New Mexico 31134"}
                     placeholderTextColor="#9CA3AF"
                     style={{ 
                       backgroundColor: 'transparent',
@@ -330,7 +377,7 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
                       value={profileData.phoneCall}
                       onChangeText={(text) => updateField('phoneCall', text)}
                       className="flex-1 text-black"
-                      placeholder="(629) 555-0129"
+                      placeholder={formatPhoneForForm(profile?.phone_no_call || '') || "(629) 555-0129"}
                       placeholderTextColor="#9CA3AF"
                       keyboardType="phone-pad"
                       style={{ 
@@ -355,7 +402,7 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
                       value={profileData.phoneText}
                       onChangeText={(text) => updateField('phoneText', text)}
                       className="flex-1 text-black"
-                      placeholder="(406) 555-0120"
+                      placeholder={formatPhoneForForm(profile?.phone_no_text || '') || "(406) 555-0120"}
                       placeholderTextColor="#9CA3AF"
                       keyboardType="phone-pad"
                       style={{ 

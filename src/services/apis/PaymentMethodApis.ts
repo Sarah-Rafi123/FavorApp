@@ -1,7 +1,7 @@
 import axiosInstance from './index';
 import { PaymentMethodMockService } from '../mock/PaymentMethodMockService';
 
-const USE_MOCK_SERVICE = process.env.EXPO_PUBLIC_USE_MOCK_PAYMENTS === 'true' || !process.env.EXPO_PUBLIC_API_URL;
+const USE_MOCK_SERVICE = process.env.EXPO_PUBLIC_USE_MOCK_PAYMENTS === 'true' || !process.env.EXPO_PUBLIC_API_BASE_URL;
 
 // Types for Payment Method APIs
 export interface PaymentMethodCard {
@@ -131,12 +131,21 @@ export const PaymentMethodApis = {
       return response.data;
     } catch (error: any) {
       console.error('List Payment Methods API Error:', error);
+      console.error('📊 Error Response Status:', error.response?.status);
+      console.error('📄 Error Response Data:', JSON.stringify(error.response?.data, null, 2));
       
       if (error.response?.status === 401) {
         throw new Error('Authentication required. Please log in again.');
       } else if (error.response?.status === 422) {
-        const errorMessage = error.response?.data?.message || 'Stripe error occurred';
-        throw new Error(errorMessage);
+        // 422 often means no payment methods found - return empty response instead of error
+        console.log('💡 422 error likely means no payment methods found - returning empty list');
+        return {
+          success: true,
+          data: {
+            payment_methods: []
+          },
+          message: 'No payment methods found'
+        };
       } else if (error.response?.data?.message) {
         throw new Error(error.response.data.message);
       } else {

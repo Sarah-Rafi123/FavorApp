@@ -1,4 +1,5 @@
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   removeTokenSecurely,
   retrieveTokenSecurely,
@@ -48,10 +49,30 @@ axiosInstance.interceptors.request.use(
     const shouldSkipAuth = authSkipEndpoints.some(endpoint => config.url?.includes(endpoint));
     
     if (!shouldSkipAuth) {
-      const tokens = await retrieveTokenSecurely();
-      if (tokens) {
-        config.headers['Authorization'] = `Bearer ${tokens.accessToken}`;
+      console.log('🔍 Checking tokens for request:', config.url);
+      
+      // Get tokens from AsyncStorage using the same keys as auth store
+      const accessToken = await AsyncStorage.getItem('auth_token');
+      const refreshToken = await AsyncStorage.getItem('refresh_token');
+      
+      if (accessToken) {
+        config.headers['Authorization'] = `Bearer ${accessToken}`;
+        console.log('🔐 Token attached to request:', config.url);
+        console.log('📊 Token details:', {
+          hasAccessToken: !!accessToken,
+          accessTokenLength: accessToken?.length,
+          accessTokenStart: accessToken?.substring(0, 20) + '...',
+          hasRefreshToken: !!refreshToken
+        });
+      } else {
+        console.error('❌ No valid tokens found for authenticated request:', config.url);
+        console.error('📊 Token status:', {
+          accessTokenExists: !!accessToken,
+          refreshTokenExists: !!refreshToken
+        });
       }
+    } else {
+      console.log('⏭️ Skipping auth for:', config.url);
     }
     return config;
   },
@@ -108,4 +129,6 @@ axiosInstance.interceptors.response.use(
 export { PaymentApis } from './PaymentApis';
 export { SetupIntentApis } from './SetupIntentApis';
 export { PaymentMethodApis } from './PaymentMethodApis';
+export { StripeConnectApis } from './StripeConnectApis';
+export * from './ProfileApis';
 export default axiosInstance;

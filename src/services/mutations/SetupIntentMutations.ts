@@ -7,12 +7,18 @@ import Toast from 'react-native-toast-message';
  * This prepares Stripe for future payment method collection
  */
 export const useCreateSetupIntent = () => {
-  return useMutation<SetupIntentResponse, Error, void>({
-    mutationFn: () => SetupIntentApis.createSetupIntent(),
+  return useMutation<SetupIntentResponse, Error, boolean | undefined>({
+    mutationFn: (forceNew?: boolean) => SetupIntentApis.createSetupIntent(forceNew),
     onSuccess: (data) => {
-      console.log('Setup Intent created:', {
+      console.log('🎉 Setup Intent Mutation Success!');
+      console.log('📄 Full Setup Intent Response:', JSON.stringify(data, null, 2));
+      console.log('✅ Setup Intent Details:', {
+        success: data.success,
         setupIntentId: data.data.setup_intent_id,
         customerId: data.data.customer_id,
+        hasClientSecret: !!data.data.client_secret,
+        clientSecretLength: data.data.client_secret?.length,
+        message: data.message,
       });
       
       // Store setup intent data for later use
@@ -21,7 +27,13 @@ export const useCreateSetupIntent = () => {
       // AsyncStorage.setItem('customer_id', data.data.customer_id);
     },
     onError: (error) => {
-      console.error('Setup Intent creation failed:', error);
+      console.error('❌ Setup Intent Mutation Failed!');
+      console.error('📄 Full Setup Intent Error:', error);
+      console.error('🔍 Error Details:', {
+        message: error.message,
+        name: error.name,
+        stack: error.stack,
+      });
       
       // Only show toast for non-authentication errors
       // Authentication errors should be handled by the auth flow
@@ -34,15 +46,7 @@ export const useCreateSetupIntent = () => {
         });
       }
     },
-    // Retry configuration
-    retry: (failureCount, error) => {
-      // Don't retry authentication errors
-      if (error.message.includes('Authentication required')) {
-        return false;
-      }
-      // Retry up to 2 times for other errors
-      return failureCount < 2;
-    },
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
+    // Disable retries to prevent repeated API calls
+    retry: false
   });
 };

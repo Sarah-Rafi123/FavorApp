@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { HomeScreen, ProvideFavorScreen, ProfileScreen, SettingsScreen, FilterScreen, AskFavorScreen, FavorDetailsScreen } from '../../screens';
+import { NotificationsScreen } from '../../screens/notificationsScreen/NotificationsScreen';
 import { CreateFavorScreen } from '../../screens/createFavorScreen/CreateFavorScreen';
 import { GetCertifiedScreen } from '../../screens/getCertifiedScreen/GetCertifiedScreen';
 import { PaymentMethodScreen } from '../../screens/paymentMethodScreen/PaymentMethodScreen';
@@ -23,6 +24,7 @@ import SettingsSvg from '../../assets/icons/Settings';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
+const RootStack = createStackNavigator();
 
 // Icon components with focus state
 const CustomHomeIcon = ({ focused }: { focused: boolean }) => <HomeSvg focused={focused} />;
@@ -142,7 +144,7 @@ function SettingsStack() {
   );
 }
 
-export function MainTabs() {
+function TabNavigator() {
   return (
     <Tab.Navigator
       screenOptions={{
@@ -233,5 +235,20 @@ export function MainTabs() {
         }}
       />
     </Tab.Navigator>
+  );
+}
+
+export function MainTabs() {
+  return (
+    <RootStack.Navigator screenOptions={{ headerShown: false }}>
+      <RootStack.Screen 
+        name="MainTabs" 
+        component={TabNavigator}
+      />
+      <RootStack.Screen 
+        name="NotificationsScreen" 
+        component={NotificationsScreen}
+      />
+    </RootStack.Navigator>
   );
 }

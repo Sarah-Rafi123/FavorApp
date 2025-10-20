@@ -410,7 +410,10 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
             <TouchableOpacity className="w-10 h-10  rounded-full items-center justify-center">
               <FilterSvg />
             </TouchableOpacity>
-            <TouchableOpacity className="w-10 h-10 rounded-full items-center justify-center">
+            <TouchableOpacity 
+              className="w-10 h-10 rounded-full items-center justify-center"
+              onPress={() => navigation?.navigate('NotificationsScreen')}
+            >
               <BellSvg />
             </TouchableOpacity>
           </View>

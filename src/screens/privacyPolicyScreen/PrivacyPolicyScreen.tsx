@@ -43,18 +43,48 @@ export function PrivacyPolicyScreen({ navigation }: PrivacyPolicyScreenProps) {
         contentContainerStyle={{ paddingBottom: 40 }}
       >
         <View className="px-6 pt-6">
+          <Text className="text-sm text-gray-500 mb-4">Effective date: February 14, 2025</Text>
+          
           <Text className="text-base text-gray-700 leading-6 mb-6">
-            Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.
+            Thank you for visiting the www.favorapp.net web site. This privacy policy describes you how we use personal information collected at this site. Please read this privacy policy before using the site or submitting any personal information. By using the site, you are accepting the practices described in this privacy policy. These practices may be changed, but any changes will be posted and changes will only apply to activities and information on a going forward, not retroactive basis. You are encouraged to review the privacy policy whenever you visit the site to make sure that you understand how any personal information you provide will be used.
           </Text>
 
-          <Text className="text-lg font-bold text-gray-800 mb-3">Where does it come from?</Text>
           <Text className="text-base text-gray-700 leading-6 mb-6">
-            Contrary to popular belief, Lorem Ipsum is not simply random text. It has roots in a piece of classical Latin literature from 45 BC, making it over 2000 years old. Richard McClintock, a Latin professor at Hampden-Sydney College in Virginia, looked up one of the more obscure Latin words, consectetur, from a Lorem Ipsum passage, and going through the cites of the word in classical literature, discovered the undoubtable source. Lorem Ipsum comes from sections 1.10.32 and 1.10.33 of "de Finibus Bonorum et Malorum" (The Extremes of Good and Evil) by Cicero, written in 45 BC. This book is a treatise on the theory of ethics, very popular during the Renaissance. The first line of Lorem Ipsum, "Lorem ipsum dolor sit amet..", comes from a line in section 1.10.32.
+            Note: the privacy practices set forth in this privacy policy are for the www.favorapp.net web site only. If you link to other web sites, please review the privacy policies posted at those sites.
           </Text>
 
-          <Text className="text-lg font-bold text-gray-800 mb-3">Why do we use it?</Text>
+          <Text className="text-lg font-bold text-gray-800 mb-3">Collection of Information</Text>
           <Text className="text-base text-gray-700 leading-6 mb-6">
-            It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters, as opposed to using 'Content here, content here', making it look like readable English. Many desktop publishing packages and web page editors now use Lorem Ipsum as their default model text, and a search for 'lorem ipsum' will uncover many web sites still in their infancy. Various versions have evolved over the years, sometimes by accident, sometimes on purpose (injected humour and the like).
+            We collect personally identifiable information limited to only your email address, and general location (county and postal code), when voluntarily submitted by our visitors upon registration for a personal profile account on the www.favorapp.net website. The email you provide is used to verify that the account registration is from an actual person with verifiable contact, and also used to send activity notifications (which you can optionally choose not to receive in your profile settings), and newsletters and updates from the www.favorapp.net website only. Your email is NEVER made visible or available to any other users of the website, advertisers, or any third party. The general location information you provide is only used to display content on the website relevant to your area.
+          </Text>
+
+          <Text className="text-lg font-bold text-gray-800 mb-3">Publicly Posted Information</Text>
+          <Text className="text-base text-gray-700 leading-6 mb-6">
+            As www.favorapp.net is a social network, we provide many areas for users to voluntarily post information visible to other users of the website, including but not limited to your profile page, blogs, forums, photo albums, etc. Any information, including but not limited to text, photographs, images, etc., posted in these areas will be visible to other members and/or unregistered visitors of the www.favorapp.net website. We STRONGLY encourage you to never post any personal identifiable information in these areas such as your full name, phone number, address, etc.
+          </Text>
+
+          <Text className="text-lg font-bold text-gray-800 mb-3">Cookie/Tracking Technology</Text>
+          <Text className="text-base text-gray-700 leading-6 mb-6">
+            The FavorApp Website may use cookie and tracking technology depending on the features offered. Cookie and tracking technology are useful for gathering information such as browser type and operating system, tracking the number of visitors to the FavorApp Website, and understanding how visitors use the FavorApp Website. Cookies can also help customize the FavorApp Website for visitors. Personal information cannot be collected via cookies and other tracking technology, however, if you previously provided personally identifiable information, cookies may be tied to such information.
+          </Text>
+
+          <Text className="text-lg font-bold text-gray-800 mb-3">Distribution of Information</Text>
+          <Text className="text-base text-gray-700 leading-6 mb-6">
+            Your confidential personal information will NEVER be sold, shared, or given to any third party without your permission, and will NEVER be made publicly visible or available on the FavorApp website. We may share information with governmental agencies or other companies assisting us in fraud prevention or investigation. We may do so when: (1) permitted or required by law; or, (2) trying to protect against or prevent actual or potential fraud or unauthorized transactions; or, (3) investigating fraud which has already taken place. The information is not provided to these companies for marketing purposes.
+          </Text>
+
+          <Text className="text-lg font-bold text-gray-800 mb-3">Commitment to Data Security</Text>
+          <Text className="text-base text-gray-700 leading-6 mb-6">
+            Your personally identifiable information is kept secure. Only authorized employees, agents and contractors (who have agreed to keep information secure and confidential) have access to this information.
+          </Text>
+
+          <Text className="text-lg font-bold text-gray-800 mb-3">Privacy Contact Information</Text>
+          <Text className="text-base text-gray-700 leading-6 mb-6">
+            If you have any questions, concerns, or comments about the FavorApp Website privacy policy you may contact us at www.favorapp.net.
+          </Text>
+
+          <Text className="text-base text-gray-700 leading-6 mb-6">
+            We reserve the right to make changes to this policy without notice to you. Any changes to this policy will be posted.
           </Text>
         </View>
       </ScrollView>

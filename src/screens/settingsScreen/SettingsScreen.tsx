@@ -109,6 +109,7 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
             </TouchableOpacity>
             <TouchableOpacity
               className="items-center justify-center"
+              onPress={() => navigation?.navigate('NotificationsScreen')}
             >
               <BellSvg />
             </TouchableOpacity>
@@ -128,7 +129,7 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
           <SettingItem
             icon={<PaymentSvg />}
             title="Payment Methods"
-            onPress={() => navigation?.navigate('StripePaymentScreen', {
+            onPress={() => navigation?.navigate('PaymentMethodScreen', {
               amount: 1000, // $10.00 example
               currency: 'usd',
               title: 'Test Payment',

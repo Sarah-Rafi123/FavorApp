@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -8,44 +8,21 @@ import {
   ImageBackground,
 } from 'react-native';
 import { PaymentMethodsList } from '../../components/payment/PaymentMethodsList';
-import { useMockPaymentSheet } from '../../components/payment/MockPaymentSheet';
 import useThemeStore from '../../store/useThemeStore';
 import BackSvg from '../../assets/icons/Back';
 
 interface PaymentMethodsScreenProps {
   navigation?: any;
-  route?: any;
 }
 
-export function PaymentMethodsScreen({ navigation, route }: PaymentMethodsScreenProps) {
+export function PaymentMethodsScreen({ navigation }: PaymentMethodsScreenProps) {
   const { themeTag } = useThemeStore();
   const isDarkMode = themeTag === 'dark';
 
-  const [showTestPayment, setShowTestPayment] = useState(false);
-
-  const handlePaymentSuccess = (paymentIntentId: string) => {
-    console.log('Payment successful:', paymentIntentId);
-    setShowTestPayment(false);
-  };
-
-  const handlePaymentError = (error: string) => {
-    console.error('Payment error:', error);
-    setShowTestPayment(false);
-  };
-
-  // Initialize payment sheet for adding new payment methods
-  const { presentPaymentSheetFlow, PaymentSheetModal } = useMockPaymentSheet({
-    amount: 100, // $1.00 for setup only
-    currency: 'usd',
-    onPaymentSuccess: handlePaymentSuccess,
-    onPaymentError: handlePaymentError,
-    onCancel: () => setShowTestPayment(false),
-    savePaymentMethod: true, // Always save when adding a new payment method
-  });
-
   const handleAddPaymentMethod = () => {
-    setShowTestPayment(true);
-    presentPaymentSheetFlow();
+    // Navigate to the PaymentMethodScreen for adding a new payment method
+    console.log('🚀 Navigating to PaymentMethodScreen...');
+    navigation?.navigate('PaymentMethodScreen');
   };
 
   return (
@@ -85,28 +62,6 @@ export function PaymentMethodsScreen({ navigation, route }: PaymentMethodsScreen
         {/* Payment Methods List */}
         <PaymentMethodsList onAddPaymentMethod={handleAddPaymentMethod} />
 
-        {/* Test Payment Section (Development Only) */}
-        {__DEV__ && (
-          <View className="mx-4 mt-6 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-            <Text className="text-sm text-yellow-800 font-medium mb-2">
-              Development Testing
-            </Text>
-            <Text className="text-xs text-yellow-700 mb-3">
-              Test the payment flow with a small charge to verify payment method saving
-            </Text>
-            <TouchableOpacity
-              className="bg-yellow-600 py-2 px-4 rounded-lg"
-              onPress={() => {
-                setShowTestPayment(true);
-                presentPaymentSheetFlow();
-              }}
-            >
-              <Text className="text-white text-center text-sm font-medium">
-                Test $1.00 Payment + Save Method
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
 
         {/* Info Section */}
         <View className="mx-4 mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
@@ -138,8 +93,6 @@ export function PaymentMethodsScreen({ navigation, route }: PaymentMethodsScreen
         </View>
       </ScrollView>
 
-      {/* Payment Sheet Modal */}
-      {showTestPayment && <PaymentSheetModal />}
     </ImageBackground>
   );
 }

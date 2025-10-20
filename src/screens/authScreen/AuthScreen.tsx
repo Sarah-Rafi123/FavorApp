@@ -149,6 +149,8 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
             email: formData.email,
           });
           
+          // Setup Intent creation is now handled on-demand when user adds payment method
+          
           Toast.show({
             type: 'success',
             text1: 'Success',

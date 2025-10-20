@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Image, TouchableOpacity, StatusBar, ImageBackground } from 'react-native';
+import { View, Text, ScrollView, Image, TouchableOpacity, StatusBar, ImageBackground, ActivityIndicator } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { CarouselButton } from '../../components/buttons';
 import { UpdateProfileModal } from '../../components/overlays/UpdateProfileModal';
+import { useProfileQuery } from '../../services/queries/ProfileQueries';
 import EditSvg from '../../assets/icons/Edit';
 import FilterSvg from '../../assets/icons/Filter';
 import BellSvg from '../../assets/icons/Bell';
@@ -16,8 +18,11 @@ interface ProfileData {
 }
 
 export function ProfileScreen() {
+  const navigation = useNavigation();
   const [activeReviewTab, setActiveReviewTab] = useState<'asked' | 'provided'>('asked');
   const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const { data: profileResponse, isLoading, error } = useProfileQuery();
+  
   const [profileData, setProfileData] = useState<ProfileData>({
     firstName: 'Kathryn',
     lastName: 'Murphy',
@@ -26,10 +31,30 @@ export function ProfileScreen() {
     phoneCall: '(303) 555-0105',
     phoneText: '(209) 555-0104',
   });
+  
+  const profile = profileResponse?.data?.profile;
 
   const handleUpdateProfile = (newProfileData: ProfileData) => {
     setProfileData(newProfileData);
   };
+
+  if (isLoading) {
+    return (
+      <View className="flex-1 justify-center items-center bg-white">
+        <ActivityIndicator size="large" color="#44A27B" />
+        <Text className="mt-4 text-gray-600">Loading profile...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View className="flex-1 justify-center items-center bg-white px-6">
+        <Text className="text-red-500 text-center mb-4">Failed to load profile</Text>
+        <Text className="text-gray-600 text-center">Please check your connection and try again.</Text>
+      </View>
+    );
+  }
 
   return (
     <ImageBackground
@@ -47,7 +72,10 @@ export function ProfileScreen() {
             <TouchableOpacity className="w-10 h-10  rounded-full items-center justify-center">
               <FilterSvg />
             </TouchableOpacity>
-            <TouchableOpacity className="w-10 h-10  rounded-full items-center justify-center">
+            <TouchableOpacity 
+              className="w-10 h-10  rounded-full items-center justify-center"
+              onPress={() => navigation.navigate('NotificationsScreen' as never)}
+            >
               <BellSvg />
             </TouchableOpacity>
           </View>
@@ -71,25 +99,68 @@ export function ProfileScreen() {
           {/* Profile Image and Name */}
           <View className="items-center mb-6">
             <View className="w-24 h-24 bg-gray-200 rounded-2xl mb-4 overflow-hidden">
-              <Image 
-                source={{ uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=face' }}
-                className="w-full h-full"
-                resizeMode="cover"
-              />
+              {profile?.image_url ? (
+                <Image 
+                  source={{ uri: profile.image_url }}
+                  className="w-full h-full"
+                  resizeMode="cover"
+                />
+              ) : (
+                <View className="w-full h-full bg-[#44A27B] items-center justify-center">
+                  <Text className="text-white text-2xl font-bold">
+                    {profile?.first_name?.[0]?.toUpperCase() || profileData.firstName[0]?.toUpperCase()}
+                    {profile?.last_name?.[0]?.toUpperCase() || profileData.lastName[0]?.toUpperCase()}
+                  </Text>
+                </View>
+              )}
             </View>
-            <Text className="text-xl font-bold text-black mb-1">{profileData.firstName} {profileData.lastName}</Text>
+            <Text className="text-xl font-bold text-black mb-1">{profile?.full_name || `${profileData.firstName} ${profileData.lastName}`}</Text>
           </View>
 
           {/* Personal Details */}
           <View className="mb-6">
             <View className="space-y-2">
-              <Text className="text-gray-600 text-sm">Email: <Text className="text-black font-medium">kathrynmurphy@gmail.com</Text></Text>
-              <Text className="text-gray-600 text-sm">Age: <Text className="text-black font-medium">26</Text></Text>
-              <Text className="text-gray-600 text-sm">Call: <Text className="text-black font-medium">{profileData.phoneCall}</Text></Text>
-              <Text className="text-gray-600 text-sm">Text: <Text className="text-black font-medium">{profileData.phoneText}</Text></Text>
-              <Text className="text-gray-600 text-sm">Since: <Text className="text-black font-medium">March 2025</Text></Text>
+              <Text className="text-gray-600 text-sm">Email: <Text className="text-black font-medium">{profile?.email || 'kathrynmurphy@gmail.com'}</Text></Text>
+              <Text className="text-gray-600 text-sm">Age: <Text className="text-black font-medium">{profile?.age || '26'}</Text></Text>
+              <Text className="text-gray-600 text-sm">Call: <Text className="text-black font-medium">{profile?.phone_no_call || profileData.phoneCall}</Text></Text>
+              <Text className="text-gray-600 text-sm">Text: <Text className="text-black font-medium">{profile?.phone_no_text || profileData.phoneText}</Text></Text>
+              <Text className="text-gray-600 text-sm">Experience: <Text className="text-black font-medium">{profile?.years_of_experience ? `${profile.years_of_experience} year${profile.years_of_experience !== 1 ? 's' : ''}` : 'Not specified'}</Text></Text>
+              <Text className="text-gray-600 text-sm">Since: <Text className="text-black font-medium">{profile?.member_since || 'March 2025'}</Text></Text>
+              {profile?.address && (
+                <Text className="text-gray-600 text-sm">Location: <Text className="text-black font-medium">{profile.address.city}, {profile.address.state}</Text></Text>
+              )}
+              {profile?.is_certified !== null && (
+                <Text className="text-gray-600 text-sm">Certified: <Text className={`font-medium ${profile?.is_certified ? 'text-green-600' : 'text-gray-500'}`}>{profile?.is_certified ? 'Yes' : 'No'}</Text></Text>
+              )}
             </View>
           </View>
+
+          {/* About Me Section */}
+          {profile?.about_me && (
+            <View className="mb-6">
+              <Text className="text-base font-bold text-black mb-3">About Me</Text>
+              <Text className="text-gray-700 text-sm leading-5">{profile.about_me}</Text>
+            </View>
+          )}
+
+          {/* Skills Section */}
+          {profile?.skills && profile.skills.length > 0 && (
+            <View className="mb-6">
+              <Text className="text-base font-bold text-black mb-3">Skills</Text>
+              <View className="flex-row flex-wrap gap-2">
+                {profile.skills.map((skill, index) => (
+                  <View key={index} className="bg-[#E8F5E8] px-3 py-1.5 rounded-full">
+                    <Text className="text-[#44A27B] text-xs font-medium">{skill}</Text>
+                  </View>
+                ))}
+              </View>
+              {profile.other_skills && (
+                <View className="mt-2">
+                  <Text className="text-gray-600 text-sm">Other: <Text className="text-black font-medium">{profile.other_skills}</Text></Text>
+                </View>
+              )}
+            </View>
+          )}
 
           {/* Favor Details */}
           <View className="mb-6">
@@ -110,12 +181,14 @@ export function ProfileScreen() {
           </View>
 
           {/* Add Payment Method Button */}
-          <View className="mb-4">
-            <CarouselButton
-              title="Add Payment Method"
-              onPress={() => {}}
-            />
-          </View>
+          {!profile?.has_payment_method && (
+            <View className="mb-4">
+              <CarouselButton
+                title="Add Payment Method"
+                onPress={() => {}}
+              />
+            </View>
+          )}
 
           {/* Export PDF Section */}
           <View className="bg-[#DCFBCC] rounded-2xl p-4">
