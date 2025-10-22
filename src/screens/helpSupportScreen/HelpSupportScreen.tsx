@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import BackSvg from '../../assets/icons/Back';
+import { useSubmitSupportRequest } from '../../services/mutations/SupportMutations';
 
 interface HelpSupportScreenProps {
   navigation?: any;
@@ -18,49 +19,86 @@ interface HelpSupportScreenProps {
 
 
 export function HelpSupportScreen({ navigation }: HelpSupportScreenProps) {
-  const [fullName, setFullName] = useState('Kathryn');
-  const [email, setEmail] = useState('Kathryn@gmail.com');
-  const [subject, setSubject] = useState('Help');
-  const [description, setDescription] = useState('Lacus pharetra aenean pellentesque massa. Est posuere tortor porttitor libero sed sem consequat sollicitudin pellentesque. Sed nisl et placerat ipsum sit quam. Libero sollicitudin consequat sit imperdiet consectetur integer etiam. Nec phasellus.');
-  const [isLoading, setIsLoading] = useState(false);
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [subject, setSubject] = useState('');
+  const [description, setDescription] = useState('');
+  
+  // Support API mutation
+  const submitSupportRequestMutation = useSubmitSupportRequest();
 
   const handleSubmit = async () => {
-    if (!fullName.trim() || !email.trim() || !subject.trim() || !description.trim()) {
-      Alert.alert('Error', 'Please fill in all required fields');
+    // Validation according to API requirements
+    if (!fullName.trim()) {
+      Alert.alert('Error', 'Full name is required');
+      return;
+    }
+    
+    if (fullName.trim().length > 50) {
+      Alert.alert('Error', 'Full name must be 50 characters or less');
       return;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!email.trim()) {
+      Alert.alert('Error', 'Email is required');
+      return;
+    }
+    
+    if (email.trim().length > 50) {
+      Alert.alert('Error', 'Email must be 50 characters or less');
+      return;
+    }
+
+    // Email validation using API pattern
+    const emailRegex = /^[\w+\-.]+@[a-z\d\-]+(\.[a-z\d\-]+)*\.[a-z]+$/i;
+    if (!emailRegex.test(email.trim())) {
       Alert.alert('Error', 'Please enter a valid email address');
       return;
     }
 
-    setIsLoading(true);
+    if (!subject.trim()) {
+      Alert.alert('Error', 'Subject is required');
+      return;
+    }
     
+    if (subject.trim().length > 50) {
+      Alert.alert('Error', 'Subject must be 50 characters or less');
+      return;
+    }
+
+    if (!description.trim()) {
+      Alert.alert('Error', 'Description is required');
+      return;
+    }
+    
+    if (description.trim().length > 200) {
+      Alert.alert('Error', 'Description must be 200 characters or less');
+      return;
+    }
+
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      console.log('📝 Submitting support request...');
       
-      Alert.alert(
-        'Success', 
-        'Your support request has been submitted successfully. We will get back to you within 24 hours.',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              setFullName('');
-              setEmail('');
-              setSubject('');
-              setDescription('');
-              navigation?.goBack();
-            }
-          }
-        ]
-      );
-    } catch (error) {
-      Alert.alert('Error', 'Failed to submit your request. Please try again.');
-    } finally {
-      setIsLoading(false);
+      await submitSupportRequestMutation.mutateAsync({
+        full_name: fullName.trim(),
+        email: email.trim(),
+        subject: subject.trim(),
+        description: description.trim(),
+      });
+      
+      // Success is handled by the mutation's onSuccess callback
+      console.log('✅ Support request submitted successfully');
+      
+      // Clear form and navigate back on success
+      setFullName('');
+      setEmail('');
+      setSubject('');
+      setDescription('');
+      navigation?.goBack();
+      
+    } catch (error: any) {
+      // Error is handled by the mutation's onError callback
+      console.error('❌ Support request submission failed:', error.message);
     }
   };
 
@@ -102,14 +140,15 @@ export function HelpSupportScreen({ navigation }: HelpSupportScreenProps) {
                 lineHeight: 22,
                 height: 56
               }}
-              placeholder="Kathryn"
+              placeholder="Enter your full name"
               placeholderTextColor="#9CA3AF"
               value={fullName}
               onChangeText={setFullName}
               autoCapitalize="words"
+              maxLength={50}
             />
-            <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700 ">
-              Full Name
+            <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700">
+              Full Name ({fullName.length}/50)
             </Text>
           </View>
 
@@ -123,15 +162,16 @@ export function HelpSupportScreen({ navigation }: HelpSupportScreenProps) {
                 lineHeight: 22,
                 height: 56
               }}
-              placeholder="Kathryn@gmail.com"
+              placeholder="Enter your email address"
               placeholderTextColor="#9CA3AF"
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
+              maxLength={50}
             />
             <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700">
-              Email
+              Email ({email.length}/50)
             </Text>
           </View>
 
@@ -145,13 +185,14 @@ export function HelpSupportScreen({ navigation }: HelpSupportScreenProps) {
                 lineHeight: 22,
                 height: 56
               }}
-              placeholder="Help"
+              placeholder="Brief subject of your inquiry"
               placeholderTextColor="#9CA3AF"
               value={subject}
               onChangeText={setSubject}
+              maxLength={50}
             />
-            <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700 ">
-              Subject
+            <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700">
+              Subject ({subject.length}/50)
             </Text>
           </View>
 
@@ -165,30 +206,31 @@ export function HelpSupportScreen({ navigation }: HelpSupportScreenProps) {
                 lineHeight: 22,
                 minHeight: 120
               }}
-              placeholder="Lacus pharetra aenean pellentesque massa. Est posuere tortor porttitor libero sed sem consequat sollicitudin pellentesque. Sed nisl et placerat ipsum sit quam. Libero sollicitudin consequat sit imperdiet consectetur integer etiam. Nec phasellus."
+              placeholder="Detailed description of your issue or question (max 200 characters)"
               placeholderTextColor="#9CA3AF"
               value={description}
               onChangeText={setDescription}
               multiline
               textAlignVertical="top"
+              maxLength={200}
             />
-            <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700 ">
-              Description
+            <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700">
+              Description ({description.length}/200)
             </Text>
           </View>
 
           {/* Submit Button */}
           <TouchableOpacity 
             className={`rounded-full py-4 ${
-              isLoading 
+              submitSupportRequestMutation.isPending 
                 ? 'bg-gray-400' 
                 : 'bg-green-500'
             }`}
             onPress={handleSubmit}
-            disabled={isLoading}
+            disabled={submitSupportRequestMutation.isPending}
           >
             <Text className="text-white text-center text-lg font-semibold">
-              {isLoading ? 'Submitting...' : 'Submit'}
+              {submitSupportRequestMutation.isPending ? 'Submitting...' : 'Submit Support Request'}
             </Text>
           </TouchableOpacity>
         </View>

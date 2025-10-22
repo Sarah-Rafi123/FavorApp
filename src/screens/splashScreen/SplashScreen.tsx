@@ -10,7 +10,7 @@ export function SplashScreen() {
     >
       <View className="flex-1 justify-center items-center">
         <Image 
-          source={require('../../../assets/logo.png')} 
+          source={require('../../assets/images/FavorAppLogo.png')} 
           className="w-64 h-32"
           resizeMode="contain"
         />

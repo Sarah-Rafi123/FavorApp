@@ -526,9 +526,9 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
               console.log('🗑️ Canceling favor request:', favor.id);
               await cancelRequestMutation.mutateAsync(favor.id);
               
-              // Immediately refresh the current data after successful cancellation
-              console.log('✅ Favor request cancelled successfully, refreshing data...');
-              await handleRefresh();
+              // Immediately refresh the Active tab data after successful cancellation
+              console.log('✅ Favor request cancelled successfully, refreshing Active tab data...');
+              await Promise.all([refetchActiveMyFavors(), refetchInProgressMyFavors()]);
               
             } catch (error: any) {
               console.error('❌ Cancel request failed:', error.message);
@@ -554,6 +554,70 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
   const FavorCard = ({ favor }: { favor: Favor }) => {
     const isActiveFavor = favor.status === 'in_progress' || favor.status === 'pending';
     
+    if (activeTab === 'All') {
+      // For "All" tab, use the exact same UI as HomeListScreen
+      return (
+        <View className="bg-[#F7FBF5] rounded-2xl p-4 mb-4 mx-4 shadow-sm border-2 border-b-4 border-b-[#44A27B] border-[#44A27B66]">
+          <TouchableOpacity 
+            onPress={() => handleFavorCardPress(favor)}
+            activeOpacity={0.7}
+          >
+            <View className="flex-row mb-3">
+              {favor.image_url ? (
+                <Image
+                  source={{ uri: favor.image_url }}
+                  className="w-28 h-28 rounded-2xl mr-4"
+                  style={{ backgroundColor: '#f3f4f6' }}
+                />
+              ) : (
+                <View className="w-28 h-28 rounded-2xl mr-4 bg-gray-200 items-center justify-center border border-gray-300">
+                  <View className="items-center">
+                    <Text className="text-4xl text-gray-400 mb-1">📋</Text>
+                  </View>
+                </View>
+              )}
+              <View className="flex-1 justify-start">
+                <View className="flex-row items-center mb-1">
+                  {!favor.favor_pay && (
+                    <View className="mr-2">
+                      <DollarSvg />
+                    </View>
+                  )}
+                  <Text className="text-lg font-semibold text-gray-800" numberOfLines={1}>
+                    {favor.user.full_name.length > 10 
+                      ? `${favor.user.full_name.substring(0, 10)}...` 
+                      : favor.user.full_name}
+                  </Text>
+                  <View className="ml-2 px-2 py-1 rounded">
+                    <Text className="text-[#D12E34] text-sm font-medium">{formatPriority(favor.priority)}</Text>
+                  </View>
+                </View>
+                <Text className="text-sm text-gray-600 mb-1" numberOfLines={1}>
+                  {favor.title || favor.favor_subject.name} | {favor.time_to_complete || 'Time not specified'}
+                </Text>
+                <Text className="text-sm text-gray-600" numberOfLines={1}>
+                  {favor.city && favor.city !== 'undefined' ? favor.city : ''}{favor.city && favor.city !== 'undefined' && favor.state && favor.state !== 'undefined' ? ', ' : ''}{favor.state && favor.state !== 'undefined' ? favor.state : favor.address}
+                </Text>
+                <Text className="text-gray-700 text-sm mb-4 leading-5" numberOfLines={2}>
+                  {favor.description}
+                </Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            className="bg-green-500 rounded-full py-3"
+            onPress={() => handleProvideFavor(favor)}
+          >
+            <Text className="text-white text-center font-semibold text-base">
+              ${parseFloat((favor.tip || 0).toString()).toFixed(2)} | Provide a Favor
+            </Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    // For Active/History tabs, keep the original layout
     return (
       <TouchableOpacity 
         onPress={() => handleFavorCardPress(favor)}
@@ -580,7 +644,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
           </View>
 
           <View className="flex-row mb-4">
-{favor.image_url ? (
+            {favor.image_url ? (
               <Image
                 source={{ uri: favor.image_url }}
                 className="w-28 h-28 rounded-2xl mr-4"
@@ -611,36 +675,23 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
             </View>
           </View>
 
-          {/* Show different buttons based on tab and favor status */}
-          {activeTab === 'All' ? (
-            // For "All" tab, always show "Provide a Favor" button like HomeListScreen
+          {/* Show contextual buttons for Active/History tabs */}
+          {favor.status !== 'completed' && favor.status !== 'cancelled' && (
             <TouchableOpacity 
               className="bg-green-500 rounded-full py-3"
-              onPress={() => handleProvideFavor(favor)}
+              onPress={() => {
+                if (isActiveFavor) {
+                  handleCancelFavor(favor);
+                } else {
+                  handleProvideFavor(favor);
+                }
+              }}
             >
               <Text className="text-white text-center font-semibold text-base">
-                ${parseFloat((favor.tip || 0).toString()).toFixed(2)} | Provide a Favor
+                {isActiveFavor ? 'Cancel Favor' : 
+                 `$${parseFloat((favor.tip || 0).toString()).toFixed(2)} | Provide a Favor`}
               </Text>
             </TouchableOpacity>
-          ) : (
-            // For Active/History tabs, show contextual buttons
-            favor.status !== 'completed' && favor.status !== 'cancelled' && (
-              <TouchableOpacity 
-                className="bg-green-500 rounded-full py-3"
-                onPress={() => {
-                  if (isActiveFavor) {
-                    handleCancelFavor(favor);
-                  } else {
-                    handleProvideFavor(favor);
-                  }
-                }}
-              >
-                <Text className="text-white text-center font-semibold text-base">
-                  {isActiveFavor ? 'Cancel Favor' : 
-                   `$${parseFloat((favor.tip || 0).toString()).toFixed(2)} | Provide a Favor`}
-                </Text>
-              </TouchableOpacity>
-            )
           )}
         </View>
       </TouchableOpacity>

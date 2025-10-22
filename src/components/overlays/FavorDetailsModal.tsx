@@ -9,8 +9,10 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
+import { BlurView } from '@react-native-community/blur';
 import { useFavor } from '../../services/queries/FavorQueries';
 import { useApplyToFavor } from '../../services/mutations/FavorMutations';
+import { usePublicUserProfileQuery } from '../../services/queries/ProfileQueries';
 import { StripeConnectManager } from '../../services/StripeConnectManager';
 
 interface FavorDetailsModalProps {
@@ -19,12 +21,48 @@ interface FavorDetailsModalProps {
   favorId: number | null;
 }
 
+const BlurredText = ({ children }: { children: string }) => (
+  <View style={{
+    position: 'relative',
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    overflow: 'hidden',
+  }}>
+    <Text style={{ 
+      fontSize: 16,
+      color: '#374151',
+    }}>
+      {children}
+    </Text>
+    <BlurView
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+      }}
+      blurType="light"
+      blurAmount={30}
+    />
+  </View>
+);
+
 export function FavorDetailsModal({ visible, onClose, favorId }: FavorDetailsModalProps) {
   const { data: favorData, isLoading, error } = useFavor(favorId || 0, {
     enabled: !!favorId && visible,
   });
 
   const favor = favorData?.data?.favor;
+  
+  // Get public user profile for additional details
+  const { data: userProfileData } = usePublicUserProfileQuery(
+    favor?.user?.id || null, 
+    { enabled: !!favor?.user?.id && visible }
+  );
+  
+  const userProfile = userProfileData?.data?.user;
 
   // Apply to Favor mutation and Stripe Connect Manager
   const applyToFavorMutation = useApplyToFavor();
@@ -138,7 +176,7 @@ export function FavorDetailsModal({ visible, onClose, favorId }: FavorDetailsMod
       onRequestClose={onClose}
     >
       <View className="flex-1 bg-black/50 justify-center items-center px-4">
-        <View className="bg-[#FBFFF0] rounded-2xl w-full max-w-sm mx-4 shadow-lg border-2 border-[#44A27B] flex-1 max-h-[85vh] flex">
+        <View className="bg-[#FBFFF0] rounded-2xl w-full max-w-sm mx-4 shadow-lg border-2 border-[#44A27B] max-h-[90vh] flex" style={{ height: '90%' }}>
           {/* Close Button */}
           <TouchableOpacity 
             onPress={onClose}
@@ -148,7 +186,7 @@ export function FavorDetailsModal({ visible, onClose, favorId }: FavorDetailsMod
           </TouchableOpacity>
 
           {/* Scrollable Content */}
-          <ScrollView showsVerticalScrollIndicator={false} className="flex-1 p-6 pb-2">
+          <ScrollView showsVerticalScrollIndicator={false} className="flex-1 p-4 pb-2" contentContainerStyle={{ flexGrow: 1 }}>
             {isLoading ? (
               <View className="items-center py-8">
                 <ActivityIndicator size="large" color="#44A27B" />
@@ -166,254 +204,179 @@ export function FavorDetailsModal({ visible, onClose, favorId }: FavorDetailsMod
               </View>
             ) : favor ? (
               <>
-                {/* User Profile Section */}
-                <View className="items-center mb-6">
-                  <Image
-                    source={{ 
-                      uri: favor.image_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(favor.user.full_name) + '&background=44A27B&color=fff&size=120'
-                    }}
-                    className="w-20 h-20 rounded-2xl mb-3"
-                    style={{ backgroundColor: '#f3f4f6' }}
-                  />
-                  <Text className="text-xl font-bold text-gray-800 text-center">
-                    {favor.user.full_name}
+                {/* Header - Favor Title and User */}
+                <View className="mb-4">
+                  <Text className="text-xl font-bold text-gray-800 mb-2">
+                    {favor.title || favor.favor_subject.name}
+                  </Text>
+                  <Text className="text-gray-600 text-sm">
+                    Posted by {favor.user.full_name}
                   </Text>
                 </View>
 
-                {/* User Details */}
-                <View className="mb-6">
-                  <Text className="text-lg font-bold text-gray-800 mb-3">User Information</Text>
-                  
-                  <View className="flex-row mb-2">
-                    <Text className="text-gray-600 font-medium w-20">Email:</Text>
-                    <Text className="text-gray-800 flex-1" numberOfLines={1}>
-                      {favor.user.email}
-                    </Text>
-                  </View>
-                  
-                  <View className="flex-row mb-2">
-                    <Text className="text-gray-600 font-medium w-20">Name:</Text>
-                    <Text className="text-gray-800 flex-1">
-                      {favor.user.first_name} {favor.user.last_name}
-                    </Text>
-                  </View>
-                  
-                  <View className="flex-row mb-2">
-                    <Text className="text-gray-600 font-medium w-20">Certified:</Text>
-                    <Text className="text-gray-800 flex-1">
-                      {favor.user.is_certified ? '✅ Verified' : '❌ Not Verified'}
-                    </Text>
-                  </View>
-                  
-                  {favor.user.years_of_experience && (
-                    <View className="flex-row mb-2">
-                      <Text className="text-gray-600 font-medium w-20">Experience:</Text>
-                      <Text className="text-gray-800 flex-1">
-                        {favor.user.years_of_experience} years
-                      </Text>
-                    </View>
-                  )}
-                  
-                  {favor.user.rating && (
-                    <View className="flex-row mb-2">
-                      <Text className="text-gray-600 font-medium w-20">Rating:</Text>
-                      <Text className="text-gray-800 flex-1">
-                        ⭐ {favor.user.rating}/5
-                      </Text>
-                    </View>
-                  )}
-                  
-                  {favor.user.skills && favor.user.skills.length > 0 && (
-                    <View className="flex-row mb-2">
-                      <Text className="text-gray-600 font-medium w-20">Skills:</Text>
-                      <Text className="text-gray-800 flex-1">
-                        {favor.user.skills.join(', ')}
-                      </Text>
-                    </View>
-                  )}
-                  
-                  <View className="flex-row">
-                    <Text className="text-gray-600 font-medium w-20">Member Since:</Text>
-                    <Text className="text-gray-800 flex-1">
-                      {favor.user.member_since ? formatDate(favor.user.member_since) : 
-                       new Date(favor.created_at).toLocaleDateString('en-US', { 
-                         month: 'long', 
-                         year: 'numeric' 
-                       })}
-                    </Text>
-                  </View>
-                  
-                  {favor.user.about_me && (
-                    <View className="mt-2">
-                      <Text className="text-gray-600 font-medium mb-1">About:</Text>
-                      <Text className="text-gray-800 leading-5">
-                        {favor.user.about_me}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-
                 {/* Favor Details Section */}
-                <View className="border-t border-gray-200 pt-4">
-                  <Text className="text-lg font-bold text-gray-800 mb-3">Favor Details</Text>
+                <View className="mb-6">
+                  <Text className="text-lg font-bold text-gray-800 mb-4">Favor Details</Text>
                   
-                  <View>
-                    <View className="flex-row mb-2">
-                      <Text className="text-gray-600 font-medium w-20">ID:</Text>
-                      <Text className="text-gray-800 flex-1">
-                        #{favor.id}
-                      </Text>
-                    </View>
-                    
-                    <View className="flex-row mb-2">
-                      <Text className="text-gray-600 font-medium w-20">Title:</Text>
-                      <Text className="text-gray-800 flex-1">
-                        {favor.title || favor.favor_subject.name}
-                      </Text>
-                    </View>
-                    
-                    <View className="flex-row mb-2">
-                      <Text className="text-gray-600 font-medium w-20">Category:</Text>
-                      <Text className="text-gray-800 flex-1">
-                        {favor.favor_subject.name}
-                      </Text>
-                    </View>
-                    
-                    <View className="flex-row mb-2">
-                      <Text className="text-gray-600 font-medium w-20">Priority:</Text>
-                      <Text className="text-red-600 flex-1">
-                        {formatPriority(favor.priority)}
-                      </Text>
-                    </View>
-                    
-                    <View className="flex-row mb-2">
-                      <Text className="text-gray-600 font-medium w-20">Status:</Text>
-                      <Text className="text-gray-800 flex-1 capitalize">
-                        {favor.status}
-                      </Text>
-                    </View>
-                    
-                    <View className="flex-row mb-2">
-                      <Text className="text-gray-600 font-medium w-20">Active:</Text>
-                      <Text className="text-gray-800 flex-1">
-                        {favor.is_active ? '✅ Yes' : '❌ No'}
-                      </Text>
-                    </View>
-                    
-                    <View className="flex-row mb-2">
-                      <Text className="text-gray-600 font-medium w-20">Time:</Text>
-                      <Text className="text-gray-800 flex-1">
-                        {favor.time_to_complete || 'Not specified'}
-                      </Text>
-                    </View>
-                    
-                    <View className="flex-row mb-2">
-                      <Text className="text-gray-600 font-medium w-20">Payment:</Text>
-                      <Text className="text-gray-800 flex-1">
-                        ${parseFloat((favor.tip || 0).toString()).toFixed(2)}
-                      </Text>
-                    </View>
-                    
-                    {favor.additional_tip && parseFloat(favor.additional_tip.toString()) > 0 && (
-                      <View className="flex-row mb-2">
-                        <Text className="text-gray-600 font-medium w-20">Bonus Tip:</Text>
-                        <Text className="text-green-600 flex-1">
-                          +${parseFloat(favor.additional_tip.toString()).toFixed(2)}
+                  {/* Grid Layout for Details */}
+                  <View className="space-y-4">
+                    {/* Row 1 */}
+                    <View className="flex-row justify-between">
+                      <View className="flex-1 mr-2">
+                        <Text className="text-gray-600 text-sm mb-1">Priority</Text>
+                        <Text className="text-red-600 font-medium">
+                          {formatPriority(favor.priority)}
                         </Text>
                       </View>
-                    )}
-                    
-                    <View className="flex-row mb-2">
-                      <Text className="text-gray-600 font-medium w-20">Address:</Text>
-                      <Text className="text-gray-800 flex-1">
-                        {favor.address}
-                      </Text>
-                    </View>
-                    
-                    <View className="flex-row mb-2">
-                      <Text className="text-gray-600 font-medium w-20">Location:</Text>
-                      <Text className="text-gray-800 flex-1">
-                        {favor.city && favor.city !== 'undefined' ? favor.city : ''}{favor.city && favor.city !== 'undefined' && favor.state && favor.state !== 'undefined' ? ', ' : ''}{favor.state && favor.state !== 'undefined' ? favor.state : ''}
-                      </Text>
-                    </View>
-                    
-                    {/* {favor.lat_lng && (
-                      <View className="flex-row mb-2">
-                        <Text className="text-gray-600 font-medium w-20">Coordinates:</Text>
-                        <Text className="text-gray-800 flex-1">
-                          {favor.lat_lng}
+                      <View className="flex-1 ml-2">
+                        <Text className="text-gray-600 text-sm mb-1">Time to Complete</Text>
+                        <Text className="text-gray-800">
+                          {favor.time_to_complete || 'Not specified'}
                         </Text>
                       </View>
-                    )}
-                    
-                    <View className="flex-row mb-2">
-                      <Text className="text-gray-600 font-medium w-20">Responses:</Text>
-                      <Text className="text-gray-800 flex-1">
-                        {favor.responses_count} total, {favor.pending_responses_count} pending
-                      </Text>
-                    </View> */}
-                    
-                    {/* <View className="flex-row mb-2">
-                      <Text className="text-gray-600 font-medium w-20">Can Edit:</Text>
-                      <Text className="text-gray-800 flex-1">
-                        {favor.can_edit ? '✅ Yes' : '❌ No'}
-                      </Text>
                     </View>
                     
-                    <View className="flex-row mb-2">
-                      <Text className="text-gray-600 font-medium w-20">Can Apply:</Text>
-                      <Text className="text-gray-800 flex-1">
-                        {favor.can_apply ? '✅ Yes' : '❌ No'}
-                      </Text>
-                    </View>
-                    
-                    <View className="flex-row mb-2">
-                      <Text className="text-gray-600 font-medium w-20">Applied:</Text>
-                      <Text className="text-gray-800 flex-1">
-                        {favor.has_applied ? '✅ Yes' : '❌ No'}
-                      </Text>
-                    </View> */}
-                    
-                    {/* <View className="flex-row mb-2">
-                      <Text className="text-gray-600 font-medium w-20">Created:</Text>
-                      <Text className="text-gray-800 flex-1">
-                        {formatDate(favor.created_at)}
-                      </Text>
-                    </View>
-                    
-                    <View className="flex-row mb-2">
-                      <Text className="text-gray-600 font-medium w-20">Updated:</Text>
-                      <Text className="text-gray-800 flex-1">
-                        {formatDate(favor.updated_at)}
-                      </Text>
-                    </View>
-                     */}
-                    {favor.accepted_response && (
-                      <View className="flex-row mb-2">
-                        <Text className="text-gray-600 font-medium w-20">Accepted:</Text>
-                        <Text className="text-green-600 flex-1">
-                          ✅ Response Accepted
+                    {/* Row 2 */}
+                    <View className="flex-row justify-between">
+                      <View className="flex-1 mr-2">
+                        <Text className="text-gray-600 text-sm mb-1">Payment</Text>
+                        <Text className="text-gray-800 font-bold">
+                          {parseFloat((favor.tip || 0).toString()) > 0 
+                            ? `$${parseFloat((favor.tip || 0).toString()).toFixed(2)}`
+                            : 'Unpaid'}
                         </Text>
                       </View>
-                    )}
+                      <View className="flex-1 ml-2">
+                        <Text className="text-gray-600 text-sm mb-1">Location</Text>
+                        <Text className="text-gray-800">
+                          {favor.city && favor.city !== 'undefined' ? favor.city : 'undefined'}, {favor.state && favor.state !== 'undefined' ? favor.state : 'Ohio'}
+                        </Text>
+                      </View>
+                    </View>
+                    
+                    {/* Row 3 */}
+                    <View className="flex-row justify-between">
+                      <View className="flex-1 mr-2">
+                        <Text className="text-gray-600 text-sm mb-1">Date Posted</Text>
+                        <Text className="text-gray-800">
+                          {new Date(favor.created_at).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric'
+                          })}
+                        </Text>
+                      </View>
+                      <View className="flex-1 ml-2">
+                        <Text className="text-gray-600 text-sm mb-1">Category</Text>
+                        <Text className="text-gray-800">
+                          {favor.favor_subject.name}
+                        </Text>
+                      </View>
+                    </View>
                   </View>
-                  
+
+                  {/* Description Section */}
                   {favor.description && (
-                    <View className="mt-4 p-3 bg-gray-50 rounded-lg">
-                      <Text className="text-gray-600 font-medium mb-2">Description:</Text>
+                    <View className="mt-6">
+                      <Text className="text-gray-600 text-sm mb-2">Description</Text>
                       <Text className="text-gray-800 leading-5">
                         {favor.description}
                       </Text>
                     </View>
                   )}
                 </View>
+
+                {/* Divider */}
+                <View className="border-t border-gray-200 my-6"></View>
+
+                {/* About User Section */}
+                <View className="mb-6">
+                  <Text className="text-lg font-bold text-gray-800 mb-4">
+                    About {favor.user.first_name}
+                  </Text>
+
+                  {/* User Avatar and Basic Info */}
+                  <View className="flex-row mb-4">
+                    <View className="w-12 h-12 bg-gray-200 rounded-full mr-4 items-center justify-center">
+                      {userProfile?.image_url ? (
+                        <Image 
+                          source={{ uri: userProfile.image_url }}
+                          className="w-full h-full rounded-full"
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <Text className="text-white text-lg font-bold">
+                          {favor.user.first_name?.[0]?.toUpperCase()}
+                        </Text>
+                      )}
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-gray-600 text-sm">Email</Text>
+                      <BlurredText>
+                        {userProfile?.email || favor.user.email}
+                      </BlurredText>
+                    </View>
+                  </View>
+
+                  {/* User Details Grid */}
+                  <View className="space-y-4">
+                    {/* Row 1 */}
+                    <View className="flex-row justify-between">
+                      <View className="flex-1 mr-2">
+                        <Text className="text-gray-600 text-sm mb-1">Member Since</Text>
+                        <Text className="text-gray-800">
+                          {userProfile?.member_since || 'July 2025'}
+                        </Text>
+                      </View>
+                      <View className="flex-1 ml-2">
+                        <Text className="text-gray-600 text-sm mb-1">Phone number (call)</Text>
+                        <BlurredText>
+                          {userProfile?.phone_no_call || '** *** ****'}
+                        </BlurredText>
+                      </View>
+                    </View>
+                    
+                    {/* Row 2 */}
+                    <View className="flex-row justify-between">
+                      <View className="flex-1 mr-2">
+                        <Text className="text-gray-600 text-sm mb-1">Age</Text>
+                        <Text className="text-gray-800">
+                          {userProfile?.age || 'Not specified'}
+                        </Text>
+                      </View>
+                      <View className="flex-1 ml-2">
+                        <Text className="text-gray-600 text-sm mb-1">Phone number (text)</Text>
+                        <BlurredText>
+                          {userProfile?.phone_no_text || '** *** ****'}
+                        </BlurredText>
+                      </View>
+                    </View>
+                    
+                    {/* Row 3 */}
+                    <View className="flex-row justify-between">
+                      <View className="flex-1 mr-2">
+                        <Text className="text-gray-600 text-sm mb-1">Experience</Text>
+                        <Text className="text-gray-800">
+                          {userProfile?.years_of_experience 
+                            ? `${userProfile.years_of_experience} Years`
+                            : favor.user.years_of_experience 
+                            ? `${favor.user.years_of_experience} Years`
+                            : '0 Years'}
+                        </Text>
+                      </View>
+                      <View className="flex-1 ml-2">
+                        {/* Empty space for alignment */}
+                      </View>
+                    </View>
+                  </View>
+                </View>
               </>
             ) : null}
           </ScrollView>
 
-          {/* Fixed Action Button at Bottom */}
+          {/* Fixed Action Button at Bottom - Compact */}
           {favor && favor.can_apply && (
-            <View className="p-6 pt-3  bg-[#FBFFF0]">
+            <View className="p-4 pt-2 bg-[#FBFFF0]">
               <TouchableOpacity 
                 className="bg-[#44A27B] rounded-full py-3"
                 onPress={handleApplyToFavor}

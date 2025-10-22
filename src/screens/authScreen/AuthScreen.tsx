@@ -311,7 +311,7 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
           <View className="flex-1 px-6 pt-20">
             <View className="items-center mb-8">
               <Image 
-                source={require('../../../assets/logo.png')} 
+                source={require('../../assets/images/FavorAppLogo.png')} 
                 className="w-36 h-20"
                 resizeMode="contain"
               />
@@ -384,7 +384,7 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
                   keyboardType="email-address"
                   autoCapitalize="none"
                 />
-                <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700 bg-white">
+                <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700 ">
                   Email
                 </Text>
                 

@@ -80,6 +80,40 @@ export interface RemoveImageResponse {
   message: string;
 }
 
+// Public User Profile Types
+export interface PublicUserProfile {
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+  middle_name?: string;
+  full_name: string;
+  phone_no_call: string;
+  phone_no_text: string;
+  years_of_experience: number;
+  about_me: string;
+  skills: string[];
+  other_skills?: string;
+  member_since: string;
+  age?: number;
+  is_active: boolean;
+  is_certified: boolean;
+  address: {
+    city: string;
+    state: string;
+  };
+  image_url?: string;
+  created_at: string;
+}
+
+export interface PublicUserProfileResponse {
+  success: boolean;
+  data: {
+    user: PublicUserProfile;
+  };
+  message?: string;
+}
+
 // Export Profile Types
 export interface ExportProfileParams {
   start_date?: string; // YYYY-MM-DD format
@@ -132,6 +166,36 @@ export const getProfile = async (): Promise<ProfileResponse> => {
   const response = await axiosInstance.get('/profile');
   console.log(`[OK] => /profile`);
   return response.data;
+};
+
+export const getPublicUserProfile = async (userId: number): Promise<PublicUserProfileResponse> => {
+  try {
+    console.log(`🚀 Making Get Public User Profile API call to: /users/${userId}`);
+    
+    const response = await axiosInstance.get(`/users/${userId}`);
+    
+    console.log('🎉 Get Public User Profile API Success!');
+    console.log('📊 Response Status:', response.status);
+    console.log('📄 Full API Response:', JSON.stringify(response.data, null, 2));
+    
+    return response.data;
+  } catch (error: any) {
+    console.error('❌ Get Public User Profile API Error!');
+    console.error('📄 Full API Error:', error);
+    console.error('📊 Error Response Status:', error.response?.status);
+    console.error('📄 Error Response Data:', JSON.stringify(error.response?.data, null, 2));
+    
+    // Handle specific error scenarios based on status codes
+    if (error.response?.status === 404) {
+      throw new Error('User not found');
+    } else if (error.response?.status === 401) {
+      throw new Error('Authentication required');
+    } else if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    } else {
+      throw new Error('Failed to load user profile. Please check your connection and try again.');
+    }
+  }
 };
 
 export const updateProfile = async (data: UpdateProfileData): Promise<UpdateProfileResponse> => {

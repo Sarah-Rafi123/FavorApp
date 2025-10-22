@@ -246,12 +246,51 @@ export const FavorApis = {
 
   // 6. Create Favor (Form Data with Image)
   createFavorWithImage: async (formData: CreateFavorFormData): Promise<GetFavorResponse> => {
-    const response = await axiosInstance.post('/favors', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data;
+    try {
+      console.log('🚀 Making Create Favor with Image API call to: /favors');
+      console.log('📤 FormData is ready for submission');
+      
+      const response = await axiosInstance.post('/favors', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      
+      console.log('🎉 Create Favor with Image API Success!');
+      console.log('📊 Response Status:', response.status);
+      console.log('📄 Full API Response:', JSON.stringify(response.data, null, 2));
+      
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Create Favor with Image API Error!');
+      console.error('📄 Full API Error:', error);
+      console.error('📊 Error Response Status:', error.response?.status);
+      console.error('📄 Error Response Data:', JSON.stringify(error.response?.data, null, 2));
+      
+      // Handle specific error scenarios based on status codes
+      if (error.response?.status === 422) {
+        const errorData = error.response?.data;
+        if (errorData?.errors) {
+          // Format validation errors for display
+          const errorMessages: string[] = [];
+          Object.entries(errorData.errors).forEach(([field, messages]: [string, any]) => {
+            if (Array.isArray(messages)) {
+              errorMessages.push(...messages.map((msg: string) => `${field}: ${msg}`));
+            } else {
+              errorMessages.push(`${field}: ${messages}`);
+            }
+          });
+          
+          throw new Error(errorMessages.join(', ') || 'Validation failed. Please check your input.');
+        } else {
+          throw new Error(errorData?.message || 'Validation failed. Please check your input.');
+        }
+      } else if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      } else {
+        throw new Error('Failed to create favor. Please check your connection and try again.');
+      }
+    }
   },
 
   // 7. Edit Favor

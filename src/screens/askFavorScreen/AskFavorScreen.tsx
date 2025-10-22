@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -74,6 +74,7 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
   ];
   const timeOptions = ['15 minutes', '20 minutes', '30 minutes', '1 hour', '2 hours', '3 hours', '4+ hours'];
 
+
   const updateFormData = (field: string, value: any) => {
     // Check if user is trying to select "Paid" but doesn't have payment methods
     if (field === 'favorPrice' && value === 'Paid' && !hasPaymentMethods) {
@@ -104,12 +105,27 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
 
   const pickImage = async () => {
     try {
+      console.log('📷 Browse File button clicked');
+      
+      // Check if ImagePicker is available
+      if (!ImagePicker) {
+        console.error('❌ ImagePicker not available');
+        Alert.alert(
+          'Feature Not Available',
+          'Image picker is not available on this device.'
+        );
+        return;
+      }
+      
+      // Show image options modal
+      console.log('✅ Showing image options modal');
       setShowImageOptions(true);
+      
     } catch (error) {
-      console.error('❌ Image picker not available:', error);
+      console.error('❌ Error in pickImage function:', error);
       Alert.alert(
-        'Not Available',
-        'Image picker is not available on this device.'
+        'Error',
+        'Something went wrong while trying to access the image picker. Please try again.'
       );
     }
   };
@@ -126,13 +142,10 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
         mediaType: 'photo',
         includeBase64: false,
       });
-
+      
       // Check file size (10MB limit)
       if (image.size && image.size > 10 * 1024 * 1024) {
-        Alert.alert(
-          'File Too Large',
-          'Please select an image smaller than 10MB.'
-        );
+        Alert.alert('Error', 'Image file is too large. Please choose an image smaller than 10MB.');
         return;
       }
 
@@ -144,12 +157,8 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
         fileSize: image.size,
       });
     } catch (error: any) {
-      console.error('❌ Error in launchImageLibrary:', error);
       if (error.code !== 'E_PICKER_CANCELLED') {
-        Alert.alert(
-          'Image Picker Error',
-          'There was an issue with the photo library. Please try again.'
-        );
+        Alert.alert('Error', 'Failed to select image. Please try again.');
       }
     }
   };
@@ -160,19 +169,16 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
       
       const image = await ImagePicker.openCamera({
         width: 800,
-        height: 600,
+        height: 800,
         cropping: true,
         compressImageQuality: 0.8,
         mediaType: 'photo',
         includeBase64: false,
       });
-
+      
       // Check file size (10MB limit)
       if (image.size && image.size > 10 * 1024 * 1024) {
-        Alert.alert(
-          'File Too Large',
-          'Please take a photo with smaller file size.'
-        );
+        Alert.alert('Error', 'Image file is too large. Please choose an image smaller than 10MB.');
         return;
       }
 
@@ -184,12 +190,8 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
         fileSize: image.size,
       });
     } catch (error: any) {
-      console.error('❌ Error in launchCamera:', error);
       if (error.code !== 'E_PICKER_CANCELLED') {
-        Alert.alert(
-          'Camera Error',
-          `Failed to open camera: ${error instanceof Error ? error.message : 'Unknown error'}`
-        );
+        Alert.alert('Error', 'Failed to take photo. Please try again.');
       }
     }
   };

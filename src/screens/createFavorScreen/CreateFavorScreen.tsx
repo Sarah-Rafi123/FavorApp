@@ -245,15 +245,37 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
             Requests ({favor.responses_count || 0})
           </Text>
 
-          {/* Show request count and pending status */}
-          <View className="bg-gray-50 rounded-xl p-3">
-            <Text className="text-sm text-gray-600 text-center">
-              {favor.pending_responses_count > 0 
-                ? `${favor.pending_responses_count} pending request${favor.pending_responses_count > 1 ? 's' : ''}`
-                : 'No requests yet'
-              }
-            </Text>
-          </View>
+          {/* Enhanced pending request display */}
+          {favor.pending_responses_count > 0 ? (
+            <View className="bg-orange-50 border border-orange-200 rounded-xl p-4">
+              <View className="flex-row items-center justify-between">
+                <View className="flex-row items-center">
+                  <View className="w-3 h-3 bg-orange-400 rounded-full mr-2"></View>
+                  <Text className="text-orange-700 font-semibold text-base">
+                    {favor.pending_responses_count} Pending Request{favor.pending_responses_count > 1 ? 's' : ''}
+                  </Text>
+                </View>
+                <TouchableOpacity 
+                  className="bg-orange-500 px-4 py-2 rounded-full"
+                  onPress={() => navigation?.navigate('FavorDetailsScreen', { favorId: favor.id })}
+                >
+                  <Text className="text-white text-sm font-medium">View</Text>
+                </TouchableOpacity>
+              </View>
+              <Text className="text-orange-600 text-sm mt-2">
+                {favor.pending_responses_count === 1 
+                  ? 'Someone wants to help with your favor!'
+                  : `${favor.pending_responses_count} people want to help with your favor!`
+                }
+              </Text>
+            </View>
+          ) : (
+            <View className="bg-gray-50 rounded-xl p-3">
+              <Text className="text-sm text-gray-600 text-center">
+                No requests yet
+              </Text>
+            </View>
+          )}
         </View>
       </TouchableOpacity>
     );
@@ -291,6 +313,26 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
             Status: {favor.status.replace('_', ' ')}
           </Text>
         </View>
+
+        {/* Pending requests indicator for active favors */}
+        {favor.pending_responses_count > 0 && (
+          <View className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-3">
+            <View className="flex-row items-center justify-between">
+              <View className="flex-row items-center">
+                <View className="w-2 h-2 bg-blue-400 rounded-full mr-2"></View>
+                <Text className="text-blue-700 font-medium text-sm">
+                  {favor.pending_responses_count} Pending Review{favor.pending_responses_count > 1 ? 's' : ''}
+                </Text>
+              </View>
+              <TouchableOpacity 
+                className="bg-blue-500 px-3 py-1 rounded-full"
+                onPress={() => navigation?.navigate('FavorDetailsScreen', { favorId: favor.id })}
+              >
+                <Text className="text-white text-xs font-medium">Review</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
       </TouchableOpacity>
       
       {/* Cancel Favor Button */}

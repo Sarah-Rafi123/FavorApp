@@ -231,22 +231,22 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications }: HomeLis
                   <DollarSvg />
                 </View>
               )}
-              <Text className="text-lg font-semibold text-gray-800">
-                {favor.user.full_name.length > 15 
-                  ? `${favor.user.full_name.substring(0, 15)}...` 
+              <Text className="text-lg font-semibold text-gray-800" numberOfLines={1}>
+                {favor.user.full_name.length > 10 
+                  ? `${favor.user.full_name.substring(0, 10)}...` 
                   : favor.user.full_name}
               </Text>
               <View className="ml-2 px-2 py-1 rounded">
                 <Text className="text-[#D12E34] text-sm font-medium">{formatPriority(favor.priority)}</Text>
               </View>
             </View>
-            <Text className="text-sm text-gray-600 mb-1">
+            <Text className="text-sm text-gray-600 mb-1" numberOfLines={1}>
               {favor.title || favor.favor_subject.name} | {favor.time_to_complete || 'Time not specified'}
             </Text>
-            <Text className="text-sm text-gray-600">
+            <Text className="text-sm text-gray-600" numberOfLines={1}>
               {favor.city && favor.city !== 'undefined' ? favor.city : ''}{favor.city && favor.city !== 'undefined' && favor.state && favor.state !== 'undefined' ? ', ' : ''}{favor.state && favor.state !== 'undefined' ? favor.state : favor.address}
             </Text>
-            <Text className="text-gray-700 text-sm mb-4 leading-5">
+            <Text className="text-gray-700 text-sm mb-4 leading-5" numberOfLines={2}>
               {favor.description}
             </Text>
           </View>

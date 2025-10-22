@@ -211,9 +211,12 @@ export const buildFavorFormData = (
 ): FormData => {
   const formData = new FormData();
   
+  console.log('🏗️ Building FormData with favor data:', data);
+  
   // Add all favor data fields
   Object.entries(data).forEach(([key, value]) => {
     if (value !== undefined && value !== null) {
+      console.log(`  Adding favor[${key}]: ${value}`);
       formData.append(`favor[${key}]`, value.toString());
     }
   });
@@ -227,6 +230,14 @@ export const buildFavorFormData = (
       name: image.name,
     };
     
+    console.log('📷 Adding image to FormData:', {
+      uri: image.uri,
+      type: image.type,
+      name: image.name,
+      uriType: typeof image.uri
+    });
+    
+    // Try favor[image] field format (consistent with other favor fields)
     formData.append('favor[image]', fileObject as any);
   }
   

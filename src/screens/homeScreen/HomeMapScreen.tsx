@@ -335,7 +335,7 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
             <Text className="text-gray-600 text-center mb-6 leading-6">
               FavorApp needs access to your location to show nearby favors and services. This helps you find and provide help in your area.
             </Text>
-            <View className="flex-row space-x-3">
+            <View className="flex-row gap-x-3">
               <TouchableOpacity
                 className="flex-1 py-3 px-4 border border-gray-300 rounded-xl"
                 onPress={() => {
