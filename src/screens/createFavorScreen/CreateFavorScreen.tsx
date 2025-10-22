@@ -17,9 +17,9 @@ import PersonwithHeartSvg from '../../assets/icons/PersonwithHeart';
 import { TimerSvg } from '../../assets/icons/Timer';
 import FilterSvg from '../../assets/icons/Filter';
 import BellSvg from '../../assets/icons/Bell';
-import { useMyFavors } from '../../services/queries/FavorQueries';
+import { useMyFavors, useFavorApplicants } from '../../services/queries/FavorQueries';
 import { useDeleteFavor } from '../../services/mutations/FavorMutations';
-import { Favor } from '../../services/apis/FavorApis';
+import { Favor, FavorApplicant } from '../../services/apis/FavorApis';
 import useAuthStore from '../../store/useAuthStore';
 
 interface CreateFavorScreenProps {
@@ -214,13 +214,78 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
 
 
 
-  const RequestCard = ({ favor }: { favor: Favor }) => {
+  // Component for individual request cards showing applicant details
+  const IndividualRequestCard = ({ favor, applicant }: { favor: Favor; applicant: FavorApplicant }) => {
     return (
       <TouchableOpacity 
         onPress={() => navigation?.navigate('FavorDetailsScreen', { favorId: favor.id })}
         activeOpacity={0.7}
       >
         <View className="bg-white rounded-2xl p-4 mb-4 mx-4 border-2 border-[#44A27B]">
+          <View className="flex-row mb-4">
+            {/* Applicant's profile image or initials */}
+            <View className="w-16 h-16 rounded-xl mr-4 bg-[#44A27B] items-center justify-center">
+              <Text className="text-white text-lg font-bold">
+                {applicant.user.first_name?.[0]?.toUpperCase() || 'U'}
+                {applicant.user.last_name?.[0]?.toUpperCase() || ''}
+              </Text>
+            </View>
+            <View className="flex-1">
+              <Text className="text-[#44A27B] text-base font-semibold mb-1">
+                {applicant.user.full_name || `${applicant.user.first_name} ${applicant.user.last_name}`}
+              </Text>
+              <Text className="text-gray-600 text-sm mb-1">
+                Applied {new Date(applicant.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </Text>
+              {applicant.user.is_certified && (
+                <View className="flex-row items-center">
+                  <View className="w-2 h-2 bg-green-500 rounded-full mr-2"></View>
+                  <Text className="text-green-600 text-xs font-medium">Verified</Text>
+                </View>
+              )}
+              {applicant.user.years_of_experience && (
+                <Text className="text-gray-500 text-xs mt-1">
+                  {applicant.user.years_of_experience} years experience
+                </Text>
+              )}
+            </View>
+          </View>
+          
+          {/* Favor details */}
+          <View className="bg-gray-50 rounded-xl p-3 mb-3">
+            <Text className="text-gray-700 text-sm font-medium mb-1">
+              {favor.favor_subject.name} • {favor.city}, {favor.state}
+            </Text>
+            <Text className="text-gray-600 text-xs">
+              {favor.description.length > 80 ? `${favor.description.substring(0, 80)}...` : favor.description}
+            </Text>
+          </View>
+
+          {/* Status indicator */}
+          <View className={`px-3 py-2 rounded-lg ${
+            applicant.status === 'pending' ? 'bg-orange-50' : 
+            applicant.status === 'accepted' ? 'bg-green-50' : 'bg-red-50'
+          }`}>
+            <Text className={`text-sm font-medium capitalize ${
+              applicant.status === 'pending' ? 'text-orange-700' : 
+              applicant.status === 'accepted' ? 'text-green-700' : 'text-red-700'
+            }`}>
+              Status: {applicant.status}
+            </Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  // Original favor card for when no applicants exist
+  const FavorSummaryCard = ({ favor }: { favor: Favor }) => {
+    return (
+      <TouchableOpacity 
+        onPress={() => navigation?.navigate('FavorDetailsScreen', { favorId: favor.id })}
+        activeOpacity={0.7}
+      >
+        <View className="bg-white rounded-2xl p-4 mb-4 mx-4 border-2 border-gray-300">
           <View className="flex-row mb-4">
             <Image
               source={{ 
@@ -241,44 +306,49 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
             </View>
           </View>
           
-          <Text className="text-lg font-bold text-black mb-3">
-            Requests ({favor.responses_count || 0})
-          </Text>
-
-          {/* Enhanced pending request display */}
-          {favor.pending_responses_count > 0 ? (
-            <View className="bg-orange-50 border border-orange-200 rounded-xl p-4">
-              <View className="flex-row items-center justify-between">
-                <View className="flex-row items-center">
-                  <View className="w-3 h-3 bg-orange-400 rounded-full mr-2"></View>
-                  <Text className="text-orange-700 font-semibold text-base">
-                    {favor.pending_responses_count} Pending Request{favor.pending_responses_count > 1 ? 's' : ''}
-                  </Text>
-                </View>
-                <TouchableOpacity 
-                  className="bg-orange-500 px-4 py-2 rounded-full"
-                  onPress={() => navigation?.navigate('FavorDetailsScreen', { favorId: favor.id })}
-                >
-                  <Text className="text-white text-sm font-medium">View</Text>
-                </TouchableOpacity>
-              </View>
-              <Text className="text-orange-600 text-sm mt-2">
-                {favor.pending_responses_count === 1 
-                  ? 'Someone wants to help with your favor!'
-                  : `${favor.pending_responses_count} people want to help with your favor!`
-                }
-              </Text>
-            </View>
-          ) : (
-            <View className="bg-gray-50 rounded-xl p-3">
-              <Text className="text-sm text-gray-600 text-center">
-                No requests yet
-              </Text>
-            </View>
-          )}
+          {/* No requests indicator */}
+          <View className="bg-gray-50 rounded-xl p-3">
+            <Text className="text-sm text-gray-600 text-center">
+              No requests yet - Share your favor to get help!
+            </Text>
+          </View>
         </View>
       </TouchableOpacity>
     );
+  };
+
+  // Component that handles the All tab content - shows individual request cards for each applicant
+  const AllTabContent = ({ favors, navigation }: { favors: Favor[]; navigation: any }) => {
+    return (
+      <>
+        {favors.map((favor) => {
+          return <FavorWithApplicants key={favor.id} favor={favor} navigation={navigation} />;
+        })}
+      </>
+    );
+  };
+
+  // Component that fetches applicants for a favor and renders individual cards
+  const FavorWithApplicants = ({ favor, navigation }: { favor: Favor; navigation: any }) => {
+    const { data: applicantsData, isLoading, error } = useFavorApplicants(favor.id);
+    
+    // If there are applicants, show individual request cards
+    if (applicantsData?.data?.applicants && applicantsData.data.applicants.length > 0) {
+      return (
+        <>
+          {applicantsData.data.applicants.map((applicant) => (
+            <IndividualRequestCard 
+              key={`${favor.id}-${applicant.id}`} 
+              favor={favor} 
+              applicant={applicant} 
+            />
+          ))}
+        </>
+      );
+    }
+    
+    // If no applicants, show the summary card
+    return <FavorSummaryCard favor={favor} />;
   };
 
   const ActiveCard = ({ favor }: { favor: Favor }) => (
@@ -489,15 +559,16 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
             />
           }
         >
-          {currentFavors.map((favor) => {
-            if (activeTab === 'All') {
-              return <RequestCard key={favor.id} favor={favor} />;
-            } else if (activeTab === 'Active') {
-              return <ActiveCard key={favor.id} favor={favor} />;
-            } else {
-              return <HistoryCard key={favor.id} favor={favor} />;
-            }
-          })}
+          {activeTab === 'All' 
+            ? <AllTabContent favors={currentFavors} navigation={navigation} />
+            : currentFavors.map((favor) => {
+                if (activeTab === 'Active') {
+                  return <ActiveCard key={favor.id} favor={favor} />;
+                } else {
+                  return <HistoryCard key={favor.id} favor={favor} />;
+                }
+              })
+          }
         </ScrollView>
       ) : (
         /* Empty State */
