@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "tsa-rn",
-    "slug": "tsa-rn",
+    "name": "FavorApp",
+    "slug": "favorapp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/logo.png",
@@ -9,6 +9,7 @@
     "scheme":"favorapp",
     "newArchEnabled": true,
     "ios": {
+      "icon": "./assets/logo.png",
       "supportsTablet": true,
       "bundleIdentifier": "com.bobeveleth.tsarn",
       "config": {
@@ -20,6 +21,7 @@
       }
     },
     "android": {
+      "icon": "./assets/logo.png",
       "adaptiveIcon": {
         "foregroundImage": "./assets/logo.png",
         "backgroundColor": "#ffffff"

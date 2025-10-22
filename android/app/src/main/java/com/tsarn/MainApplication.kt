@@ -1,4 +1,4 @@
-package com.bobeveleth.tsarn
+package com.tsarn
 
 import android.app.Application
 import android.content.res.Configuration
