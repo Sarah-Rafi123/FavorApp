@@ -80,6 +80,53 @@ export interface RemoveImageResponse {
   message: string;
 }
 
+// Export Profile Types
+export interface ExportProfileParams {
+  start_date?: string; // YYYY-MM-DD format
+  end_date?: string;   // YYYY-MM-DD format
+  debug?: boolean;     // Set to true for HTML preview in development
+}
+
+export interface ExportProfileJSONResponse {
+  success: boolean;
+  data: {
+    user: {
+      id: number;
+      email: string;
+      first_name: string;
+      last_name: string;
+      middle_name?: string;
+      phone_no_call?: string;
+      phone_no_text?: string;
+      years_of_experience?: number;
+      about_me?: string;
+      skills?: string[];
+      other_skills?: string;
+      image_url?: string;
+      created_at: string;
+    };
+    statistics: {
+      date_range: {
+        start_date: string;
+        end_date: string;
+      };
+      favors_requested: {
+        count: number;
+        total_hours: number;
+      };
+      favors_provided: {
+        count: number;
+        total_hours: number;
+      };
+      monthly_unpaid_hours: Array<{
+        month: string;
+        hours: number;
+      }>;
+    };
+  };
+  message: string;
+}
+
 export const getProfile = async (): Promise<ProfileResponse> => {
   console.log(`[INIT] => /profile`);
   const response = await axiosInstance.get('/profile');
@@ -251,6 +298,93 @@ export const removeProfileImage = async (): Promise<RemoveImageResponse> => {
       throw new Error(error.response.data.message);
     } else {
       throw new Error('Failed to remove image. Please check your connection and try again.');
+    }
+  }
+};
+
+export const exportProfilePDF = async (params?: ExportProfileParams): Promise<Blob> => {
+  try {
+    console.log(`🚀 Making Export Profile PDF API call to: /profile/export`);
+    console.log('📤 Request Params:', JSON.stringify(params, null, 2));
+    
+    // Build query parameters
+    const queryParams = new URLSearchParams();
+    if (params?.start_date) queryParams.append('start_date', params.start_date);
+    if (params?.end_date) queryParams.append('end_date', params.end_date);
+    if (params?.debug) queryParams.append('debug', '1');
+    
+    const url = `/profile/export${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    
+    const response = await axiosInstance.get(url, {
+      headers: {
+        'Accept': 'application/pdf',
+      },
+      responseType: 'blob', // Important for PDF download
+    });
+    
+    console.log('🎉 Export Profile PDF API Success!');
+    console.log('📊 Response Status:', response.status);
+    console.log('📄 Response Type:', response.headers['content-type']);
+    
+    return response.data;
+  } catch (error: any) {
+    console.error('❌ Export Profile PDF API Error!');
+    console.error('📄 Full API Error:', error);
+    console.error('📊 Error Response Status:', error.response?.status);
+    console.error('📄 Error Response Data:', error.response?.data);
+    
+    // Handle specific error scenarios based on status codes
+    if (error.response?.status === 401) {
+      throw new Error('Session expired. Please log in again.');
+    } else if (error.response?.status === 500) {
+      throw new Error('Failed to generate PDF. Please try again later.');
+    } else if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    } else {
+      throw new Error('Failed to export profile. Please check your connection and try again.');
+    }
+  }
+};
+
+export const exportProfileJSON = async (params?: ExportProfileParams): Promise<ExportProfileJSONResponse> => {
+  try {
+    console.log(`🚀 Making Export Profile JSON API call to: /profile/export`);
+    console.log('📤 Request Params:', JSON.stringify(params, null, 2));
+    
+    // Build query parameters
+    const queryParams = new URLSearchParams();
+    if (params?.start_date) queryParams.append('start_date', params.start_date);
+    if (params?.end_date) queryParams.append('end_date', params.end_date);
+    if (params?.debug) queryParams.append('debug', '1');
+    
+    const url = `/profile/export${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    
+    const response = await axiosInstance.get(url, {
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
+    
+    console.log('🎉 Export Profile JSON API Success!');
+    console.log('📊 Response Status:', response.status);
+    console.log('📄 Full API Response:', JSON.stringify(response.data, null, 2));
+    
+    return response.data;
+  } catch (error: any) {
+    console.error('❌ Export Profile JSON API Error!');
+    console.error('📄 Full API Error:', error);
+    console.error('📊 Error Response Status:', error.response?.status);
+    console.error('📄 Error Response Data:', JSON.stringify(error.response?.data, null, 2));
+    
+    // Handle specific error scenarios based on status codes
+    if (error.response?.status === 401) {
+      throw new Error('Session expired. Please log in again.');
+    } else if (error.response?.status === 500) {
+      throw new Error('Failed to generate export data. Please try again later.');
+    } else if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    } else {
+      throw new Error('Failed to export profile. Please check your connection and try again.');
     }
   }
 };

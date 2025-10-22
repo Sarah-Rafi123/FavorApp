@@ -118,7 +118,11 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
         </View>
       </View>
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        className="flex-1" 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 100 }}
+      >
         <View className="">
           
           <SettingItem

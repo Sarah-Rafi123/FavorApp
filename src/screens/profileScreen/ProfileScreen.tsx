@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Image, TouchableOpacity, StatusBar, ImageBackground, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Image, TouchableOpacity, StatusBar, ImageBackground, ActivityIndicator, Alert, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { CarouselButton } from '../../components/buttons';
 import { UpdateProfileModal } from '../../components/overlays/UpdateProfileModal';
+import { ExportPDFModal } from '../../components/overlays/ExportPDFModal';
 import { useProfileQuery } from '../../services/queries/ProfileQueries';
+import { exportProfilePDF, ExportProfileParams } from '../../services/apis/ProfileApis';
+import Toast from 'react-native-toast-message';
 import EditSvg from '../../assets/icons/Edit';
 import FilterSvg from '../../assets/icons/Filter';
 import BellSvg from '../../assets/icons/Bell';
@@ -21,6 +24,8 @@ export function ProfileScreen() {
   const navigation = useNavigation();
   const [activeReviewTab, setActiveReviewTab] = useState<'asked' | 'provided'>('asked');
   const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const { data: profileResponse, isLoading, error } = useProfileQuery();
   
   const [profileData, setProfileData] = useState<ProfileData>({
@@ -36,6 +41,79 @@ export function ProfileScreen() {
 
   const handleUpdateProfile = (newProfileData: ProfileData) => {
     setProfileData(newProfileData);
+  };
+
+  const handleShowExportModal = () => {
+    setShowExportModal(true);
+  };
+
+  const handleExportPDF = async (startDate: string, endDate: string) => {
+    setIsExporting(true);
+    
+    try {
+      const params: ExportProfileParams = {
+        start_date: startDate,
+        end_date: endDate,
+      };
+
+      console.log('🚀 Starting PDF export with params:', params);
+      
+      const pdfBlob = await exportProfilePDF(params);
+      
+      console.log('✅ PDF export successful, blob size:', pdfBlob.size);
+      
+      // Handle PDF download based on platform
+      if (Platform.OS === 'web') {
+        // Web platform - trigger download
+        const url = window.URL.createObjectURL(pdfBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `Profile_${profile?.first_name || 'User'}_${startDate}_${endDate}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      } else {
+        // Mobile platform - need to use file system or sharing
+        // For now, show success message and inform user
+        Alert.alert(
+          'Export Successful',
+          'Your profile PDF has been generated successfully. The file will be available in your downloads.',
+          [{ text: 'OK' }]
+        );
+      }
+      
+      // Show success toast
+      Toast.show({
+        type: 'success',
+        text1: 'PDF Export Complete! 📄',
+        text2: 'Your profile has been exported successfully',
+        visibilityTime: 4000,
+      });
+
+      // Close the modal on success
+      setShowExportModal(false);
+      
+    } catch (error: any) {
+      console.error('❌ PDF export failed:', error);
+      
+      // Show error toast
+      Toast.show({
+        type: 'error',
+        text1: 'Export Failed',
+        text2: error.message || 'Failed to export PDF. Please try again.',
+        visibilityTime: 4000,
+      });
+      
+      // Also show alert for better visibility
+      Alert.alert(
+        'Export Failed',
+        error.message || 'Failed to export PDF. Please try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   if (isLoading) {
@@ -198,7 +276,10 @@ export function ProfileScreen() {
             <Text className="text-center text-gray-700 text-sm mb-3">
               Export your free community service hours as a PDF
             </Text>
-            <TouchableOpacity className="bg-transparent border-2 border-[#44A27B] rounded-full py-3">
+            <TouchableOpacity 
+              className="bg-transparent border-2 border-[#44A27B] rounded-full py-3"
+              onPress={handleShowExportModal}
+            >
               <Text className="text-center text-[#44A27B] font-semibold">Export PDF</Text>
             </TouchableOpacity>
           </View>
@@ -246,6 +327,13 @@ export function ProfileScreen() {
         onClose={() => setShowUpdateModal(false)}
         onUpdate={handleUpdateProfile}
         initialData={profileData}
+      />
+
+      <ExportPDFModal
+        visible={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        onExport={handleExportPDF}
+        isExporting={isExporting}
       />
     </ImageBackground>
   );

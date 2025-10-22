@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   ScrollView,
   Platform,
+  Modal,
 } from 'react-native';
 import { CarouselButton } from '../../components/buttons';
 import useAuthStore from '../../store/useAuthStore';
@@ -40,11 +41,88 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [showCompleteAccountModal, setShowCompleteAccountModal] = useState(false);
+  const [savedCredentials, setSavedCredentials] = useState<Array<{email: string, password: string}>>([]);
+  const [showEmailDropdown, setShowEmailDropdown] = useState(false);
 
   const setUser = useAuthStore((state) => state.setUser);
   const setTokens = useAuthStore((state) => state.setTokens);
   const setRegistrationData = useAuthStore((state) => state.setRegistrationData);
   const loginMutation = useLoginMutation();
+
+  // Load saved credentials on component mount and auto-populate if available
+  useEffect(() => {
+    loadSavedCredentials();
+  }, []);
+
+  // Auto-populate with most recent credentials when they're loaded
+  useEffect(() => {
+    if (savedCredentials.length > 0 && activeTab === 'signin' && !formData.email && !formData.password) {
+      const mostRecent = savedCredentials[0]; // First item is most recent
+      setFormData(prev => ({
+        ...prev,
+        email: mostRecent.email,
+        password: mostRecent.password,
+        rememberMe: true
+      }));
+      console.log('🔄 Auto-populated credentials for:', mostRecent.email);
+    }
+  }, [savedCredentials, activeTab]);
+
+  // Utility functions for credential management
+  const loadSavedCredentials = async () => {
+    try {
+      const saved = await AsyncStorage.getItem('saved_credentials');
+      if (saved) {
+        const credentials = JSON.parse(saved);
+        setSavedCredentials(credentials);
+        console.log('📋 Loaded saved credentials:', credentials.length, 'accounts');
+      }
+    } catch (error) {
+      console.error('❌ Error loading saved credentials:', error);
+    }
+  };
+
+  const saveCredentials = async (email: string, password: string) => {
+    try {
+      const existing = savedCredentials.filter(cred => cred.email !== email);
+      const newCredentials = [{ email, password }, ...existing].slice(0, 5); // Keep max 5 accounts
+      
+      await AsyncStorage.setItem('saved_credentials', JSON.stringify(newCredentials));
+      setSavedCredentials(newCredentials);
+      console.log('💾 Saved credentials for:', email);
+    } catch (error) {
+      console.error('❌ Error saving credentials:', error);
+    }
+  };
+
+  const removeCredentials = async (email: string) => {
+    try {
+      const filtered = savedCredentials.filter(cred => cred.email !== email);
+      await AsyncStorage.setItem('saved_credentials', JSON.stringify(filtered));
+      setSavedCredentials(filtered);
+      console.log('🗑️ Removed credentials for:', email);
+    } catch (error) {
+      console.error('❌ Error removing credentials:', error);
+    }
+  };
+
+  const selectSavedCredential = (credential: {email: string, password: string}) => {
+    setFormData(prev => ({
+      ...prev,
+      email: credential.email,
+      password: credential.password,
+      rememberMe: true
+    }));
+    setShowEmailDropdown(false);
+    setErrors({
+      email: '',
+      password: '',
+      confirmPassword: ''
+    });
+  };
 
   // Email validation
   const validateEmail = (email: string) => {
@@ -151,6 +229,11 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
           
           // Setup Intent creation is now handled on-demand when user adds payment method
           
+          // Save credentials if Remember Me is checked
+          if (formData.rememberMe) {
+            await saveCredentials(formData.email, formData.password);
+          }
+          
           Toast.show({
             type: 'success',
             text1: 'Success',
@@ -161,6 +244,17 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
         } catch (error: any) {
           console.error('Login error:', error);
           console.error('Error response:', error.response?.data);
+          
+          // Check if this is an incomplete account scenario
+          const isAuthenticationRequired = error.message === 'Authentication required';
+          const hasNoToken = error.message?.includes('No auth token found') || error.message?.includes('Authentication required');
+          const isIncompleteAccount = isAuthenticationRequired || hasNoToken;
+          
+          if (isIncompleteAccount) {
+            // Show complete account modal instead of generic error
+            setShowCompleteAccountModal(true);
+            return;
+          }
           
           let errorMessage = 'Invalid credentials. Please try again.';
           if (error.response?.data?.message) {
@@ -277,16 +371,63 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
                   placeholderTextColor="#9CA3AF"
                   value={formData.email}
                   onChangeText={(text) => updateFormData('email', text)}
+                  onFocus={() => {
+                    // Show dropdown only for signin tab and if there are saved credentials
+                    if (activeTab === 'signin' && savedCredentials.length > 0) {
+                      setShowEmailDropdown(true);
+                    }
+                  }}
+                  onBlur={() => {
+                    // Hide dropdown after a short delay to allow selection
+                    setTimeout(() => setShowEmailDropdown(false), 150);
+                  }}
                   keyboardType="email-address"
                   autoCapitalize="none"
                 />
-                <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700">
+                <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700 bg-white">
                   Email
                 </Text>
-                {/* Fixed height container for error message to prevent layout shift */}
-                <View className="min-h-[30px] mt-1">
+                
+                {/* Credential Dropdown */}
+                {showEmailDropdown && activeTab === 'signin' && savedCredentials.length > 0 && (
+                  <View className="absolute top-14 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-10 max-h-48">
+                    <View className="p-2">
+                      <Text className="text-xs font-medium text-gray-500 px-2 py-1">Saved Accounts</Text>
+                      {savedCredentials.map((credential, index) => (
+                        <TouchableOpacity
+                          key={index}
+                          className="flex-row items-center justify-between px-3 py-3 rounded-lg hover:bg-gray-50"
+                          onPress={() => selectSavedCredential(credential)}
+                        >
+                          <View className="flex-1">
+                            <Text className="text-sm font-medium text-gray-800">
+                              {credential.email}
+                            </Text>
+                            <Text className="text-xs text-gray-500">
+                              Password saved
+                            </Text>
+                          </View>
+                          <TouchableOpacity
+                            className="ml-2 p-1"
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              removeCredentials(credential.email);
+                            }}
+                          >
+                            <Text className="text-red-500 text-xs">✕</Text>
+                          </TouchableOpacity>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                )}
+                
+                {/* Error message container with dynamic spacing */}
+                <View className={`${errors.email ? 'mt-2 mb-4' : 'mt-0.5'} min-h-[16px]`}>
                   {errors.email ? (
-                    <Text className="text-red-500 text-sm leading-4">{errors.email}</Text>
+                    <View className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 mt-1">
+                      <Text className="text-red-600 text-xs leading-3">{errors.email}</Text>
+                    </View>
                   ) : null}
                 </View>
               </View>
@@ -323,10 +464,12 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
                 >
                   <EyeSvg />
                 </TouchableOpacity>
-                {/* Fixed height container for error message to prevent layout shift */}
-                <View className="min-h-[35px] mt-1">
+                {/* Error message container with dynamic spacing */}
+                <View className={`${errors.password ? 'mt-2 mb-4' : 'mt-0.5'} min-h-[16px]`}>
                   {errors.password ? (
-                    <Text className="text-red-500 text-xs leading-4">{errors.password}</Text>
+                    <View className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 mt-1">
+                      <Text className="text-red-600 text-xs leading-3">{errors.password}</Text>
+                    </View>
                   ) : null}
                 </View>
               </View>
@@ -364,10 +507,12 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
                   >
                     <EyeSvg />
                   </TouchableOpacity>
-                  {/* Fixed height container for error message to prevent layout shift */}
-                  <View className="min-h-[40px] mt-1">
+                  {/* Error message container with dynamic spacing */}
+                  <View className={`${errors.confirmPassword ? 'mt-2 mb-4' : 'mt-0.5'} min-h-[16px]`}>
                     {errors.confirmPassword ? (
-                      <Text className="text-red-500 text-sm leading-4">{errors.confirmPassword}</Text>
+                      <View className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 mt-1">
+                        <Text className="text-red-600 text-xs leading-3">{errors.confirmPassword}</Text>
+                      </View>
                     ) : null}
                   </View>
                 </View>
@@ -420,9 +565,21 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
                     </View>
                     <Text className="text-gray-700 flex-1">
                       I have read and agree to the{' '}
-                      <Text className="underline text-black">Terms & Condition</Text>
+                      <Text 
+                        className="underline text-black hover:text-green-500 transition-colors duration-200"
+                        onPress={() => setShowTermsModal(true)}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        Terms & Condition
+                      </Text>
                       {' '}and the{' '}
-                      <Text className="underline text-black">Privacy Policy</Text>
+                      <Text 
+                        className="underline text-black hover:text-green-500 transition-colors duration-200"
+                        onPress={() => setShowPrivacyModal(true)}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        Privacy Policy
+                      </Text>
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -431,6 +588,240 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Terms & Conditions Modal */}
+      <Modal
+        visible={showTermsModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowTermsModal(false)}
+      >
+        <View className="flex-1 bg-black/50 justify-center items-center">
+          <View className="bg-white rounded-3xl w-full max-w-sm mx-4 max-h-[80vh] border-4 border-[#71DFB1]">
+            <View className="p-6">
+              <View className="flex-row justify-between items-center mb-4">
+                <Text className="text-xl font-bold text-black">Terms & Conditions</Text>
+                <TouchableOpacity 
+                  onPress={() => setShowTermsModal(false)}
+                  className="w-6 h-6 bg-black rounded-full items-center justify-center"
+                >
+                  <Text className="text-white text-sm">×</Text>
+                </TouchableOpacity>
+              </View>
+              
+              <ScrollView className="max-h-[60vh]" showsVerticalScrollIndicator={false}>
+                <Text className="text-xl font-bold text-gray-800 mb-2">FavorApp Terms of Use Agreement</Text>
+                <Text className="text-sm text-gray-500 mb-6">Updated February 18, 2025</Text>
+                
+                <Text className="text-base text-gray-700 leading-6 mb-6">
+                  The services offered by FavorApp LLC ("we," "us" or "our") include the www.favorapp.net website (the "Website"), the www.favorapp.net Internet messaging service, and any other features, content, or application offered from time to time by www.favorapp.net in connection with the FavorApp LLC Website (collectively, "FavorApp"). FavorApp is privately owned and hosted in the United States. FavorApp is a social networking service that allows Members to create unique personal profiles online in order to find and communicate with other users on the FavorApp website to provide services.
+                </Text>
+
+                <Text className="text-base text-gray-700 leading-6 mb-6">
+                  This Terms of Use Agreement ("Agreement") sets forth the legally binding terms for your use of FavorApp. By using FavorApp, you agree to be bound by this Agreement, whether you are a "Visitor" (which means that you simply browse the Website) or you are a "Member" (which means that you have registered with www.favorapp.net). The term "User" refers to a Visitor or a Member. You are only authorized to use FavorApp (regardless of whether your access or use is intended) if you agree to abide by all applicable laws and to this Agreement.
+                </Text>
+
+                <Text className="text-lg font-bold text-gray-800 mb-3">Content Guidelines</Text>
+                <Text className="text-base text-gray-700 leading-6 mb-6">
+                  Please choose carefully the information you post on FavorApp and that you provide to other Users. Your FavorApp profile may not include any photographs containing nudity, or obscene, lewd, excessively violent, harassing, sexually explicit or otherwise objectionable subject matter.
+                </Text>
+
+                <Text className="text-lg font-bold text-gray-800 mb-3">Eligibility</Text>
+                <Text className="text-base text-gray-700 leading-6 mb-6">
+                  Use of and Membership in FavorApp is void where prohibited. By using FavorApp, you represent and warrant that (a) all registration information you submit is truthful and accurate; (b) you will maintain the accuracy of such information; (c) you are 18 years of age or older; and (d) your use of FavorApp does not violate any applicable law or regulation.
+                </Text>
+
+                <Text className="text-lg font-bold text-gray-800 mb-3">Fees</Text>
+                <Text className="text-base text-gray-700 leading-6 mb-6">
+                  A fifteen percent (15%) fee is charged to any user who creates a paid favor. FavorApp may offer enhancements and features which can be added to personal accounts for a fee when selecting such upgrade option. As security is our top priority, there is a $5.00 monthly maintenance fee for identification verification for use on the FavorApp LLC website.
+                </Text>
+
+                <Text className="text-lg font-bold text-gray-800 mb-3">Prohibited Content and Activity</Text>
+                <Text className="text-base text-gray-700 leading-6 mb-4">
+                  The following types of content and activities are prohibited on FavorApp:
+                </Text>
+                <Text className="text-sm text-gray-700 leading-6 mb-6">
+                  • Content that is patently offensive, promotes racism, bigotry, hatred or physical harm{'\n'}
+                  • Harassment or advocacy of harassment{'\n'}
+                  • Nudity, violence, or offensive subject matter{'\n'}
+                  • False or misleading information{'\n'}
+                  • Illegal activities{'\n'}
+                  • Commercial activities without prior written consent{'\n'}
+                  • Automated use of the system{'\n'}
+                  • Impersonating another person{'\n'}
+                  • Selling or transferring your profile
+                </Text>
+
+                <Text className="text-base text-gray-700 leading-6 mb-6 font-semibold">
+                  YOUR USE OF THE WEBSITE OR REGISTRATION ON THE WEBSITE AFFIRMS THAT YOU HAVE READ THIS AGREEMENT AND AGREE TO ALL OF THE PROVISIONS CONTAINED ABOVE.
+                </Text>
+              </ScrollView>
+              
+              <View className="mt-4">
+                <TouchableOpacity
+                  className="bg-green-500 rounded-full py-3"
+                  onPress={() => {
+                    updateFormData('agreeTerms', true);
+                    setShowTermsModal(false);
+                  }}
+                >
+                  <Text className="text-white text-center font-semibold text-lg">I Agree</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Privacy Policy Modal */}
+      <Modal
+        visible={showPrivacyModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowPrivacyModal(false)}
+      >
+        <View className="flex-1 bg-black/50 justify-center items-center">
+          <View className="bg-white rounded-3xl w-full max-w-sm mx-4 max-h-[80vh] border-4 border-[#71DFB1]">
+            <View className="p-6">
+              <View className="flex-row justify-between items-center mb-4">
+                <Text className="text-xl font-bold text-black">Privacy Policy</Text>
+                <TouchableOpacity 
+                  onPress={() => setShowPrivacyModal(false)}
+                  className="w-6 h-6 bg-black rounded-full items-center justify-center"
+                >
+                  <Text className="text-white text-sm">×</Text>
+                </TouchableOpacity>
+              </View>
+              
+              <ScrollView className="max-h-[60vh]" showsVerticalScrollIndicator={false}>
+                <Text className="text-sm text-gray-500 mb-4">Effective date: February 14, 2025</Text>
+                
+                <Text className="text-base text-gray-700 leading-6 mb-6">
+                  Thank you for visiting the www.favorapp.net web site. This privacy policy describes you how we use personal information collected at this site. Please read this privacy policy before using the site or submitting any personal information. By using the site, you are accepting the practices described in this privacy policy.
+                </Text>
+
+                <Text className="text-base text-gray-700 leading-6 mb-6">
+                  Note: the privacy practices set forth in this privacy policy are for the www.favorapp.net web site only. If you link to other web sites, please review the privacy policies posted at those sites.
+                </Text>
+
+                <Text className="text-lg font-bold text-gray-800 mb-3">Collection of Information</Text>
+                <Text className="text-base text-gray-700 leading-6 mb-6">
+                  We collect personally identifiable information limited to only your email address, and general location (county and postal code), when voluntarily submitted by our visitors upon registration for a personal profile account on the www.favorapp.net website. The email you provide is used to verify that the account registration is from an actual person with verifiable contact, and also used to send activity notifications.
+                </Text>
+
+                <Text className="text-lg font-bold text-gray-800 mb-3">Publicly Posted Information</Text>
+                <Text className="text-base text-gray-700 leading-6 mb-6">
+                  As www.favorapp.net is a social network, we provide many areas for users to voluntarily post information visible to other users of the website, including but not limited to your profile page, blogs, forums, photo albums, etc. We STRONGLY encourage you to never post any personal identifiable information in these areas such as your full name, phone number, address, etc.
+                </Text>
+
+                <Text className="text-lg font-bold text-gray-800 mb-3">Distribution of Information</Text>
+                <Text className="text-base text-gray-700 leading-6 mb-6">
+                  Your confidential personal information will NEVER be sold, shared, or given to any third party without your permission, and will NEVER be made publicly visible or available on the FavorApp website. We may share information with governmental agencies or other companies assisting us in fraud prevention or investigation.
+                </Text>
+
+                <Text className="text-lg font-bold text-gray-800 mb-3">Commitment to Data Security</Text>
+                <Text className="text-base text-gray-700 leading-6 mb-6">
+                  Your personally identifiable information is kept secure. Only authorized employees, agents and contractors (who have agreed to keep information secure and confidential) have access to this information.
+                </Text>
+
+                <Text className="text-base text-gray-700 leading-6 mb-6">
+                  We reserve the right to make changes to this policy without notice to you. Any changes to this policy will be posted.
+                </Text>
+              </ScrollView>
+              
+              <View className="mt-4">
+                <TouchableOpacity
+                  className="bg-green-500 rounded-full py-3"
+                  onPress={() => {
+                    updateFormData('agreeTerms', true);
+                    setShowPrivacyModal(false);
+                  }}
+                >
+                  <Text className="text-white text-center font-semibold text-lg">I Agree</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Complete Account Modal */}
+      <Modal
+        visible={showCompleteAccountModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowCompleteAccountModal(false)}
+      >
+        <View className="flex-1 bg-black/50 justify-center items-center">
+          <View className="bg-white rounded-3xl w-full max-w-sm mx-4 border-4 border-[#71DFB1]">
+            <View className="p-6">
+              <View className="flex-row justify-between items-center mb-6">
+                <Text className="text-xl font-bold text-black">Complete Your Account</Text>
+                <TouchableOpacity 
+                  onPress={() => setShowCompleteAccountModal(false)}
+                  className="w-6 h-6 bg-black rounded-full items-center justify-center"
+                >
+                  <Text className="text-white text-sm">×</Text>
+                </TouchableOpacity>
+              </View>
+              
+              {/* Icon */}
+              <View className="items-center mb-6">
+                <View className="w-16 h-16 bg-orange-100 rounded-full items-center justify-center mb-4">
+                  <Text className="text-3xl">⚠️</Text>
+                </View>
+                <Text className="text-lg font-semibold text-gray-800 text-center mb-3">
+                  Account Setup Incomplete
+                </Text>
+                <Text className="text-sm text-gray-600 text-center leading-5">
+                  It looks like your account registration wasn't completed. To access FavorApp, please complete the signup process by creating your profile.
+                </Text>
+              </View>
+
+              {/* Pre-fill email hint */}
+              <View className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+                <Text className="text-sm text-blue-800 font-medium mb-1">
+                  💡 Quick Setup
+                </Text>
+                <Text className="text-xs text-blue-700">
+                  We'll use your email "{formData.email}" to continue where you left off.
+                </Text>
+              </View>
+
+              {/* Action Buttons */}
+              <View className="gap-y-3">
+                <TouchableOpacity
+                  className="bg-[#44A27B] rounded-full py-4"
+                  onPress={() => {
+                    setShowCompleteAccountModal(false);
+                    // Pre-fill the signup form with current email
+                    setActiveTab('signup');
+                    // Navigate to signup flow
+                    onSignup?.(formData.email);
+                  }}
+                >
+                  <Text className="text-white text-center font-semibold text-base">
+                    Complete Signup
+                  </Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  className="bg-gray-100 rounded-full py-4 border border-gray-300"
+                  onPress={() => {
+                    setShowCompleteAccountModal(false);
+                    // Switch to signup tab
+                    setActiveTab('signup');
+                  }}
+                >
+                  <Text className="text-gray-700 text-center font-semibold text-base">
+                    Create New Account
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ImageBackground>
   );
 }

@@ -313,7 +313,14 @@ export const FavorApis = {
       } else if (error.response?.status === 401) {
         throw new Error('Authentication required. Please log in again.');
       } else if (error.response?.data?.message) {
-        throw new Error(error.response.data.message);
+        // Handle the exact error message from API
+        const message = error.response.data.message;
+        if (message === 'Already applied') {
+          throw new Error('You have already applied to this favor');
+        }
+        throw new Error(message);
+      } else if (error.message === 'Already applied') {
+        throw new Error('You have already applied to this favor');
       } else {
         throw new Error('Failed to apply to favor. Please try again.');
       }

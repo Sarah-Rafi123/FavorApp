@@ -12,9 +12,11 @@ import {
   ActivityIndicator,
   Keyboard,
   Platform,
+  Image,
 } from 'react-native';
-import { CardField, useStripe } from '@stripe/stripe-react-native';
+import { useStripe } from '@stripe/stripe-react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
+import Toast from 'react-native-toast-message';
 import { useCreateSetupIntent } from '../../services/mutations/SetupIntentMutations';
 import { useSavePaymentMethod, useDeletePaymentMethod } from '../../services/mutations/PaymentMethodMutations';
 import { usePaymentMethods } from '../../services/queries/PaymentMethodQueries';
@@ -26,26 +28,6 @@ interface PaymentMethodScreenProps {
 }
 
 
-const RadioButton = ({ selected }: { selected: boolean }) => (
-  <Svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-    <Circle
-      cx="10"
-      cy="10"
-      r="9"
-      stroke={selected ? "#44A27B" : "#D1D5DB"}
-      strokeWidth="2"
-      fill={selected ? "#44A27B" : "white"}
-    />
-    {selected && (
-      <Circle
-        cx="10"
-        cy="10"
-        r="4"
-        fill="white"
-      />
-    )}
-  </Svg>
-);
 
 const countries = [
   { code: 'AF', name: 'Afghanistan' },
@@ -239,11 +221,14 @@ const countries = [
 ];
 
 export function PaymentMethodScreen({ navigation }: PaymentMethodScreenProps) {
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('Card');
   const [nameOnCard, setNameOnCard] = useState('');
   const [nameError, setNameError] = useState('');
   const [cardNumber, setCardNumber] = useState('');
+  const [cardNumberError, setCardNumberError] = useState('');
   const [expirationDate, setExpirationDate] = useState('');
+  const [expirationError, setExpirationError] = useState('');
+  const [securityCode, setSecurityCode] = useState('');
+  const [securityCodeError, setSecurityCodeError] = useState('');
   const [country, setCountry] = useState('US'); // Default to US
   const [showCountryModal, setShowCountryModal] = useState(false);
   const [zip, setZip] = useState('');
@@ -251,7 +236,6 @@ export function PaymentMethodScreen({ navigation }: PaymentMethodScreenProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentPaymentMethod, setCurrentPaymentMethod] = useState<any>(null);
-  const [cardComplete, setCardComplete] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   // API hooks
@@ -262,7 +246,7 @@ export function PaymentMethodScreen({ navigation }: PaymentMethodScreenProps) {
   const { data: paymentMethodsData } = usePaymentMethods();
   
   // Stripe hooks
-  const { confirmSetupIntent } = useStripe();
+  const { confirmSetupIntent, createToken } = useStripe();
 
   // Keyboard event listeners for better UX
   useEffect(() => {
@@ -331,14 +315,37 @@ export function PaymentMethodScreen({ navigation }: PaymentMethodScreenProps) {
               setNameOnCard('');
               setCardNumber('');
               setExpirationDate('');
+              setSecurityCode('');
               setCountry('');
               setZip('');
               
-              Alert.alert(
-                'Success',
-                'Payment method deleted successfully',
-                [{ text: 'OK' }]
-              );
+              // Show success toast for deletion
+              Toast.show({
+                type: 'success',
+                position: 'top',
+                text1: 'Payment Method Deleted! ✅',
+                text2: 'Payment method removed successfully',
+                visibilityTime: 3000,
+                autoHide: true,
+                topOffset: 60,
+                renderLeadingIcon: () => (
+                  <View style={{ 
+                    width: 40, 
+                    height: 40, 
+                    borderRadius: 20, 
+                    backgroundColor: '#FEF2F2',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    marginRight: 12
+                  }}>
+                    <Image 
+                      source={require('../../assets/images/logo.png')} 
+                      style={{ width: 24, height: 24 }}
+                      resizeMode="contain"
+                    />
+                  </View>
+                )
+              });
               
             } catch (error: any) {
               console.error('❌ Failed to delete payment method:', error);
@@ -358,8 +365,16 @@ export function PaymentMethodScreen({ navigation }: PaymentMethodScreenProps) {
 
 
   const validateName = (text: string) => {
+    // Limit to 50 characters
+    if (text.length > 50) {
+      text = text.substring(0, 50);
+    }
+    
     setNameOnCard(text);
-    if (text.trim().length < 2) {
+    
+    if (text.trim().length === 0) {
+      setNameError('Name on card is required');
+    } else if (text.trim().length < 2) {
       setNameError('Name must be at least 2 characters');
     } else if (!/^[a-zA-Z\s]+$/.test(text)) {
       setNameError('Name can only contain letters and spaces');
@@ -369,11 +384,138 @@ export function PaymentMethodScreen({ navigation }: PaymentMethodScreenProps) {
   };
 
   const validateZip = (text: string) => {
-    setZip(text);
-    if (text.length < 5) {
-      setZipError('Zip code must be at least 5 characters');
+    // Only allow numbers
+    const cleaned = text.replace(/\D/g, '');
+    
+    // Limit to 10 characters
+    if (cleaned.length > 10) {
+      return;
+    }
+    
+    setZip(cleaned);
+    
+    if (cleaned.length === 0) {
+      setZipError('Zip code is required');
+    } else if (cleaned.length < 5) {
+      setZipError('Zip code must be at least 5 digits');
+    } else if (cleaned.length > 10) {
+      setZipError('Zip code cannot exceed 10 digits');
     } else {
       setZipError('');
+    }
+  };
+
+  const isValidLuhn = (cardNumber: string) => {
+    const digits = cardNumber.replace(/\D/g, '');
+    let sum = 0;
+    let isEven = false;
+    
+    for (let i = digits.length - 1; i >= 0; i--) {
+      let digit = parseInt(digits[i]);
+      
+      if (isEven) {
+        digit *= 2;
+        if (digit > 9) {
+          digit -= 9;
+        }
+      }
+      
+      sum += digit;
+      isEven = !isEven;
+    }
+    
+    return sum % 10 === 0;
+  };
+
+  const formatCardNumber = (text: string) => {
+    // Remove all non-digits
+    const cleaned = text.replace(/\D/g, '');
+    
+    // Limit to 16 digits
+    if (cleaned.length > 16) {
+      return;
+    }
+    
+    // Add spaces every 4 digits
+    const formatted = cleaned.replace(/(\d{4})(?=\d)/g, '$1 ');
+    setCardNumber(formatted);
+    
+    // Validate card number
+    if (cleaned.length === 0) {
+      setCardNumberError('Card number is required');
+    } else if (cleaned.length < 13) {
+      setCardNumberError('Card number must be at least 13 digits');
+    } else if (cleaned.length > 16) {
+      setCardNumberError('Card number cannot exceed 16 digits');
+    } else if (!isValidLuhn(cleaned)) {
+      setCardNumberError('Invalid card number');
+    } else {
+      setCardNumberError('');
+    }
+  };
+
+  const formatExpirationDate = (text: string) => {
+    // Remove all non-digits
+    const cleaned = text.replace(/\D/g, '');
+    
+    // Limit to 4 digits
+    if (cleaned.length > 4) {
+      return;
+    }
+    
+    let formatted = cleaned;
+    
+    // Add slash after 2 digits
+    if (cleaned.length >= 2) {
+      formatted = cleaned.substring(0, 2) + '/' + cleaned.substring(2, 4);
+    }
+    
+    setExpirationDate(formatted);
+    
+    // Validate expiration date
+    if (cleaned.length === 0) {
+      setExpirationError('Expiration date is required');
+    } else if (cleaned.length < 4) {
+      setExpirationError('Enter complete expiration date (MM/YY)');
+    } else {
+      const month = parseInt(cleaned.substring(0, 2));
+      const year = parseInt(cleaned.substring(2, 4)) + 2000;
+      const currentDate = new Date();
+      const currentYear = currentDate.getFullYear();
+      const currentMonth = currentDate.getMonth() + 1;
+      
+      if (month < 1 || month > 12) {
+        setExpirationError('Invalid month (01-12)');
+      } else if (year < currentYear || (year === currentYear && month < currentMonth)) {
+        setExpirationError('Card has expired');
+      } else if (year > currentYear + 10) {
+        setExpirationError('Expiration date too far in future');
+      } else {
+        setExpirationError('');
+      }
+    }
+  };
+
+  const validateSecurityCode = (text: string) => {
+    // Only allow numbers
+    const cleaned = text.replace(/\D/g, '');
+    
+    // Limit to 4 digits
+    if (cleaned.length > 4) {
+      return;
+    }
+    
+    setSecurityCode(cleaned);
+    
+    // Validate security code
+    if (cleaned.length === 0) {
+      setSecurityCodeError('Security code is required');
+    } else if (cleaned.length < 3) {
+      setSecurityCodeError('Security code must be 3-4 digits');
+    } else if (cleaned.length > 4) {
+      setSecurityCodeError('Security code cannot exceed 4 digits');
+    } else {
+      setSecurityCodeError('');
     }
   };
 
@@ -385,14 +527,32 @@ export function PaymentMethodScreen({ navigation }: PaymentMethodScreenProps) {
     
     let isValid = true;
     
+    // Validate all fields and check for errors
     if (!nameOnCard.trim()) {
       setNameError('Name on card is required');
       isValid = false;
+    } else if (nameError) {
+      isValid = false;
     }
     
-    // Card details validation using Stripe CardField
-    if (!cardComplete) {
-      Alert.alert('Error', 'Please complete your card details');
+    if (!cardNumber.trim()) {
+      setCardNumberError('Card number is required');
+      isValid = false;
+    } else if (cardNumberError) {
+      isValid = false;
+    }
+    
+    if (!expirationDate.trim()) {
+      setExpirationError('Expiration date is required');
+      isValid = false;
+    } else if (expirationError) {
+      isValid = false;
+    }
+    
+    if (!securityCode.trim()) {
+      setSecurityCodeError('Security code is required');
+      isValid = false;
+    } else if (securityCodeError) {
       isValid = false;
     }
     
@@ -400,8 +560,11 @@ export function PaymentMethodScreen({ navigation }: PaymentMethodScreenProps) {
       Alert.alert('Error', 'Please select a country');
       isValid = false;
     }
+    
     if (!zip.trim()) {
       setZipError('Zip code is required');
+      isValid = false;
+    } else if (zipError) {
       isValid = false;
     }
     
@@ -482,12 +645,48 @@ export function PaymentMethodScreen({ navigation }: PaymentMethodScreenProps) {
         frontendIsLive: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY?.includes('_live_')
       });
 
-      // Real Stripe React Native SDK implementation
+      // Parse card details for Stripe
+      const cardNumberClean = cardNumber.replace(/\s/g, '');
+      const [expMonth, expYear] = expirationDate.split('/');
+      
+      console.log('🔍 Card Details Processing:', {
+        cardNumberLength: cardNumberClean.length,
+        expMonth,
+        expYear: expYear ? `20${expYear}` : undefined,
+        securityCodeLength: securityCode.length,
+        name: nameOnCard
+      });
+
+      // Step 2a: Create a token first using card details
+      console.log('📋 Step 2a: Creating card token...');
+      const { token, error: tokenError } = await createToken({
+        type: 'Card',
+        number: cardNumberClean,
+        expMonth: parseInt(expMonth),
+        expYear: parseInt(`20${expYear}`),
+        cvc: securityCode,
+        name: nameOnCard,
+        address: {
+          country: country,
+          postalCode: zip
+        }
+      });
+
+      if (tokenError) {
+        console.error('❌ Token creation error:', tokenError);
+        throw new Error(tokenError.message);
+      }
+
+      console.log('✅ Card token created:', token?.id);
+
+      // Step 2b: Confirm SetupIntent with the token
+      console.log('📋 Step 2b: Confirming SetupIntent with token...');
       const { setupIntent, error } = await confirmSetupIntent(
         setupIntentData.client_secret,
         {
           paymentMethodType: 'Card',
           paymentMethodData: {
+            token: token?.id,
             billingDetails: {
               name: nameOnCard,
               address: {
@@ -544,20 +743,37 @@ Contact your backend team to verify the Stripe configuration.
 
       setIsProcessing(false);
       
-      Alert.alert(
-        'Success!',
-        'Your payment method has been added successfully and is ready to use.',
-        [
-          {
-            text: 'View Payment Methods',
-            onPress: () => navigation?.navigate('PaymentMethodsScreen')
-          },
-          {
-            text: 'OK',
-            style: 'cancel'
-          }
-        ]
-      );
+      // Show custom toast notification with logo
+      Toast.show({
+        type: 'success',
+        position: 'top',
+        text1: 'Payment Method Added! 🎉',
+        text2: 'Your payment method has been added successfully',
+        visibilityTime: 4000,
+        autoHide: true,
+        topOffset: 60,
+        renderLeadingIcon: () => (
+          <View style={{ 
+            width: 40, 
+            height: 40, 
+            borderRadius: 20, 
+            backgroundColor: '#F0FDF4',
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginRight: 12
+          }}>
+            <Image 
+              source={require('../../assets/images/logo.png')} 
+              style={{ width: 24, height: 24 }}
+              resizeMode="contain"
+            />
+          </View>
+        ),
+        onPress: () => {
+          Toast.hide();
+          navigation?.navigate('PaymentMethodsScreen');
+        }
+      });
 
     } catch (error: any) {
       setIsProcessing(false);
@@ -629,37 +845,6 @@ This is a backend configuration issue.`;
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
       >
-        {/* Choose a payment method */}
-        <Text className="text-lg font-medium text-black mb-4">
-          Choose a payment method
-        </Text>
-
-        {/* Payment Method Options */}
-        <View className="flex-row flex-wrap mb-6">
-          <TouchableOpacity
-            className="flex-row items-center mr-6 mb-2"
-            onPress={() => setSelectedPaymentMethod('Card')}
-          >
-            <RadioButton selected={selectedPaymentMethod === 'Card'} />
-            <Text className="ml-2 text-base text-black">Card</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            className="flex-row items-center mr-6 mb-2"
-            onPress={() => setSelectedPaymentMethod('Bank Transfer')}
-          >
-            <RadioButton selected={selectedPaymentMethod === 'Bank Transfer'} />
-            <Text className="ml-2 text-base text-black">Bank Transfer</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            className="flex-row items-center mb-2"
-            onPress={() => setSelectedPaymentMethod('Other Option')}
-          >
-            <RadioButton selected={selectedPaymentMethod === 'Other Option'} />
-            <Text className="ml-2 text-base text-black">Other Option</Text>
-          </TouchableOpacity>
-        </View>
 
         {isEditMode ? (
           /* Edit Mode - Show read-only card info */
@@ -686,92 +871,104 @@ This is a backend configuration issue.`;
               editable={false}
             />
 
-            {/* Expiration date */}
-            <Text className="text-base font-medium text-black mb-2">
-              Expiration date
-            </Text>
-            <TextInput
-              className="bg-gray-100 border border-gray-200 rounded-xl px-4 text-base text-gray-600 mb-4"
-              style={{ height: 56, lineHeight: 20, textAlignVertical: 'center', paddingTop: 18, paddingBottom: 18 }}
-              value={expirationDate}
-              editable={false}
-            />
+            {/* Expiration date and Security code row */}
+            <View className="flex-row gap-x-4 mb-4">
+              <View className="flex-1">
+                <Text className="text-base font-medium text-black mb-2">
+                  Expiration date
+                </Text>
+                <TextInput
+                  className="bg-gray-100 border border-gray-200 rounded-xl px-4 text-base text-gray-600"
+                  style={{ height: 56, lineHeight: 20, textAlignVertical: 'center', paddingTop: 18, paddingBottom: 18 }}
+                  value={expirationDate}
+                  editable={false}
+                />
+              </View>
+              <View className="flex-1">
+                <Text className="text-base font-medium text-black mb-2">
+                  Security code
+                </Text>
+                <TextInput
+                  className="bg-gray-100 border border-gray-200 rounded-xl px-4 text-base text-gray-600"
+                  style={{ height: 56, lineHeight: 20, textAlignVertical: 'center', paddingTop: 18, paddingBottom: 18 }}
+                  value="***"
+                  editable={false}
+                />
+              </View>
+            </View>
           </View>
         ) : (
-          /* Add Mode - Show Stripe CardField for new cards */
+          /* Add Mode - Show individual input fields */
           <View>
-            {/* Instructions */}
-            <View className="mb-4 p-4 bg-blue-50 rounded-xl border border-blue-200">
-              <Text className="text-sm text-blue-800 font-medium mb-2">
-                🔒 Secure Card Entry
-              </Text>
-              <Text className="text-xs text-blue-700">
-                Your card details are processed securely by Stripe and never stored on our servers.
-              </Text>
-            </View>
-
-            {/* Name on card - kept separate as Stripe CardField doesn't include this */}
+            {/* Name on card */}
             <Text className="text-base font-medium text-black mb-2">
               Name on card
             </Text>
             <TextInput
-              className={`bg-white border rounded-xl px-4 text-base text-black ${nameError ? 'border-red-500' : 'border-gray-200'}`}
+              className={`bg-white border rounded-xl px-4 text-base text-black mb-4 ${nameError ? 'border-red-500' : 'border-gray-200'}`}
               style={{ height: 56, lineHeight: 20, textAlignVertical: 'center', paddingTop: 18, paddingBottom: 18 }}
               value={nameOnCard}
               onChangeText={validateName}
               placeholder="Enter cardholder name"
             />
             {nameError ? (
-              <Text className="text-red-500 text-sm mb-4">{nameError}</Text>
-            ) : (
-              <View className="mb-4" />
-            )}
+              <Text className="text-red-500 text-sm mb-2">{nameError}</Text>
+            ) : null}
 
-            {/* Stripe CardField */}
+            {/* Card number */}
             <Text className="text-base font-medium text-black mb-2">
-              Card details
+              Card number
             </Text>
-            <View className="bg-white border border-gray-200 rounded-xl mb-4" style={{ height: 56, justifyContent: 'center', paddingHorizontal: 16 }}>
-              <CardField
-                postalCodeEnabled={false}
-                placeholders={{
-                  number: '4242 4242 4242 4242',
-                  expiration: 'MM/YY',
-                  cvc: 'CVC',
-                }}
-                cardStyle={{
-                  backgroundColor: '#FFFFFF',
-                  textColor: '#000000',
-                  fontSize: 16,
-                  placeholderColor: '#9CA3AF',
-                  borderWidth: 0,
-                  borderColor: 'transparent',
-                }}
-                style={{
-                  width: '100%',
-                  height: 50,
-                  marginVertical: Platform.OS === 'ios' ? 0 : 0,
-                }}
-                onCardChange={(cardDetails) => {
-                  console.log('💳 Card details changed:', {
-                    complete: cardDetails.complete,
-                    validNumber: cardDetails.validNumber,
-                    validCVC: cardDetails.validCVC,
-                    validExpiryDate: cardDetails.validExpiryDate,
-                  });
-                  setCardComplete(cardDetails.complete);
-                }}
-              />
-            </View>
+            <TextInput
+              className={`bg-white border rounded-xl px-4 text-base text-black mb-4 ${cardNumberError ? 'border-red-500' : 'border-gray-200'}`}
+              style={{ height: 56, lineHeight: 20, textAlignVertical: 'center', paddingTop: 18, paddingBottom: 18 }}
+              value={cardNumber}
+              onChangeText={formatCardNumber}
+              placeholder="1234 5678 9012 3456"
+              keyboardType="numeric"
+              maxLength={19}
+            />
+            {cardNumberError ? (
+              <Text className="text-red-500 text-sm mb-2">{cardNumberError}</Text>
+            ) : null}
 
-            {/* Test card info */}
-            <View className="mb-4 p-3 bg-yellow-50 rounded-xl border border-yellow-200">
-              <Text className="text-xs text-yellow-800 font-medium mb-1">
-                💳 Test Card (Development)
-              </Text>
-              <Text className="text-xs text-yellow-700">
-                4242 4242 4242 4242 • Any future date • Any 3-digit CVC
-              </Text>
+            {/* Expiration date and Security code row */}
+            <View className="flex-row gap-x-4 mb-4">
+              <View className="flex-1">
+                <Text className="text-base font-medium text-black mb-2">
+                  Expiration date
+                </Text>
+                <TextInput
+                  className={`bg-white border rounded-xl px-4 text-base text-black ${expirationError ? 'border-red-500' : 'border-gray-200'}`}
+                  style={{ height: 56, lineHeight: 20, textAlignVertical: 'center', paddingTop: 18, paddingBottom: 18 }}
+                  value={expirationDate}
+                  onChangeText={formatExpirationDate}
+                  placeholder="MM/YY"
+                  keyboardType="numeric"
+                  maxLength={5}
+                />
+                {expirationError ? (
+                  <Text className="text-red-500 text-sm mt-1">{expirationError}</Text>
+                ) : null}
+              </View>
+              <View className="flex-1">
+                <Text className="text-base font-medium text-black mb-2">
+                  Security code
+                </Text>
+                <TextInput
+                  className={`bg-white border rounded-xl px-4 text-base text-black ${securityCodeError ? 'border-red-500' : 'border-gray-200'}`}
+                  style={{ height: 56, lineHeight: 20, textAlignVertical: 'center', paddingTop: 18, paddingBottom: 18 }}
+                  value={securityCode}
+                  onChangeText={validateSecurityCode}
+                  placeholder="123"
+                  keyboardType="numeric"
+                  maxLength={4}
+                  secureTextEntry={true}
+                />
+                {securityCodeError ? (
+                  <Text className="text-red-500 text-sm mt-1">{securityCodeError}</Text>
+                ) : null}
+              </View>
             </View>
           </View>
         )}
@@ -929,6 +1126,7 @@ This is a backend configuration issue.`;
                 setNameOnCard('');
                 setCardNumber('');
                 setExpirationDate('');
+                setSecurityCode('');
                 setCountry('US');
                 setZip('');
               }}

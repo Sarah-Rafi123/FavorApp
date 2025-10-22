@@ -284,17 +284,25 @@ export const useApplyToFavor = () => {
       let title = 'Application Failed';
       
       // Some errors are more informational than critical
-      if (error.message.includes('already applied') || 
-          error.message.includes('already the accepted provider') ||
-          error.message.includes('cannot apply to your own favor')) {
+      let message = error.message;
+      if (error.message.toLowerCase().includes('already applied')) {
+        toastType = 'info';
+        title = 'Already Applied';
+        message = 'You have already applied to this favor';
+      } else if (error.message.toLowerCase().includes('already the accepted provider')) {
+        toastType = 'info';
+        title = 'Already Accepted';
+        message = 'You are already the accepted provider for this favor';
+      } else if (error.message.toLowerCase().includes('cannot apply to your own favor')) {
         toastType = 'info';
         title = 'Cannot Apply';
+        message = 'You cannot apply to your own favor';
       }
       
       Toast.show({
         type: toastType,
         text1: title,
-        text2: error.message,
+        text2: message,
         visibilityTime: 4000,
       });
     },
