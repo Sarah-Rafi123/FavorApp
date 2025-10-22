@@ -1,4 +1,4 @@
-package com.tsarn
+package com.favorapp
 
 import android.os.Build
 import android.os.Bundle

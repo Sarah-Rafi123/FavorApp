@@ -155,7 +155,6 @@ export type AppRoutes = {
   'Settings': any;
 
   // Root Stack
-  'splash-screen': any;
   'auth-screen': any;
   'forgot-password-screen': any;
   'otp-verification-screen': { email: string };

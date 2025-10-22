@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-               BuildableName = "tsarn.app"
-               BlueprintName = "tsarn"
-               ReferencedContainer = "container:tsarn.xcodeproj">
+               BuildableName = "FavorApp.app"
+               BlueprintName = "FavorApp"
+               ReferencedContainer = "container:FavorApp.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -33,9 +33,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "00E356ED1AD99517003FC87E"
-               BuildableName = "tsarnTests.xctest"
-               BlueprintName = "tsarnTests"
-               ReferencedContainer = "container:tsarn.xcodeproj">
+               BuildableName = "FavorAppTests.xctest"
+               BlueprintName = "FavorAppTests"
+               ReferencedContainer = "container:FavorApp.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -55,9 +55,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-            BuildableName = "tsarn.app"
-            BlueprintName = "tsarn"
-            ReferencedContainer = "container:tsarn.xcodeproj">
+            BuildableName = "FavorApp.app"
+            BlueprintName = "FavorApp"
+            ReferencedContainer = "container:FavorApp.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -72,9 +72,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-            BuildableName = "tsarn.app"
-            BlueprintName = "tsarn"
-            ReferencedContainer = "container:tsarn.xcodeproj">
+            BuildableName = "FavorApp.app"
+            BlueprintName = "FavorApp"
+            ReferencedContainer = "container:FavorApp.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>
