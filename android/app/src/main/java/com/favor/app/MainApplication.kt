@@ -1,4 +1,4 @@
-package com.favorapp
+package com.favor.app
 
 import android.app.Application
 import android.content.res.Configuration

@@ -28,7 +28,7 @@
         <key>CFBundleURLSchemes</key>
         <array>
           <string>favorapp</string>
-          <string>com.bobeveleth.tsarn</string>
+          <string>com.favor.app</string>
         </array>
       </dict>
     </array>

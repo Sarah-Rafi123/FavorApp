@@ -11,7 +11,7 @@
     "ios": {
       "icon": "./assets/logo.png",
       "supportsTablet": true,
-      "bundleIdentifier": "com.bobeveleth.tsarn",
+      "bundleIdentifier": "com.favor.app",
       "config": {
         "googleMapsApiKey": "AIzaSyDt1zyVSt1snXRBteLuH9ngKmE8ABve268"
       },
@@ -26,7 +26,7 @@
         "foregroundImage": "./assets/logo.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.bobeveleth.tsarn",
+      "package": "com.favor.app",
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyDt1zyVSt1snXRBteLuH9ngKmE8ABve268"
@@ -48,7 +48,7 @@
       [
         "@stripe/stripe-react-native",
         {
-          "merchantIdentifier": "merchant.com.bobeveleth.tsarn",
+          "merchantIdentifier": "merchant.com.favor.app",
           "publishableKey": "pk_test_51Q7dmgB0ebyuNLiRFS67rDTvorE6TiCaf5cXjofD1MUKOUtoT7xDl8LKMkbEhthWmzZtDc5cbwotic3Fv0KjosJ600I9SOjcpj"
         }
       ]

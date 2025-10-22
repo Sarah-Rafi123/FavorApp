@@ -1,6 +1,6 @@
 export const STRIPE_CONFIG = {
   publishableKey: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || '',
-  merchantId: 'merchant.com.bobeveleth.tsarn', // Updated to match your app.json
+  merchantId: 'merchant.com.favor.app', // Updated to match your app.json
   urlScheme: 'favorapp', // Replace with your app's URL scheme
 };
 
