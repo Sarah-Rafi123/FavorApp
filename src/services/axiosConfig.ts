@@ -77,23 +77,39 @@ axiosInstance.interceptors.response.use(
       return Promise.reject(new Error('Network error. Please check your connection.'));
     }
     
-    // Handle specific HTTP errors
+    // Handle specific HTTP errors while preserving original error details
     const { status, data } = error.response;
+    
+    // Create a new error with user-friendly message but preserve original error details
+    let userMessage: string;
     
     switch (status) {
       case 400:
-        return Promise.reject(new Error(data?.message || 'Bad request'));
+        userMessage = data?.message || 'Bad request';
+        break;
       case 403:
-        return Promise.reject(new Error('Access forbidden'));
+        userMessage = 'Access forbidden';
+        break;
       case 404:
-        return Promise.reject(new Error('Resource not found'));
+        userMessage = 'Resource not found';
+        break;
       case 422:
-        return Promise.reject(new Error(data?.message || 'Validation error'));
+        userMessage = data?.message || 'Validation error';
+        break;
       case 500:
-        return Promise.reject(new Error('Server error. Please try again later.'));
+        userMessage = 'Server error. Please try again later.';
+        break;
       default:
-        return Promise.reject(new Error(data?.message || `HTTP Error ${status}`));
+        userMessage = data?.message || `HTTP Error ${status}`;
     }
+    
+    // Create new error with user-friendly message but preserve original error details
+    const enhancedError = new Error(userMessage) as any;
+    enhancedError.response = error.response;
+    enhancedError.config = error.config;
+    enhancedError.code = error.code;
+    
+    return Promise.reject(enhancedError);
   }
 );
 

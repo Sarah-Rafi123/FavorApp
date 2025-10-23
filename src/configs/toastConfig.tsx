@@ -37,12 +37,20 @@ export const toastConfig = {
 const createStyles = (theme: ThemeTypes) => StyleSheet.create({
   container: {
     flexDirection: 'row',
-
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderRadius: 12,
     paddingVertical: 8,
     paddingHorizontal: 8,
     width: '90%',
     marginHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
     // borderColor: theme.primary,
     // borderWidth: 1
     // shadowColor: theme.primary,

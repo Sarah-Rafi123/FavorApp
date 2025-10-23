@@ -309,7 +309,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
           {/* No requests indicator */}
           <View className="bg-gray-50 rounded-xl p-3">
             <Text className="text-sm text-gray-600 text-center">
-              No requests yet - Share your favor to get help!
+              No requests yet!
             </Text>
           </View>
         </View>

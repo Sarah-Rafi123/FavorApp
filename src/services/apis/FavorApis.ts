@@ -240,8 +240,27 @@ export const FavorApis = {
 
   // 6. Create Favor (JSON)
   createFavor: async (data: CreateFavorRequest): Promise<GetFavorResponse> => {
-    const response = await axiosInstance.post('/favors', { favor: data });
-    return response.data;
+    try {
+      console.log('🚀 Making Create Favor API call to: /favors');
+      console.log('📤 Request Data:', JSON.stringify({ favor: data }, null, 2));
+      
+      const response = await axiosInstance.post('/favors', { favor: data });
+      
+      console.log('🎉 Create Favor API Success!');
+      console.log('📊 Response Status:', response.status);
+      console.log('📄 Full API Response:', JSON.stringify(response.data, null, 2));
+      
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Create Favor API Error!');
+      console.error('📄 Full API Error:', error);
+      console.error('📊 Error Response Status:', error.response?.status);
+      console.error('📄 Error Response Data:', JSON.stringify(error.response?.data, null, 2));
+      console.error('📄 Error Response Headers:', error.response?.headers);
+      
+      // Re-throw the error for the interceptor to handle
+      throw error;
+    }
   },
 
   // 6. Create Favor (Form Data with Image)

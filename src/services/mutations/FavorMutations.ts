@@ -35,6 +35,9 @@ export const useCreateFavor = () => {
     },
     onError: (error) => {
       console.error('Create favor failed:', error);
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
       Toast.show({
         type: 'error',
         text1: 'Failed to Create Favor',

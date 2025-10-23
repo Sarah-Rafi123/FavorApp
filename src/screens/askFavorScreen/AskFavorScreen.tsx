@@ -262,6 +262,10 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
       Alert.alert('Error', 'Please provide a description for your favor.');
       return;
     }
+    if (formData.description.trim().length < 20) {
+      Alert.alert('Error', 'Description must be at least 20 characters long.');
+      return;
+    }
     if (!formData.address.trim()) {
       Alert.alert('Error', 'Please provide an address for your favor.');
       return;
@@ -311,9 +315,13 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
         await createFavorMutation.mutateAsync(createRequest);
       }
       
+      // Only navigate back on successful creation
+      console.log('✅ Favor created successfully, navigating back');
       navigation?.goBack();
     } catch (error) {
-      console.error('Error creating favor:', error);
+      console.error('❌ Error creating favor:', error);
+      // Error handling is done in the mutation's onError callback
+      // Don't navigate back on error
     }
   };
 
@@ -364,7 +372,7 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
           <View className="mb-8">
             <Text className="text-xl font-bold text-black mb-6">Subject</Text>
             <View className="flex-row flex-wrap">
-              {favorSubjects.map((subject, index) => (
+              {favorSubjects.map((subject) => (
                 <View key={subject.id} className="w-1/3 mb-4">
                   <TouchableOpacity 
                     className="flex-row items-center"

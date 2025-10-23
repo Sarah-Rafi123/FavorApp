@@ -53,11 +53,12 @@ export function CountryDropdown({
   return (
     <Modal
       visible={visible}
+      transparent
       animationType="slide"
-      presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <SafeAreaView className="flex-1 bg-white">
+      <View className="flex-1 bg-black/50">
+        <SafeAreaView className="flex-1 bg-white mt-12 rounded-t-3xl">
         <View className="flex-1">
           {/* Header */}
           <View className="flex-row items-center justify-between px-6 py-4 border-b border-gray-200">
@@ -93,7 +94,8 @@ export function CountryDropdown({
             windowSize={10}
           />
         </View>
-      </SafeAreaView>
+        </SafeAreaView>
+      </View>
     </Modal>
   );
 }

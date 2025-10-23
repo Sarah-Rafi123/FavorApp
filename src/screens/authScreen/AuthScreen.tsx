@@ -44,6 +44,7 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showCompleteAccountModal, setShowCompleteAccountModal] = useState(false);
+  const [showInvalidCredentialsModal, setShowInvalidCredentialsModal] = useState(false);
   const [savedCredentials, setSavedCredentials] = useState<Array<{email: string, password: string}>>([]);
   const [showEmailDropdown, setShowEmailDropdown] = useState(false);
 
@@ -245,31 +246,8 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
           console.error('Login error:', error);
           console.error('Error response:', error.response?.data);
           
-          // Check if this is an incomplete account scenario
-          const isAuthenticationRequired = error.message === 'Authentication required';
-          const hasNoToken = error.message?.includes('No auth token found') || error.message?.includes('Authentication required');
-          const isIncompleteAccount = isAuthenticationRequired || hasNoToken;
-          
-          if (isIncompleteAccount) {
-            // Show complete account modal instead of generic error
-            setShowCompleteAccountModal(true);
-            return;
-          }
-          
-          let errorMessage = 'Invalid credentials. Please try again.';
-          if (error.response?.data?.message) {
-            errorMessage = error.response.data.message;
-          } else if (error.userMessage) {
-            errorMessage = error.userMessage;
-          } else if (error.message) {
-            errorMessage = error.message;
-          }
-          
-          Toast.show({
-            type: 'error',
-            text1: 'Login Failed',
-            text2: errorMessage
-          });
+          // Show invalid credentials popup for all login errors
+          setShowInvalidCredentialsModal(true);
         }
       } else {
         // Sign up flow - save email, password and terms acceptance, navigate to profile creation
@@ -818,6 +796,53 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
                   </Text>
                 </TouchableOpacity>
               </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Invalid Credentials Modal */}
+      <Modal
+        visible={showInvalidCredentialsModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowInvalidCredentialsModal(false)}
+      >
+        <View className="flex-1 bg-black/50 justify-center items-center">
+          <View className="bg-white rounded-3xl w-full max-w-sm mx-4 border-4 border-[#71DFB1]">
+            <View className="p-6">
+              <View className="flex-row justify-between items-center mb-6">
+                <Text className="text-xl font-bold text-black">Invalid Credentials</Text>
+                <TouchableOpacity 
+                  onPress={() => setShowInvalidCredentialsModal(false)}
+                  className="w-6 h-6 bg-black rounded-full items-center justify-center"
+                >
+                  <Text className="text-white text-sm">×</Text>
+                </TouchableOpacity>
+              </View>
+              
+              {/* Icon */}
+              <View className="items-center mb-6">
+                <View className="w-16 h-16 bg-red-100 rounded-full items-center justify-center mb-4">
+                  <Text className="text-3xl">❌</Text>
+                </View>
+                <Text className="text-lg font-semibold text-gray-800 text-center mb-3">
+                  Login Failed
+                </Text>
+                <Text className="text-sm text-gray-600 text-center leading-5">
+                  The email or password you entered is incorrect. Please check your credentials and try again.
+                </Text>
+              </View>
+
+              {/* Action Button */}
+              <TouchableOpacity
+                className="bg-[#44A27B] rounded-full py-4"
+                onPress={() => setShowInvalidCredentialsModal(false)}
+              >
+                <Text className="text-white text-center font-semibold text-base">
+                  Try Again
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
         </View>
