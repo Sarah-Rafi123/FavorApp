@@ -29,22 +29,27 @@ export class StripeConnectManager {
     try {
       console.log('🚀 Starting Stripe Connect setup flow...');
       
-      // Step 1: Call setup API without custom URLs (let backend handle defaults)
-      // This avoids the "Not a valid URL" error for development
+      // Step 1: Call setup API - let backend handle URLs for test environment
+      // This avoids URL validation issues in Stripe test mode
       const setupResponse = await StripeConnectApis.setup();
       console.log('✅ Setup API response:', setupResponse);
       
-      // Step 2: Open onboarding URL
+      // Step 2: Validate onboarding URL
+      if (!setupResponse.data.onboarding_url) {
+        throw new Error('No onboarding URL received from server');
+      }
+      
+      // Step 3: Open onboarding URL
       await DeepLinkingService.openStripeOnboarding(setupResponse.data.onboarding_url);
       
-      // Step 3: Show instruction to user
+      // Step 4: Show instruction to user
       Alert.alert(
         'Complete Setup',
-        'Complete your payment account setup in the browser, then return to the app and check your account status.',
+        'Complete your payment account setup in the browser, then return to the app.',
         [
-          { text: 'OK' },
+          { text: 'I\'ll do this later' },
           { 
-            text: 'Check Status', 
+            text: 'Check Status Now', 
             onPress: () => this.checkAccountStatusAfterSetup(onSetupComplete)
           }
         ]
@@ -125,6 +130,14 @@ export class StripeConnectManager {
     try {
       console.log('🔍 Checking account status after setup...');
       const status = await this.getAccountStatus();
+      
+      console.log('📊 Account Status:', {
+        hasAccount: status.hasAccount,
+        canReceivePayments: status.canReceivePayments,
+        needsOnboarding: status.needsOnboarding,
+        accountId: status.accountId,
+        message: status.message
+      });
       
       if (status.canReceivePayments) {
         Alert.alert(

@@ -7,7 +7,7 @@ export interface DeepLinkingConfig {
 
 export class DeepLinkingService {
   private static readonly SCHEME = 'favorapp'; // App scheme for actual deep linking
-  private static readonly WEB_BASE_URL = 'https://your-domain.com'; // Replace with your actual domain
+  private static readonly WEB_BASE_URL = 'https://favorapp.com'; // Replace with your actual domain when available
   
   /**
    * Get deep linking URLs for Stripe Connect onboarding

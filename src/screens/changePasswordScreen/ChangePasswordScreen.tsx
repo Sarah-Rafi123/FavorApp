@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   TextInput,
   Alert,
   ImageBackground,
+  Keyboard,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import BackSvg from '../../assets/icons/Back';
@@ -58,6 +59,10 @@ export function ChangePasswordScreen({ navigation }: ChangePasswordScreenProps) 
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
+  const currentPasswordRef = useRef<TextInput>(null);
+  const newPasswordRef = useRef<TextInput>(null);
+  const confirmPasswordRef = useRef<TextInput>(null);
+  
   const updatePasswordMutation = useUpdatePasswordMutation();
 
   const validatePassword = (password: string) => {
@@ -77,7 +82,7 @@ export function ChangePasswordScreen({ navigation }: ChangePasswordScreenProps) 
     };
   };
 
-  const passwordValidation = validatePassword(newPassword);
+  const passwordValidation = useMemo(() => validatePassword(newPassword), [newPassword]);
 
   const handleChangePassword = async () => {
     if (!currentPassword.trim()) {
@@ -121,7 +126,8 @@ export function ChangePasswordScreen({ navigation }: ChangePasswordScreenProps) 
     onChangeText, 
     show, 
     onToggleShow, 
-    placeholder 
+    placeholder,
+    inputRef
   }: {
     label: string;
     value: string;
@@ -129,6 +135,7 @@ export function ChangePasswordScreen({ navigation }: ChangePasswordScreenProps) 
     show: boolean;
     onToggleShow: () => void;
     placeholder: string;
+    inputRef?: React.RefObject<TextInput>;
   }) => (
     <View style={{ marginBottom: 24 }}>
       <Text style={{ fontSize: 16, fontWeight: '500', color: 'black', marginBottom: 8 }}>
@@ -136,6 +143,7 @@ export function ChangePasswordScreen({ navigation }: ChangePasswordScreenProps) 
       </Text>
       <View style={{ position: 'relative' }}>
         <TextInput
+          ref={inputRef}
           style={{ 
             backgroundColor: '#FBFFF0',
             borderWidth: 1,
@@ -156,6 +164,8 @@ export function ChangePasswordScreen({ navigation }: ChangePasswordScreenProps) 
           autoCorrect={false}
           keyboardType="default"
           textContentType="password"
+          blurOnSubmit={false}
+          returnKeyType="next"
         />
         <TouchableOpacity
           style={{ 
@@ -204,6 +214,8 @@ export function ChangePasswordScreen({ navigation }: ChangePasswordScreenProps) 
         className="flex-1"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 40 }}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
       >
         <View className="px-6 pt-6">
 
@@ -214,6 +226,7 @@ export function ChangePasswordScreen({ navigation }: ChangePasswordScreenProps) 
             show={showCurrentPassword}
             onToggleShow={() => setShowCurrentPassword(!showCurrentPassword)}
             placeholder="••••••••••"
+            inputRef={currentPasswordRef}
           />
 
           <PasswordInput
@@ -223,6 +236,7 @@ export function ChangePasswordScreen({ navigation }: ChangePasswordScreenProps) 
             show={showNewPassword}
             onToggleShow={() => setShowNewPassword(!showNewPassword)}
             placeholder="••••••••••"
+            inputRef={newPasswordRef}
           />
 
           <PasswordInput
@@ -232,6 +246,7 @@ export function ChangePasswordScreen({ navigation }: ChangePasswordScreenProps) 
             show={showConfirmPassword}
             onToggleShow={() => setShowConfirmPassword(!showConfirmPassword)}
             placeholder="••••••••••"
+            inputRef={confirmPasswordRef}
           />
 
           {/* Change Password Button */}

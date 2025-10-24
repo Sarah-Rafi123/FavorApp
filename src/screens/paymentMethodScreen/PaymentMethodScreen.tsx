@@ -6,7 +6,7 @@ import {
   StatusBar,
   ScrollView,
   ImageBackground,
-  Alert,
+  Alert, 
   ActivityIndicator,
   Keyboard,
   Platform,
@@ -296,24 +296,24 @@ export function PaymentMethodScreen({ navigation }: PaymentMethodScreenProps) {
             </Text>
             
             {/* Instructions */}
-            <View className="mb-6 p-4 bg-blue-50 rounded-xl border border-blue-200">
+            {/* <View className="mb-6 p-4 bg-blue-50 rounded-xl border border-blue-200">
               <Text className="text-sm text-blue-800 font-medium mb-2">
                 🔒 Secure Payment Setup
               </Text>
               <Text className="text-xs text-blue-700">
                 Tap "Add Payment Method" below to open Stripe's secure payment form. Your card details are processed securely and never stored on our servers.
               </Text>
-            </View>
+            </View> */}
 
             {/* Test card info */}
-            <View className="mb-6 p-3 bg-yellow-50 rounded-xl border border-yellow-200">
+            {/* <View className="mb-6 p-3 bg-yellow-50 rounded-xl border border-yellow-200">
               <Text className="text-xs text-yellow-800 font-medium mb-1">
                 💳 Test Card (Development Mode)
               </Text>
               <Text className="text-xs text-yellow-700">
                 4242 4242 4242 4242 • Any future date • Any 3-digit CVC
               </Text>
-            </View>
+            </View> */}
           </View>
         )}
 
@@ -322,7 +322,7 @@ export function PaymentMethodScreen({ navigation }: PaymentMethodScreenProps) {
           /* Edit Mode - Show payment method details and delete option */
           <View>
             {/* Current Payment Method Info */}
-            <View className="mx-2 mb-4 p-4 bg-blue-50 rounded-xl border border-blue-200">
+            {/* <View className="mx-2 mb-4 p-4 bg-blue-50 rounded-xl border border-blue-200">
               <Text className="text-sm text-blue-800 font-medium mb-2">
                 💳 Current Payment Method
               </Text>
@@ -333,7 +333,7 @@ export function PaymentMethodScreen({ navigation }: PaymentMethodScreenProps) {
                 {currentPaymentMethod?.is_default ? 'Default payment method' : 'Additional payment method'}
               </Text>
             </View>
-            
+             */}
             {/* Delete Button */}
             <TouchableOpacity 
               className={`${isProcessing ? 'bg-gray-400' : 'bg-red-600'} rounded-full py-4 mx-2 flex-row justify-center items-center mb-4`}

@@ -16,8 +16,12 @@ import Svg, { Path } from 'react-native-svg';
 import BackSvg from '../../assets/icons/Back';
 import CancelSvg from '../../assets/icons/Cancel';
 import { useFavor } from '../../services/queries/FavorQueries';
-import { useDeleteFavor, useReassignFavor } from '../../services/mutations/FavorMutations';
+import { usePublicUserProfileQuery, useFavorProviderProfileQuery } from '../../services/queries/ProfileQueries';
+import { useDeleteFavor, useReassignFavor, useCompleteFavor, useCancelAndRepost, useCreateReview } from '../../services/mutations/FavorMutations';
 import { Favor } from '../../services/apis/FavorApis';
+import { PublicUserProfile, ProviderProfile } from '../../services/apis/ProfileApis';
+import { Linking } from 'react-native';
+import Toast from 'react-native-toast-message';
 
 interface FavorDetailsScreenProps {
   navigation?: any;
@@ -44,22 +48,45 @@ const VerifiedIcon = () => (
 export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProps) {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [showUserProfileModal, setShowUserProfileModal] = useState(false);
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState('');
+  const [showTipOption, setShowTipOption] = useState(false);
+  const [tipAmount, setTipAmount] = useState('');
 
   // Get favor ID from route params
   const favorId = route?.params?.favorId || route?.params?.favor?.id;
+  
+  // Check if coming from CreateFavorScreen (request mode) or ProvideFavorScreen (provider mode)
+  const isRequestMode = route?.params?.source === 'CreateFavorScreen' || route?.name === 'FavorDetailsScreen';
   
   // Fetch favor data using the API
   const { data: favorResponse, isLoading, error } = useFavor(favorId, {
     enabled: !!favorId
   });
 
+  // Fetch provider profile data when there's an accepted response
+  const { data: providerProfileResponse, isLoading: providerProfileLoading } = useFavorProviderProfileQuery(
+    favorResponse?.data.favor?.accepted_response ? favorId : null,
+    { enabled: !!favorResponse?.data.favor?.accepted_response }
+  );
+
+  // Fetch user profile data when needed (for modal)
+  const { data: userProfileResponse, isLoading: userProfileLoading } = usePublicUserProfileQuery(
+    favorResponse?.data.favor?.user?.id || null,
+    { enabled: !!favorResponse?.data.favor?.user?.id && showUserProfileModal }
+  );
+
   // Delete favor mutation and Reassign favor mutation
   const deleteFavorMutation = useDeleteFavor();
   const reassignFavorMutation = useReassignFavor();
+  const completeFavorMutation = useCompleteFavor();
+  const cancelAndRepostMutation = useCancelAndRepost();
+  const createReviewMutation = useCreateReview();
 
   const favor = favorResponse?.data.favor;
+  const userProfile = userProfileResponse?.data.user;
+  const providerProfile = providerProfileResponse?.data.user;
 
   const handleGoBack = () => {
     navigation?.goBack();
@@ -161,70 +188,109 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
     setShowCancelModal(false);
   };
 
-  const handleCallNumber = () => {
-    console.log('Call number pressed');
+  const handleCallNumber = (phoneNumber: string) => {
+    const cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
+    Linking.openURL(`tel:${cleanNumber}`).catch(err => {
+      console.error('Error making call:', err);
+      Alert.alert('Error', 'Unable to make phone call');
+    });
   };
 
-  const handleTextNumber = () => {
-    console.log('Text number pressed');
+  const handleTextNumber = (phoneNumber: string) => {
+    const cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
+    Linking.openURL(`sms:${cleanNumber}`).catch(err => {
+      console.error('Error opening messages:', err);
+      Alert.alert('Error', 'Unable to open messaging app');
+    });
   };
 
-  const handleSubmitReview = () => {
-    setShowReviewModal(true);
+  const handleViewProfile = () => {
+    setShowUserProfileModal(true);
   };
 
-  const handleReviewSubmit = () => {
-    console.log('Review submitted:', { rating, reviewText });
-    setShowReviewModal(false);
-    setRating(0);
-    setReviewText('');
-  };
-
-  const handleCancelAndRepost = () => {
+  const handleSubmitReview = async () => {
     if (!favor) return;
 
-    // For now, we'll need the new provider ID to be input manually
-    // In a real app, this would show a list of applicants to choose from
+    try {
+      console.log('🎯 Marking favor as completed:', favor.id);
+      await completeFavorMutation.mutateAsync(favor.id);
+      
+      // Show review modal after successful completion
+      setShowReviewModal(true);
+      
+      console.log('✅ Favor marked as completed successfully');
+    } catch (error: any) {
+      console.error('❌ Complete favor failed:', error.message);
+      // Error handling is done by the mutation's onError callback
+    }
+  };
+
+  const handleReviewSubmit = async () => {
+    if (!favor || rating === 0 || !reviewText.trim()) {
+      Toast.show({
+        type: 'error',
+        text1: 'Incomplete Review',
+        text2: 'Please provide a rating and review text.',
+        visibilityTime: 3000,
+      });
+      return;
+    }
+
+    try {
+      const reviewData = {
+        rating,
+        description: reviewText.trim(),
+        review_type: 'favor_review',
+        add_tip: showTipOption && tipAmount.trim() !== '',
+        ...(showTipOption && tipAmount.trim() !== '' && { tip_amount: parseFloat(tipAmount) })
+      };
+
+      console.log('🌟 Submitting review:', reviewData);
+      await createReviewMutation.mutateAsync({
+        favorId: favor.id,
+        data: reviewData
+      });
+      
+      // Reset form and close modal
+      setShowReviewModal(false);
+      setRating(0);
+      setReviewText('');
+      setShowTipOption(false);
+      setTipAmount('');
+      
+      // Navigate back after successful review
+      navigation?.goBack();
+      
+      console.log('✅ Review submitted successfully');
+    } catch (error: any) {
+      console.error('❌ Review submission failed:', error.message);
+      // Error handling is done by the mutation's onError callback
+    }
+  };
+
+  const handleCancelAndRepost = async () => {
+    if (!favor) return;
+
     Alert.alert(
       'Cancel & Repost Favor',
-      'This will cancel the current provider and reassign to another provider. Do you want to continue?',
+      'This will cancel the current favor and create a new identical posting. Do you want to continue?',
       [
         { text: 'Cancel', style: 'cancel' },
         { 
-          text: 'Continue',
-          onPress: () => {
-            // For demo purposes, we'll prompt for provider ID
-            // In a real implementation, this would show a list of applicants
-            Alert.prompt(
-              'Enter New Provider ID',
-              'Enter the ID of the new provider to assign this favor to:',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                  text: 'Reassign',
-                  onPress: async (newProviderId) => {
-                    if (!newProviderId || isNaN(Number(newProviderId))) {
-                      Alert.alert('Error', 'Please enter a valid provider ID');
-                      return;
-                    }
-
-                    try {
-                      console.log('🔄 Reassigning favor to provider:', newProviderId);
-                      await reassignFavorMutation.mutateAsync({
-                        favorId: favor.id,
-                        newProviderId: Number(newProviderId)
-                      });
-                      console.log('✅ Favor reassigned successfully');
-                      navigation?.goBack();
-                    } catch (error: any) {
-                      console.error('❌ Reassign favor failed:', error.message);
-                      // Error handling is done by the mutation's onError callback
-                    }
-                  }
-                }
-              ],
-              'plain-text'
-            );
+          text: 'Repost',
+          onPress: async () => {
+            try {
+              console.log('🔄 Canceling and reposting favor:', favor.id);
+              await cancelAndRepostMutation.mutateAsync(favor.id);
+              
+              // Navigate back on success
+              navigation?.goBack();
+              
+              console.log('✅ Favor cancelled and reposted successfully');
+            } catch (error: any) {
+              console.error('❌ Cancel and repost failed:', error.message);
+              // Error handling is done by the mutation's onError callback
+            }
           }
         }
       ]
@@ -235,6 +301,8 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
     setShowReviewModal(false);
     setRating(0);
     setReviewText('');
+    setShowTipOption(false);
+    setTipAmount('');
   };
 
   return (
@@ -263,11 +331,11 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 120 }}
       >
-        {/* Favor Details Card */}
-        <View className="mx-4 mb-6 bg-[#FBFFF0] rounded-3xl p-6 border-4 border-[#71DFB1]">
+        {/* Favor Details Card - Matching the image */}
+        <View className="mx-4 mb-6 bg-white rounded-3xl p-6 border-4 border-[#71DFB1]">
           {/* Favor Image */}
           <View className="items-center mb-6">
-            <View className="w-24 h-24 bg-gray-200 rounded-2xl overflow-hidden">
+            <View className="w-32 h-24 bg-gray-200 rounded-2xl overflow-hidden">
               <Image
                 source={{ 
                   uri: favor.image_url || 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400&h=400&fit=crop' 
@@ -279,125 +347,138 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
           </View>
 
           {/* Favor Details */}
-          <View className="space-y-4 mb-6">
+          <View className="space-y-3 mb-6">
             <View className="flex-row">
-              <Text className="text-gray-700 text-lg w-24">Priority</Text>
-              <Text className="text-gray-700 text-lg mr-2">:</Text>
-              <Text className="text-gray-800 text-lg flex-1 capitalize">{favor.priority}</Text>
+              <Text className="text-gray-700 text-base w-20">Priority</Text>
+              <Text className="text-gray-700 text-base mr-2">:</Text>
+              <Text className="text-gray-800 text-base flex-1 capitalize">{favor.priority}</Text>
             </View>
 
             <View className="flex-row">
-              <Text className="text-gray-700 text-lg w-24">Category</Text>
-              <Text className="text-gray-700 text-lg mr-2">:</Text>
-              <Text className="text-gray-800 text-lg flex-1">{favor.favor_subject.name}</Text>
+              <Text className="text-gray-700 text-base w-20">Category</Text>
+              <Text className="text-gray-700 text-base mr-2">:</Text>
+              <Text className="text-gray-800 text-base flex-1">{favor.favor_subject.name}</Text>
             </View>
 
             <View className="flex-row">
-              <Text className="text-gray-700 text-lg w-24">Duration</Text>
-              <Text className="text-gray-700 text-lg mr-2">:</Text>
-              <Text className="text-gray-800 text-lg flex-1">{favor.time_to_complete || 'Not specified'}</Text>
+              <Text className="text-gray-700 text-base w-20">Duration</Text>
+              <Text className="text-gray-700 text-base mr-2">:</Text>
+              <Text className="text-gray-800 text-base flex-1">{favor.time_to_complete || '1 Hour'}</Text>
             </View>
 
             <View className="flex-row">
-              <Text className="text-gray-700 text-lg w-24">Location</Text>
-              <Text className="text-gray-700 text-lg mr-2">:</Text>
-              <Text className="text-gray-800 text-lg flex-1">{favor.city}, {favor.state}</Text>
-            </View>
-
-            <View className="flex-row">
-              <Text className="text-gray-700 text-lg w-24">Tip</Text>
-              <Text className="text-gray-700 text-lg mr-2">:</Text>
-              <Text className="text-gray-800 text-lg flex-1">
-                {favor.favor_pay ? `$${favor.tip}` : 'Free'}
-              </Text>
+              <Text className="text-gray-700 text-base w-20">Location</Text>
+              <Text className="text-gray-700 text-base mr-2">:</Text>
+              <Text className="text-gray-800 text-base flex-1">{favor.city}, {favor.state}</Text>
             </View>
 
             <View className="flex-row items-start">
-              <Text className="text-gray-700 text-lg w-24">Description</Text>
-              <Text className="text-gray-700 text-lg mr-2">:</Text>
-              <Text className="text-gray-800 text-lg flex-1">{favor.description}</Text>
+              <Text className="text-gray-700 text-base w-20">Description</Text>
+              <Text className="text-gray-700 text-base mr-2">:</Text>
+              <Text className="text-gray-800 text-base flex-1">{favor.description}</Text>
             </View>
           </View>
-
         </View>
 
-        {/* You are helping section */}
-        <View className="mx-4 mb-6">
-          <Text className="text-xl font-semibold text-black mb-4">You are helping</Text>
-          
-          <View className="flex-row items-center border rounded-3xl border-gray-300 p-5 border-1 mb-4">
-            <View className="relative">
-              <View className="w-16 h-16 bg-gray-200 rounded-full overflow-hidden">
-                <Image
-                  source={{ 
-                    uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face' 
-                  }}
-                  className="w-full h-full"
-                  resizeMode="cover"
-                />
-              </View>
-              {favor.user.is_certified && (
-                <View className="absolute -top-1 -right-1">
-                  <VerifiedIcon />
+        {/* Show accepted response details if available */}
+        {favor.accepted_response && (
+          <View className="mx-4 mb-6">
+            <Text className="text-lg font-semibold text-black mb-4">
+              Provided By
+            </Text>
+            
+            <View className="flex-row items-center bg-white border rounded-2xl border-gray-300 p-4 border-1 mb-4">
+              <View className="relative">
+                <View className="w-16 h-16 bg-gray-200 rounded-full overflow-hidden">
+                  <Image
+                    source={{ 
+                      uri: providerProfile?.image_url || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face' 
+                    }}
+                    className="w-full h-full"
+                    resizeMode="cover"
+                  />
                 </View>
-              )}
+                {providerProfile?.is_certified && (
+                  <View className="absolute -top-1 -right-1">
+                    <VerifiedIcon />
+                  </View>
+                )}
+              </View>
+
+              <View className="ml-4 flex-1">
+                <Text className="text-lg font-semibold text-black">
+                  {favor.accepted_response.user.full_name}
+                </Text>
+                <View className="flex-row items-center">
+                  <Text className="text-gray-600 text-sm">⭐ {providerProfile?.average_rating || '4.5'} | </Text>
+                  <Text className="text-gray-600 text-sm">{providerProfile?.total_reviews || '0'} Reviews</Text>
+                </View>
+                {providerProfile?.years_of_experience && (
+                  <Text className="text-gray-600 text-sm">{providerProfile.years_of_experience} years experience</Text>
+                )}
+                <TouchableOpacity onPress={handleViewProfile}>
+                  <Text className="text-[#44A27B] text-sm font-medium">View Profile</Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
-            <View className="ml-4 flex-1">
-              <Text className="text-lg font-semibold text-black">{favor.user.full_name}</Text>
-              <View className="flex-row items-center">
-                <Text className="text-gray-600 text-sm">⭐ {favor.user.rating || '0'} | </Text>
-                <Text className="text-gray-600 text-sm">Member since {favor.user.member_since || 'N/A'}</Text>
-              </View>
-              {favor.user.years_of_experience && (
-                <Text className="text-gray-600 text-sm">{favor.user.years_of_experience} years experience</Text>
-              )}
-              <TouchableOpacity>
-                <Text className="text-green-600 text-sm font-medium underline">View Profile</Text>
+            {/* Contact Buttons */}
+            <View className="flex-row mb-4">
+              <TouchableOpacity 
+                className="flex-1 bg-transparent border border-black rounded-xl mr-2 py-3 px-2"
+                onPress={() => handleCallNumber(providerProfile?.phone_no_call || '917-582-3220')}
+              >
+                <Text className="text-center text-gray-800 font-medium text-sm">
+                  Call: {providerProfile?.phone_no_call || '917-582-3220'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                className="flex-1 bg-transparent border border-black rounded-xl ml-2 py-3 px-2"
+                onPress={() => handleTextNumber(providerProfile?.phone_no_text || '908-245-4242')}
+              >
+                <Text className="text-center text-gray-800 font-medium text-sm">
+                  Text: {providerProfile?.phone_no_text || '908-245-4242'}
+                </Text>
               </TouchableOpacity>
             </View>
-            
-          </View>
 
-          {/* Contact Buttons */}
-          <View className="flex-row mb-4">
-            <TouchableOpacity 
-              className="flex-1 bg-transparent border border-black rounded-xl mr-3 py-3 px-2"
-              onPress={handleCallNumber}
-            >
-              <Text className="text-center text-gray-800 font-medium text-sm">Call: 917-582-3220</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              className="flex-1 bg-transparent border border-black rounded-xl mr-3 py-3 px-2"
-              onPress={handleTextNumber}
-            >
-              <Text className="text-center text-gray-800 font-medium text-sm">Text: 908-245-4242</Text>
-            </TouchableOpacity>
+            {/* Action buttons based on context */}
+            {isRequestMode ? (
+              /* Buttons for request mode (CreateFavorScreen) */
+              <View className="flex-row space-x-2">
+                <TouchableOpacity 
+                  className="flex-1 bg-transparent border border-black rounded-xl py-3 mr-2"
+                  onPress={handleCancelAndRepost}
+                >
+                  <Text className="text-center text-gray-800 font-medium text-sm">Cancel & Repost</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  className="bg-[#44A27B] rounded-xl py-3 px-4 mr-2"
+                  onPress={handleSubmitReview}
+                >
+                  <Text className="text-white text-center font-medium text-sm">Mark as Completed</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  className="bg-transparent border border-black rounded-xl py-3 px-4"
+                  onPress={() => {
+                    // Cancel functionality
+                    console.log('Cancel');
+                  }}
+                >
+                  <Text className="text-center text-gray-800 font-medium text-sm">Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              /* Button for provider mode (ProvideFavorScreen) */
+              <TouchableOpacity 
+                className="bg-[#44A27B] rounded-xl py-3 mb-4"
+                onPress={handleSubmitReview}
+              >
+                <Text className="text-white text-center font-medium text-base">Mark as Completed</Text>
+              </TouchableOpacity>
+            )}
           </View>
-
-          {/* Action Buttons */}
-          <View className="flex-row ">
-            <TouchableOpacity 
-              className="flex-1 bg-transparent border border-black justify-center mr-3 rounded-xl py-1 px-1"
-              onPress={handleCancelAndRepost}
-            >
-              <Text className="text-center text-gray-800 font-medium text-base">Cancel & Repost</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              className="bg-green-500 py-1 px-1 mr-3 justify-center rounded-xl"
-              onPress={handleSubmitReview}
-            >
-              <Text className="text-white text-center font-medium text-base">Submit Review</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              className="flex-1 bg-transparent justify-center border mr-3 border-black rounded-xl py-1 px-1"
-              onPress={handleCancelFavor}
-            >
-              <Text className="text-center text-gray-800 font-medium text-base">Cancel</Text>
-            </TouchableOpacity>
-          </View>
-         
-        </View>
+        )}
       </ScrollView>
 
       {/* Cancel Confirmation Modal */}
@@ -502,11 +583,11 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
             </View>
 
             {/* Review Text Input */}
-            <View className="mb-6">
+            <View className="mb-4">
               <Text className="text-gray-700 text-base font-medium mb-2">Write Review</Text>
               <TextInput
                 className="border border-gray-300 rounded-xl p-4 h-24 text-base"
-                placeholder="Enter"
+                placeholder="Share your experience..."
                 placeholderTextColor="#9CA3AF"
                 multiline
                 textAlignVertical="top"
@@ -515,13 +596,196 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
               />
             </View>
 
+            {/* Tip Option */}
+            <View className="mb-6">
+              <TouchableOpacity 
+                className="flex-row items-center mb-3"
+                onPress={() => setShowTipOption(!showTipOption)}
+              >
+                <View className={`w-5 h-5 rounded border-2 mr-3 items-center justify-center ${showTipOption ? 'border-green-500 bg-green-500' : 'border-gray-300'}`}>
+                  {showTipOption && (
+                    <Text className="text-white text-xs font-bold">✓</Text>
+                  )}
+                </View>
+                <Text className="text-gray-700 text-base">Add tip (optional)</Text>
+              </TouchableOpacity>
+              
+              {showTipOption && (
+                <View className="ml-8">
+                  <Text className="text-gray-600 text-sm mb-2">Tip amount ($)</Text>
+                  <TextInput
+                    className="border border-gray-300 rounded-xl p-3 text-base"
+                    placeholder="0.00"
+                    placeholderTextColor="#9CA3AF"
+                    value={tipAmount}
+                    onChangeText={setTipAmount}
+                    keyboardType="decimal-pad"
+                  />
+                </View>
+              )}
+            </View>
+
             {/* Submit Button */}
             <TouchableOpacity 
               className="bg-green-500 rounded-full py-4"
               onPress={handleReviewSubmit}
             >
-              <Text className="text-white text-center font-semibold text-lg">Submit</Text>
+              <Text className="text-white text-center font-semibold text-lg">Submit Review</Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* User Profile Modal */}
+      <Modal
+        visible={showUserProfileModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowUserProfileModal(false)}
+      >
+        <View className="flex-1 bg-black/50 justify-center items-center px-6">
+          <View className="bg-white rounded-3xl p-6 max-w-sm w-full border-4 border-[#44A27B] relative">
+            {/* Close Button */}
+            <TouchableOpacity 
+              className="absolute top-4 right-4 w-8 h-8 bg-black rounded-full items-center justify-center z-10"
+              onPress={() => setShowUserProfileModal(false)}
+            >
+              <Text className="text-white font-bold text-lg">×</Text>
+            </TouchableOpacity>
+
+            {userProfileLoading || providerProfileLoading ? (
+              <View className="items-center py-8">
+                <ActivityIndicator size="large" color="#44A27B" />
+                <Text className="text-gray-600 mt-2">Loading profile...</Text>
+              </View>
+            ) : (favor.accepted_response && providerProfile) ? (
+              <>
+                {/* Profile Photo */}
+                <View className="items-center mb-6 mt-4">
+                  <View className="w-20 h-20 rounded-2xl overflow-hidden">
+                    <Image
+                      source={{ uri: providerProfile.image_url || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face' }}
+                      className="w-full h-full"
+                      resizeMode="cover"
+                    />
+                  </View>
+                </View>
+
+                {/* Name */}
+                <Text className="text-xl font-bold text-gray-800 text-center mb-6">
+                  {providerProfile.full_name}
+                </Text>
+
+                {/* Provider Details */}
+                <View className="mb-6">
+                  {providerProfile.has_contact_info && providerProfile.email && (
+                    <View className="mb-3">
+                      <Text className="text-gray-700 text-base">
+                        Email : <Text className="text-gray-500">{providerProfile.email}</Text>
+                      </Text>
+                    </View>
+                  )}
+
+                  {providerProfile.age && (
+                    <View className="mb-3">
+                      <Text className="text-gray-700 text-base">
+                        Age : <Text className="font-semibold">{providerProfile.age}</Text>
+                      </Text>
+                    </View>
+                  )}
+
+                  {providerProfile.has_contact_info && providerProfile.phone_no_call && (
+                    <View className="mb-3">
+                      <Text className="text-gray-700 text-base">
+                        Call : <Text className="text-gray-500">{providerProfile.phone_no_call}</Text>
+                      </Text>
+                    </View>
+                  )}
+
+                  {providerProfile.has_contact_info && providerProfile.phone_no_text && (
+                    <View className="mb-3">
+                      <Text className="text-gray-700 text-base">
+                        Text : <Text className="text-gray-500">{providerProfile.phone_no_text}</Text>
+                      </Text>
+                    </View>
+                  )}
+
+                  {providerProfile.member_since && (
+                    <View className="mb-3">
+                      <Text className="text-gray-700 text-base">
+                        Since : <Text className="text-gray-500">{providerProfile.member_since}</Text>
+                      </Text>
+                    </View>
+                  )}
+
+                  {providerProfile.years_of_experience && (
+                    <View className="mb-3">
+                      <Text className="text-gray-700 text-base">
+                        Experience : <Text className="font-semibold">{providerProfile.years_of_experience} years</Text>
+                      </Text>
+                    </View>
+                  )}
+
+                  <View className="mb-3">
+                    <Text className="text-gray-700 text-base">
+                      Rating : <Text className="font-semibold">⭐ {providerProfile.average_rating} ({providerProfile.total_reviews} reviews)</Text>
+                    </Text>
+                  </View>
+
+                  <View className="mb-3">
+                    <Text className="text-gray-700 text-base">
+                      Completed : <Text className="font-semibold">{providerProfile.favor_history.completed_favors_count} favors ({providerProfile.favor_history.total_hours} hours)</Text>
+                    </Text>
+                  </View>
+
+                  {providerProfile.about_me && (
+                    <View className="mb-3">
+                      <Text className="text-gray-700 text-base">
+                        About : <Text className="text-gray-500">{providerProfile.about_me}</Text>
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* Call and Text Buttons - Only show if contact info is available */}
+                {providerProfile.has_contact_info && (
+                  <View className="flex-row space-x-4">
+                    {providerProfile.phone_no_call && (
+                      <TouchableOpacity 
+                        className="flex-1 bg-[#44A27B] rounded-xl py-3"
+                        onPress={() => {
+                          handleCallNumber(providerProfile.phone_no_call!);
+                          setShowUserProfileModal(false);
+                        }}
+                      >
+                        <Text className="text-white text-center font-semibold">Call</Text>
+                      </TouchableOpacity>
+                    )}
+                    {providerProfile.phone_no_text && (
+                      <TouchableOpacity 
+                        className="flex-1 border-2 border-[#44A27B] rounded-xl py-3"
+                        onPress={() => {
+                          handleTextNumber(providerProfile.phone_no_text!);
+                          setShowUserProfileModal(false);
+                        }}
+                      >
+                        <Text className="text-[#44A27B] text-center font-semibold">Text</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
+              </>
+            ) : (
+              <View className="items-center py-8">
+                <Text className="text-gray-600 text-center">Failed to load user profile</Text>
+                <TouchableOpacity 
+                  className="bg-[#44A27B] rounded-xl py-2 px-4 mt-4"
+                  onPress={() => setShowUserProfileModal(false)}
+                >
+                  <Text className="text-white font-medium">Close</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         </View>
       </Modal>

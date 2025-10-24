@@ -114,6 +114,46 @@ export interface PublicUserProfileResponse {
   message?: string;
 }
 
+// Provider Profile Types
+export interface ProviderProfile {
+  id: number;
+  first_name: string;
+  last_name: string;
+  full_name: string;
+  image_url?: string;
+  age?: number;
+  years_of_experience?: number;
+  about_me?: string;
+  is_certified: boolean;
+  favor_history: {
+    total_hours: number;
+    completed_favors_count: number;
+    favors_requested: number;
+    favors_provided: number;
+  };
+  average_rating: number;
+  total_reviews: number;
+  email?: string;
+  phone_no_call?: string;
+  phone_no_text?: string;
+  member_since?: string;
+  has_contact_info: boolean;
+}
+
+export interface ProviderProfileResponse {
+  success: boolean;
+  data: {
+    user: ProviderProfile;
+    favor: {
+      id: number;
+      title: string;
+      status: string;
+    };
+    viewer_relationship: 'public' | 'connected';
+  };
+  message: string;
+}
+
 // Export Profile Types
 export interface ExportProfileParams {
   start_date?: string; // YYYY-MM-DD format
@@ -194,6 +234,36 @@ export const getPublicUserProfile = async (userId: number): Promise<PublicUserPr
       throw new Error(error.response.data.message);
     } else {
       throw new Error('Failed to load user profile. Please check your connection and try again.');
+    }
+  }
+};
+
+export const getFavorProviderProfile = async (favorId: number): Promise<ProviderProfileResponse> => {
+  try {
+    console.log(`🚀 Making Get Favor Provider Profile API call to: /favors/${favorId}/provider_profile`);
+    
+    const response = await axiosInstance.get(`/favors/${favorId}/provider_profile`);
+    
+    console.log('🎉 Get Favor Provider Profile API Success!');
+    console.log('📊 Response Status:', response.status);
+    console.log('📄 Full API Response:', JSON.stringify(response.data, null, 2));
+    
+    return response.data;
+  } catch (error: any) {
+    console.error('❌ Get Favor Provider Profile API Error!');
+    console.error('📄 Full API Error:', error);
+    console.error('📊 Error Response Status:', error.response?.status);
+    console.error('📄 Error Response Data:', JSON.stringify(error.response?.data, null, 2));
+    
+    // Handle specific error scenarios based on status codes
+    if (error.response?.status === 404) {
+      throw new Error('Favor not found');
+    } else if (error.response?.status === 401) {
+      throw new Error('Authentication required');
+    } else if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    } else {
+      throw new Error('Failed to load provider profile. Please check your connection and try again.');
     }
   }
 };

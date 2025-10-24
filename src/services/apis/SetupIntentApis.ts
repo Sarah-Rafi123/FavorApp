@@ -1,4 +1,4 @@
-import axiosInstance from './index';
+import { axiosInstance } from '../axiosConfig';
 import { SetupIntentMockService } from '../mock/SetupIntentMockService';
 
 const USE_MOCK_SERVICE = process.env.EXPO_PUBLIC_USE_MOCK_PAYMENTS === 'true' || !process.env.EXPO_PUBLIC_API_BASE_URL;

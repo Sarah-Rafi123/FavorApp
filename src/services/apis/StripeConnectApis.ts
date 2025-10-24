@@ -1,6 +1,6 @@
-import axiosInstance from './index';
+import { axiosInstance } from '../axiosConfig';
 
-const USE_MOCK_SERVICE = process.env.EXPO_PUBLIC_USE_MOCK_PAYMENTS === 'true' || !process.env.EXPO_PUBLIC_API_BASE_URL;
+const USE_MOCK_SERVICE = process.env.EXPO_PUBLIC_USE_MOCK_PAYMENTS === 'true';
 
 export interface StripeConnectAccountResponse {
   success: boolean;
@@ -68,6 +68,7 @@ export interface StripeConnectBalanceResponse {
 export interface StripeConnectSetupRequest {
   return_url?: string;
   refresh_url?: string;
+  test_mode?: boolean;
 }
 
 export const StripeConnectApis = {
@@ -166,6 +167,11 @@ export const StripeConnectApis = {
       }
       if (refreshUrl && refreshUrl.startsWith('http')) {
         requestBody.refresh_url = refreshUrl;
+      }
+      
+      // Add test mode flag for development
+      if (process.env.NODE_ENV === 'development' || __DEV__) {
+        requestBody.test_mode = true;
       }
       
       console.log('📋 Request body:', requestBody);

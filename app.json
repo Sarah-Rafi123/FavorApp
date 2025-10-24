@@ -6,8 +6,13 @@
     "orientation": "portrait",
     "icon": "./assets/logo.png",
     "userInterfaceStyle": "light",
-    "scheme":"favorapp",
+    "scheme": "favorapp",
     "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#71DFB1"
+    },
     "ios": {
       "icon": "./assets/logo.png",
       "supportsTablet": true,
@@ -21,9 +26,9 @@
       }
     },
     "android": {
-      "icon": "./assets/logo.png",
+      "icon": "./assets/logo_app_icon.png",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/logo.png",
+        "foregroundImage": "./assets/logo_app_icon.png",
         "backgroundColor": "#ffffff"
       },
       "package": "com.favor.app",
@@ -35,7 +40,9 @@
       "permissions": [
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE"
+        "WRITE_EXTERNAL_STORAGE",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ]
     },
     "web": {
@@ -52,7 +59,11 @@
           "publishableKey": "pk_test_51Q7dmgB0ebyuNLiRFS67rDTvorE6TiCaf5cXjofD1MUKOUtoT7xDl8LKMkbEhthWmzZtDc5cbwotic3Fv0KjosJ600I9SOjcpj"
         }
       ]
-    ]
-    
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "7ce5bc8d-1a94-401a-9641-3f0ee27fb437"
+      }
+    }
   }
 }

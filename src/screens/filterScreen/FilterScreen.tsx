@@ -147,7 +147,13 @@ export function FilterScreen({ onBack, onApply, navigation }: FilterScreenProps)
         <View className="flex-row items-center">
           <TouchableOpacity 
             className="mr-4"
-            onPress={onBack || (() => navigation?.goBack())}
+            onPress={onBack || (() => {
+              if (navigation?.canGoBack()) {
+                navigation.goBack();
+              } else {
+                navigation?.navigate('Home');
+              }
+            })}
           >
             <BackSvg />
           </TouchableOpacity>
@@ -195,7 +201,11 @@ export function FilterScreen({ onBack, onApply, navigation }: FilterScreenProps)
             onPress={() => {
               const applyAction = onApply || (() => {
                 console.log('Applied filters:', filters);
-                navigation?.goBack();
+                if (navigation?.canGoBack()) {
+                  navigation.goBack();
+                } else {
+                  navigation?.navigate('Home');
+                }
               });
               applyAction();
             }}

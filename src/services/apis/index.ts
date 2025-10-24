@@ -126,9 +126,7 @@ axiosInstance.interceptors.response.use(
   }
 );
 
-export { PaymentApis } from './PaymentApis';
-export { SetupIntentApis } from './SetupIntentApis';
-export { PaymentMethodApis } from './PaymentMethodApis';
-export { StripeConnectApis } from './StripeConnectApis';
+// Removed re-exports to fix circular dependency issues
+// Import these directly from their respective files instead
 export * from './ProfileApis';
 export default axiosInstance;

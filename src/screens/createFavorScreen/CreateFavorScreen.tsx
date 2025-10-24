@@ -18,7 +18,7 @@ import { TimerSvg } from '../../assets/icons/Timer';
 import FilterSvg from '../../assets/icons/Filter';
 import BellSvg from '../../assets/icons/Bell';
 import { useMyFavors, useFavorApplicants } from '../../services/queries/FavorQueries';
-import { useDeleteFavor } from '../../services/mutations/FavorMutations';
+import { useDeleteFavor, useAcceptApplicant } from '../../services/mutations/FavorMutations';
 import { Favor, FavorApplicant } from '../../services/apis/FavorApis';
 import useAuthStore from '../../store/useAuthStore';
 
@@ -37,6 +37,14 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
 
   // Delete favor mutation for canceling favors
   const deleteFavorMutation = useDeleteFavor();
+  
+  // Accept applicant mutation
+  const acceptApplicantMutation = useAcceptApplicant({
+    onSuccess: () => {
+      // Refresh data after successful accept
+      handleRefresh();
+    }
+  });
 
   // API calls for different tabs
   // All tab: active favors (shows requests)
@@ -218,7 +226,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
   const IndividualRequestCard = ({ favor, applicant }: { favor: Favor; applicant: FavorApplicant }) => {
     return (
       <TouchableOpacity 
-        onPress={() => navigation?.navigate('FavorDetailsScreen', { favorId: favor.id })}
+        onPress={() => navigation?.navigate('FavorDetailsScreen', { favorId: favor.id, source: 'CreateFavorScreen' })}
         activeOpacity={0.7}
       >
         <View className="bg-white rounded-2xl p-4 mb-4 mx-4 border-2 border-[#44A27B]">
@@ -278,11 +286,102 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
     );
   };
 
+  // Component for Active tab request cards that match the image style - shows favor details with applicant info and Accept button
+  const ActiveRequestCard = ({ favor, applicant, navigation }: { favor: Favor; applicant: FavorApplicant; navigation: any }) => {
+    return (
+      <View className="bg-white rounded-2xl p-4 mb-4 mx-4 border-2 border-[#44A27B] shadow-sm">
+        {/* Header with favor details like the image */}
+        <TouchableOpacity 
+          onPress={() => navigation?.navigate('FavorDetailsScreen', { favorId: favor.id, source: 'CreateFavorScreen' })}
+          activeOpacity={0.7}
+        >
+          <View className="flex-row mb-4">
+            {/* Favor image on the left */}
+            {favor.image_url ? (
+              <Image
+                source={{ uri: favor.image_url }}
+                className="w-20 h-20 rounded-xl mr-4"
+                style={{ backgroundColor: '#f3f4f6' }}
+                resizeMode="cover"
+              />
+            ) : (
+              <View className="w-20 h-20 rounded-xl mr-4 bg-gray-200 items-center justify-center border border-gray-300">
+                <Text className="text-3xl text-gray-400">📋</Text>
+              </View>
+            )}
+            
+            {/* Favor details on the right */}
+            <View className="flex-1">
+              <Text className="text-[#D12E34] text-sm font-medium mb-1 capitalize">{favor.priority}</Text>
+              <Text className="text-sm text-gray-600 mb-1">
+                {favor.favor_subject.name} | {favor.time_to_complete || '1 Hour'} | {new Date(favor.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </Text>
+              <Text className="text-sm text-gray-600 mb-1">
+                {favor.user?.full_name || 'Unknown'} | {favor.city}, {favor.state}
+              </Text>
+              <Text className="text-gray-700 text-sm leading-4" numberOfLines={2}>
+                {favor.description}
+              </Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+
+        {/* Request counter like in the image */}
+        <View className="mb-4">
+          <Text className="text-gray-800 font-semibold text-base">
+            Request ({favor.pending_responses_count || 1})
+          </Text>
+        </View>
+
+        {/* Applicant info like in the image */}
+        <View className="flex-row items-center justify-between">
+          <View className="flex-row items-center flex-1">
+            {/* Applicant profile image */}
+            <View className="w-12 h-12 rounded-xl mr-3 bg-[#44A27B] items-center justify-center">
+              <Text className="text-white text-sm font-bold">
+                {applicant.user.first_name?.[0]?.toUpperCase() || 'U'}
+                {applicant.user.last_name?.[0]?.toUpperCase() || ''}
+              </Text>
+            </View>
+            <View className="flex-1">
+              <Text className="text-gray-800 font-medium text-base">
+                {applicant.user.full_name || `${applicant.user.first_name} ${applicant.user.last_name}`}
+              </Text>
+              <View className="flex-row items-center">
+                <Text className="text-gray-600 text-sm mr-2">⭐ {applicant.user.rating || 0}</Text>
+                <Text className="text-gray-600 text-sm">| 0 Reviews</Text>
+              </View>
+              <TouchableOpacity>
+                <Text className="text-[#44A27B] text-sm">View Profile</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          
+          {/* Accept button like in the image */}
+          <TouchableOpacity 
+            className="bg-[#44A27B] rounded-full px-6 py-2"
+            onPress={() => {
+              acceptApplicantMutation.mutate({
+                favorId: favor.id,
+                applicantId: applicant.user.id
+              });
+            }}
+            disabled={acceptApplicantMutation.isPending}
+          >
+            <Text className="text-white font-medium text-sm">
+              {acceptApplicantMutation.isPending ? 'Accepting...' : 'Accept'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
+
   // Original favor card for when no applicants exist
   const FavorSummaryCard = ({ favor }: { favor: Favor }) => {
     return (
       <TouchableOpacity 
-        onPress={() => navigation?.navigate('FavorDetailsScreen', { favorId: favor.id })}
+        onPress={() => navigation?.navigate('FavorDetailsScreen', { favorId: favor.id, source: 'CreateFavorScreen' })}
         activeOpacity={0.7}
       >
         <View className="bg-white rounded-2xl p-4 mb-4 mx-4 border-2 border-gray-300">
@@ -351,75 +450,87 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
     return <FavorSummaryCard favor={favor} />;
   };
 
-  const ActiveCard = ({ favor }: { favor: Favor }) => (
-    <View className="bg-white rounded-2xl p-4 mb-4 mx-4 border-2 border-[#44A27B]">
-      <TouchableOpacity 
-        onPress={() => navigation?.navigate('FavorDetailsScreen', { favorId: favor.id })}
-        activeOpacity={0.7}
-      >
-        <View className="flex-row mb-3">
-          <Image
-            source={{ 
-              uri: favor.image_url || 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400&h=400&fit=crop'
-            }}
-            className="w-16 h-16 rounded-xl mr-4"
-            style={{ backgroundColor: '#f3f4f6' }}
-          />
-          <View className="flex-1">
-            <Text className="text-[#D12E34] text-sm font-medium mb-1 capitalize">{favor.priority}</Text>
-            <Text className="text-sm text-gray-600 mb-1">
-              {favor.favor_subject.name} | {favor.time_to_complete || '1 Hour'} | {new Date(favor.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-            </Text>
-            <Text className="text-sm text-gray-600 mb-1">{favor.city}, {favor.state}</Text>
-            <Text className="text-gray-700 text-sm leading-4">
-              {favor.description}
-            </Text>
-          </View>
-        </View>
-        
-        {/* Status indicator */}
-        <View className="px-3 py-2 bg-green-50 rounded-lg mb-3">
-          <Text className="text-sm text-green-700 font-medium capitalize">
-            Status: {favor.status.replace('_', ' ')}
-          </Text>
-        </View>
+  // Component for Active tab that fetches applicants for favors with pending reviews
+  const ActiveFavorWithApplicants = ({ favor, navigation }: { favor: Favor; navigation: any }) => {
+    const { data: applicantsData, isLoading, error } = useFavorApplicants(favor.id);
+    
+    // If there are applicants, show individual request cards like in the image
+    if (applicantsData?.data?.applicants && applicantsData.data.applicants.length > 0) {
+      return (
+        <>
+          {applicantsData.data.applicants.map((applicant) => (
+            <ActiveRequestCard 
+              key={`${favor.id}-${applicant.id}`} 
+              favor={favor} 
+              applicant={applicant} 
+              navigation={navigation}
+            />
+          ))}
+        </>
+      );
+    }
+    
+    // If no applicants, return null or show regular active card
+    return null;
+  };
 
-        {/* Pending requests indicator for active favors */}
-        {favor.pending_responses_count > 0 && (
-          <View className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-3">
-            <View className="flex-row items-center justify-between">
-              <View className="flex-row items-center">
-                <View className="w-2 h-2 bg-blue-400 rounded-full mr-2"></View>
-                <Text className="text-blue-700 font-medium text-sm">
-                  {favor.pending_responses_count} Pending Review{favor.pending_responses_count > 1 ? 's' : ''}
-                </Text>
-              </View>
-              <TouchableOpacity 
-                className="bg-blue-500 px-3 py-1 rounded-full"
-                onPress={() => navigation?.navigate('FavorDetailsScreen', { favorId: favor.id })}
-              >
-                <Text className="text-white text-xs font-medium">Review</Text>
-              </TouchableOpacity>
+  const ActiveCard = ({ favor }: { favor: Favor }) => {
+    // If favor has pending reviews, show individual request cards for each applicant
+    if (favor.pending_responses_count > 0) {
+      return <ActiveFavorWithApplicants favor={favor} navigation={navigation} />;
+    }
+    
+    // If no pending reviews, show regular active card
+    return (
+      <View className="bg-white rounded-2xl p-4 mb-4 mx-4 border-2 border-[#44A27B]">
+        <TouchableOpacity 
+          onPress={() => navigation?.navigate('FavorDetailsScreen', { favorId: favor.id, source: 'CreateFavorScreen' })}
+          activeOpacity={0.7}
+        >
+          <View className="flex-row mb-3">
+            <Image
+              source={{ 
+                uri: favor.image_url || 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400&h=400&fit=crop'
+              }}
+              className="w-16 h-16 rounded-xl mr-4"
+              style={{ backgroundColor: '#f3f4f6' }}
+            />
+            <View className="flex-1">
+              <Text className="text-[#D12E34] text-sm font-medium mb-1 capitalize">{favor.priority}</Text>
+              <Text className="text-sm text-gray-600 mb-1">
+                {favor.favor_subject.name} | {favor.time_to_complete || '1 Hour'} | {new Date(favor.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </Text>
+              <Text className="text-sm text-gray-600 mb-1">{favor.city}, {favor.state}</Text>
+              <Text className="text-gray-700 text-sm leading-4">
+                {favor.description}
+              </Text>
             </View>
           </View>
-        )}
-      </TouchableOpacity>
-      
-      {/* Cancel Favor Button */}
-      <TouchableOpacity 
-        className="bg-green-500 rounded-full py-3"
-        onPress={() => handleCancelFavor(favor)}
-      >
-        <Text className="text-white text-center font-semibold text-base">
-          Cancel Favor
-        </Text>
-      </TouchableOpacity>
-    </View>
-  );
+          
+          {/* Status indicator */}
+          <View className="px-3 py-2 bg-green-50 rounded-lg mb-3">
+            <Text className="text-sm text-green-700 font-medium capitalize">
+              Status: {favor.status.replace('_', ' ')}
+            </Text>
+          </View>
+        </TouchableOpacity>
+        
+        {/* Cancel Favor Button */}
+        <TouchableOpacity 
+          className="bg-green-500 rounded-full py-3"
+          onPress={() => handleCancelFavor(favor)}
+        >
+          <Text className="text-white text-center font-semibold text-base">
+            Cancel Favor
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   const HistoryCard = ({ favor }: { favor: Favor }) => (
     <TouchableOpacity 
-      onPress={() => navigation?.navigate('FavorDetailsScreen', { favorId: favor.id })}
+      onPress={() => navigation?.navigate('FavorDetailsScreen', { favorId: favor.id, source: 'CreateFavorScreen' })}
       activeOpacity={0.7}
     >
       <View className="bg-white rounded-2xl p-4 mb-4 mx-4 border-2 border-gray-200">

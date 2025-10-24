@@ -6,7 +6,13 @@ import {
   UpdateFavorRequest,
   GetFavorResponse,
   ReassignFavorResponse,
-  ApplyToFavorResponse
+  ApplyToFavorResponse,
+  CompleteFavorResponse,
+  CancelAndRepostResponse,
+  CreateReviewRequest,
+  CreateReviewResponse,
+  CreateUserReviewRequest,
+  CreateUserReviewResponse
 } from '../apis/FavorApis';
 import Toast from 'react-native-toast-message';
 
@@ -66,7 +72,7 @@ export const useCreateFavorWithImage = () => {
       Toast.show({
         type: 'success',
         text1: 'Favor Created',
-        text2: 'Your favor with image has been posted successfully!',
+        text2: 'Your favor has been posted successfully!',
         visibilityTime: 4000,
       });
     },
@@ -199,6 +205,25 @@ export const useFavorMutation = <TData = any, TVariables = any>(
       options?.onError?.(error, variables);
     },
   });
+};
+
+/**
+ * Hook for accepting an applicant
+ */
+export const useAcceptApplicant = (options?: {
+  onSuccess?: (data: any, variables: { favorId: number; applicantId: number }) => void;
+  onError?: (error: Error, variables: { favorId: number; applicantId: number }) => void;
+}) => {
+  return useFavorMutation(
+    ({ favorId, applicantId }: { favorId: number; applicantId: number }) => 
+      FavorApis.acceptApplicant(favorId, applicantId),
+    {
+      successMessage: 'Applicant accepted successfully!',
+      errorMessage: 'Failed to accept applicant',
+      onSuccess: options?.onSuccess,
+      onError: options?.onError,
+    }
+  );
 };
 
 /**
@@ -425,6 +450,151 @@ export const useCancelRequest = () => {
       Toast.show({
         type: 'error',
         text1: 'Failed to Cancel Request',
+        text2: error.message,
+        visibilityTime: 4000,
+      });
+    },
+  });
+};
+
+/**
+ * Hook for completing a favor
+ */
+export const useCompleteFavor = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<CompleteFavorResponse, Error, number>({
+    mutationFn: (favorId: number) => FavorApis.completeFavor(favorId),
+    onSuccess: (data, favorId) => {
+      console.log('Complete favor successful:', favorId);
+      
+      // Invalidate and refetch relevant queries
+      queryClient.invalidateQueries({ queryKey: ['favors'] });
+      queryClient.invalidateQueries({ queryKey: ['favors', 'my'] });
+      queryClient.invalidateQueries({ queryKey: ['favor', favorId] });
+      
+      Toast.show({
+        type: 'success',
+        text1: 'Favor Completed! 🎉',
+        text2: data.data.completion_message || 'Favor has been marked as completed successfully!',
+        visibilityTime: 4000,
+      });
+    },
+    onError: (error, favorId) => {
+      console.error('Complete favor failed:', error);
+      
+      Toast.show({
+        type: 'error',
+        text1: 'Failed to Complete Favor',
+        text2: error.message,
+        visibilityTime: 4000,
+      });
+    },
+  });
+};
+
+/**
+ * Hook for canceling and reposting a favor
+ */
+export const useCancelAndRepost = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<CancelAndRepostResponse, Error, number>({
+    mutationFn: (favorId: number) => FavorApis.cancelAndRepost(favorId),
+    onSuccess: (data, favorId) => {
+      console.log('Cancel and repost successful:', favorId);
+      
+      // Invalidate and refetch relevant queries
+      queryClient.invalidateQueries({ queryKey: ['favors'] });
+      queryClient.invalidateQueries({ queryKey: ['favors', 'my'] });
+      queryClient.invalidateQueries({ queryKey: ['favor', favorId] });
+      
+      Toast.show({
+        type: 'success',
+        text1: 'Favor Reposted! 🔄',
+        text2: data.message || 'Favor has been cancelled and reposted successfully!',
+        visibilityTime: 4000,
+      });
+    },
+    onError: (error, favorId) => {
+      console.error('Cancel and repost failed:', error);
+      
+      Toast.show({
+        type: 'error',
+        text1: 'Failed to Repost Favor',
+        text2: error.message,
+        visibilityTime: 4000,
+      });
+    },
+  });
+};
+
+/**
+ * Hook for creating a review (requester with optional tip)
+ */
+export const useCreateReview = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<CreateReviewResponse, Error, { favorId: number; data: CreateReviewRequest }>({
+    mutationFn: ({ favorId, data }) => FavorApis.createReview(favorId, data),
+    onSuccess: (response, { favorId }) => {
+      console.log('Create review successful:', response.data.review.id);
+      
+      // Invalidate and refetch relevant queries
+      queryClient.invalidateQueries({ queryKey: ['favors'] });
+      queryClient.invalidateQueries({ queryKey: ['favors', 'my'] });
+      queryClient.invalidateQueries({ queryKey: ['favor', favorId] });
+      
+      const tipMessage = response.data.tip_sent ? ' and tip sent' : '';
+      Toast.show({
+        type: 'success',
+        text1: 'Review Submitted! ⭐',
+        text2: `${response.message}${tipMessage}`,
+        visibilityTime: 4000,
+      });
+    },
+    onError: (error) => {
+      console.error('Create review failed:', error);
+      
+      Toast.show({
+        type: 'error',
+        text1: 'Failed to Submit Review',
+        text2: error.message,
+        visibilityTime: 4000,
+      });
+    },
+  });
+};
+
+/**
+ * Hook for creating a user review (bidirectional)
+ */
+export const useCreateUserReview = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<CreateUserReviewResponse, Error, { favorId: number; data: CreateUserReviewRequest }>({
+    mutationFn: ({ favorId, data }) => FavorApis.createUserReview(favorId, data),
+    onSuccess: (response, { favorId }) => {
+      console.log('Create user review successful:', response.data.review.id);
+      
+      // Invalidate and refetch relevant queries
+      queryClient.invalidateQueries({ queryKey: ['favors'] });
+      queryClient.invalidateQueries({ queryKey: ['favors', 'my'] });
+      queryClient.invalidateQueries({ queryKey: ['favor', favorId] });
+      
+      Toast.show({
+        type: 'success',
+        text1: 'Review Submitted! ⭐',
+        text2: response.message || 'Review submitted successfully!',
+        visibilityTime: 4000,
+      });
+    },
+    onError: (error) => {
+      console.error('Create user review failed:', error);
+      
+      Toast.show({
+        type: 'error',
+        text1: 'Failed to Submit Review',
         text2: error.message,
         visibilityTime: 4000,
       });

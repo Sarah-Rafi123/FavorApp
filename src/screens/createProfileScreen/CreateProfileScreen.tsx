@@ -49,6 +49,9 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
     firstName: '',
     lastName: '',
     dateOfBirth: new Date(),
+    birthDay: '',
+    birthMonth: '',
+    birthYear: '',
     fullAddress: '',
     city: '',
     state: '',
@@ -59,13 +62,15 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
     heardAboutUs: '',
     skills: [] as string[],
     otherSkills: '',
-    isOver18: false,
   });
 
   const [selectedCountryCall, setSelectedCountryCall] = useState<CountryCode>(countryData[0]);
   const [selectedCountryText, setSelectedCountryText] = useState<CountryCode>(countryData[0]);
 
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showDayDropdown, setShowDayDropdown] = useState(false);
+  const [showMonthDropdown, setShowMonthDropdown] = useState(false);
+  const [showYearDropdown, setShowYearDropdown] = useState(false);
   const [showCountryCallDropdown, setShowCountryCallDropdown] = useState(false);
   const [showCountryTextDropdown, setShowCountryTextDropdown] = useState(false);
   const [showSkillsDropdown, setShowSkillsDropdown] = useState(false);
@@ -93,6 +98,25 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
     'Advertisement',
     'Other'
   ];
+  
+  // Date options
+  const dayOptions = Array.from({ length: 31 }, (_, i) => (i + 1).toString());
+  const monthOptions = [
+    { value: '1', label: 'January' },
+    { value: '2', label: 'February' },
+    { value: '3', label: 'March' },
+    { value: '4', label: 'April' },
+    { value: '5', label: 'May' },
+    { value: '6', label: 'June' },
+    { value: '7', label: 'July' },
+    { value: '8', label: 'August' },
+    { value: '9', label: 'September' },
+    { value: '10', label: 'October' },
+    { value: '11', label: 'November' },
+    { value: '12', label: 'December' },
+  ];
+  const currentYear = new Date().getFullYear();
+  const yearOptions = Array.from({ length: currentYear - 1900 - 17 }, (_, i) => (currentYear - 18 - i).toString());
 
   const [errors, setErrors] = useState({
     firstName: '',
@@ -103,32 +127,47 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
     state: '',
     phoneCall: '',
     phoneText: '',
+    yearsOfExperience: '',
     aboutMe: '',
-    heardAboutUs: '',
+    otherSkills: '',
   });
 
   const updateFormData = (field: string, value: string | boolean | string[] | Date) => {
-    // Prevent numbers in first name and last name fields
-    if ((field === 'firstName' || field === 'lastName') && typeof value === 'string') {
-      const hasNumbers = /\d/.test(value);
-      if (hasNumbers) {
-        return; // Don't update if contains numbers
+    // Field-specific validations and character limits
+    if (typeof value === 'string') {
+      // First and Last Name: no numbers, max 50 characters
+      if ((field === 'firstName' || field === 'lastName')) {
+        const hasNumbers = /\d/.test(value);
+        if (hasNumbers || value.length > 50) {
+          return;
+        }
       }
-    }
-    
-    // Prevent alphabetic characters in phone number fields
-    if ((field === 'phoneCall' || field === 'phoneText') && typeof value === 'string') {
-      const hasLetters = /[a-zA-Z]/.test(value);
-      if (hasLetters) {
-        return; // Don't update if contains letters
+      
+      // Phone fields: no letters, max 20 characters
+      if ((field === 'phoneCall' || field === 'phoneText')) {
+        const hasLetters = /[a-zA-Z]/.test(value);
+        if (hasLetters || value.length > 20) {
+          return;
+        }
       }
-    }
-    
-    // Allow only numbers in years of experience field
-    if (field === 'yearsOfExperience' && typeof value === 'string') {
-      const hasNonNumbers = /[^0-9]/.test(value);
-      if (hasNonNumbers) {
-        return; // Don't update if contains non-numeric characters
+      
+      // Years of experience: only numbers, 0-99
+      if (field === 'yearsOfExperience') {
+        const hasNonNumbers = /[^0-9]/.test(value);
+        const numValue = parseInt(value);
+        if (hasNonNumbers || (value && (numValue < 0 || numValue > 99))) {
+          return;
+        }
+      }
+      
+      // About me: max 1000 characters
+      if (field === 'aboutMe' && value.length > 1000) {
+        return;
+      }
+      
+      // Other skills: max 150 characters
+      if (field === 'otherSkills' && value.length > 150) {
+        return;
       }
     }
     
@@ -159,6 +198,22 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
     updateFormData('heardAboutUs', option);
     setShowHeardAboutDropdown(false);
   };
+  
+  const handleDateSelect = (field: 'birthDay' | 'birthMonth' | 'birthYear', value: string) => {
+    updateFormData(field, value);
+    
+    // Update the main dateOfBirth when all fields are filled
+    const newFormData = { ...formData, [field]: value };
+    if (newFormData.birthDay && newFormData.birthMonth && newFormData.birthYear) {
+      const date = new Date(parseInt(newFormData.birthYear), parseInt(newFormData.birthMonth) - 1, parseInt(newFormData.birthDay));
+      updateFormData('dateOfBirth', date);
+    }
+    
+    // Close dropdown
+    if (field === 'birthDay') setShowDayDropdown(false);
+    if (field === 'birthMonth') setShowMonthDropdown(false);
+    if (field === 'birthYear') setShowYearDropdown(false);
+  };
 
   const validateForm = () => {
     const newErrors = {
@@ -170,11 +225,13 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
       state: '',
       phoneCall: '',
       phoneText: '',
+      yearsOfExperience: '',
       aboutMe: '',
-      heardAboutUs: '',
+      otherSkills: '',
     };
     let isValid = true;
 
+    // Required field validations
     if (!formData.firstName.trim()) {
       newErrors.firstName = 'First name is required';
       isValid = false;
@@ -185,32 +242,59 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
       isValid = false;
     }
 
-    if (!formData.fullAddress.trim()) {
-      newErrors.fullAddress = 'Full address is required';
-      isValid = false;
-    }
-
-    if (!formData.city.trim()) {
-      newErrors.city = 'City is required';
-      isValid = false;
-    }
-
-    if (!formData.state.trim()) {
-      newErrors.state = 'State is required';
-      isValid = false;
-    }
-
     if (!formData.phoneCall.trim()) {
-      newErrors.phoneCall = 'Phone number is required';
+      newErrors.phoneCall = 'Phone number (call) is required';
       isValid = false;
     }
 
     if (!formData.phoneText.trim()) {
-      newErrors.phoneText = 'Text number is required';
+      newErrors.phoneText = 'Phone number (text) is required';
       isValid = false;
     }
 
-    if (!formData.isOver18) {
+    if (!formData.yearsOfExperience.trim()) {
+      newErrors.yearsOfExperience = 'Years of experience must be between 0 and 99';
+      isValid = false;
+    } else {
+      const years = parseInt(formData.yearsOfExperience);
+      if (years < 0 || years > 99) {
+        newErrors.yearsOfExperience = 'Years of experience must be between 0 and 99';
+        isValid = false;
+      }
+    }
+
+    // Date validation - user must be 18 or older
+    if (!formData.birthDay.trim() || !formData.birthMonth.trim() || !formData.birthYear.trim()) {
+      newErrors.dateOfBirth = 'Please select your complete date of birth';
+      isValid = false;
+    } else {
+      const today = new Date();
+      const birthDate = new Date(parseInt(formData.birthYear), parseInt(formData.birthMonth) - 1, parseInt(formData.birthDay));
+      const age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      const dayDiff = today.getDate() - birthDate.getDate();
+      
+      const actualAge = monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? age - 1 : age;
+      
+      if (actualAge < 18) {
+        newErrors.dateOfBirth = 'You must be at least 18 years old';
+        isValid = false;
+      }
+    }
+
+    // Address validation
+    if (!formData.fullAddress.trim()) {
+      newErrors.fullAddress = 'Please enter a valid address';
+      isValid = false;
+    }
+
+    if (!formData.city.trim()) {
+      newErrors.city = 'Address must include a valid city';
+      isValid = false;
+    }
+
+    if (!formData.state.trim()) {
+      newErrors.state = 'Address must include a valid state';
       isValid = false;
     }
 
@@ -245,9 +329,9 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
         years_of_experience: formData.yearsOfExperience || "0",
         about_me: formData.aboutMe || undefined,
         heard_about_us: formData.heardAboutUs || undefined,
-        birth_day: formData.dateOfBirth.getDate().toString(),
-        birth_month: (formData.dateOfBirth.getMonth() + 1).toString(),
-        birth_year: formData.dateOfBirth.getFullYear().toString(),
+        birth_day: formData.birthDay,
+        birth_month: formData.birthMonth,
+        birth_year: formData.birthYear,
         terms_of_service: registrationData.termsAccepted ? "1" : "0",
         skills: formData.skills,
         other_skills: formData.otherSkills || undefined,
@@ -305,15 +389,37 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
   };
 
   const isFormComplete = () => {
-    return formData.firstName && 
-           formData.lastName && 
-           formData.fullAddress && 
-           formData.city &&
-           formData.state &&
-           formData.phoneCall && 
-           formData.phoneText && 
-           formData.yearsOfExperience &&
-           formData.isOver18;
+    // Check all required fields
+    const requiredFieldsComplete = formData.firstName.trim() && 
+           formData.lastName.trim() && 
+           formData.birthDay.trim() &&
+           formData.birthMonth.trim() &&
+           formData.birthYear.trim() &&
+           formData.fullAddress.trim() && 
+           formData.city.trim() &&
+           formData.state.trim() &&
+           formData.phoneCall.trim() && 
+           formData.phoneText.trim() && 
+           formData.yearsOfExperience.trim();
+    
+    // Check age validation
+    let isOver18 = false;
+    if (formData.birthDay && formData.birthMonth && formData.birthYear) {
+      const today = new Date();
+      const birthDate = new Date(parseInt(formData.birthYear), parseInt(formData.birthMonth) - 1, parseInt(formData.birthDay));
+      const age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      const dayDiff = today.getDate() - birthDate.getDate();
+      const actualAge = monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? age - 1 : age;
+      isOver18 = actualAge >= 18;
+    }
+    
+    // Check years of experience is valid
+    const yearsValid = formData.yearsOfExperience.trim() && 
+                      parseInt(formData.yearsOfExperience) >= 0 && 
+                      parseInt(formData.yearsOfExperience) <= 99;
+    
+    return requiredFieldsComplete && isOver18 && yearsValid;
   };
 
   const formatDateDisplay = (date: Date) => {
@@ -368,7 +474,7 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
                   onChangeText={(text) => updateFormData('firstName', text)}
                 />
                 <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700" >
-                  First Name
+                  First Name *
                 </Text>
                 {errors.firstName ? (
                   <Text className="text-red-500 text-sm mt-1">{errors.firstName}</Text>
@@ -391,7 +497,7 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
                   onChangeText={(text) => updateFormData('lastName', text)}
                 />
                 <Text className="absolute -top-3 left-3 px-1 text-sm font-medium text-gray-700">
-                  Last Name
+                  Last Name *
                 </Text>
                 {errors.lastName ? (
                   <Text className="text-red-500 text-sm mt-1">{errors.lastName}</Text>
@@ -400,24 +506,65 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
 
 
               {/* Date of Birth */}
-              <View className="mb-4 relative">
-                <TouchableOpacity
-                  className="px-4 py-4 rounded-xl border border-gray-200 pr-12 bg-transparent"
-                  onPress={() => setShowDatePicker(true)}
-                >
-                  <Text className="text-base text-gray-800">
-                    {formatDateDisplay(formData.dateOfBirth)}
-                  </Text>
-                </TouchableOpacity>
-                <Text className="absolute -top-3 left-3 px-1 text-sm font-medium text-gray-700">
-                  Date of Birth
+              <View className="mb-4">
+                <Text className="text-sm font-medium text-gray-700 mb-2">
+                  Date of Birth *
                 </Text>
-                <TouchableOpacity 
-                  className="absolute right-3 top-4"
-                  onPress={() => setShowDatePicker(true)}
-                >
-                  <CalenderSvg />
-                </TouchableOpacity>
+                <View className="flex-row space-x-2">
+                  {/* Birth Month */}
+                  <View className="flex-1">
+                    <TouchableOpacity 
+                      className="px-4 py-4 rounded-xl border border-gray-200 pr-8 bg-transparent"
+                      onPress={() => setShowMonthDropdown(true)}
+                    >
+                      <Text className={`text-base ${formData.birthMonth ? 'text-gray-800' : 'text-gray-400'}`}>
+                        {formData.birthMonth ? monthOptions.find(m => m.value === formData.birthMonth)?.label : 'Month'}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      className="absolute right-2 top-4"
+                      onPress={() => setShowMonthDropdown(true)}
+                    >
+                      <Text className="text-gray-500">▼</Text>
+                    </TouchableOpacity>
+                  </View>
+                  
+                  {/* Birth Day */}
+                  <View className="flex-1">
+                    <TouchableOpacity 
+                      className="px-4 py-4 rounded-xl border border-gray-200 pr-8 bg-transparent"
+                      onPress={() => setShowDayDropdown(true)}
+                    >
+                      <Text className={`text-base ${formData.birthDay ? 'text-gray-800' : 'text-gray-400'}`}>
+                        {formData.birthDay || 'Day'}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      className="absolute right-2 top-4"
+                      onPress={() => setShowDayDropdown(true)}
+                    >
+                      <Text className="text-gray-500">▼</Text>
+                    </TouchableOpacity>
+                  </View>
+                  
+                  {/* Birth Year */}
+                  <View className="flex-1">
+                    <TouchableOpacity 
+                      className="px-4 py-4 rounded-xl border border-gray-200 pr-8 bg-transparent"
+                      onPress={() => setShowYearDropdown(true)}
+                    >
+                      <Text className={`text-base ${formData.birthYear ? 'text-gray-800' : 'text-gray-400'}`}>
+                        {formData.birthYear || 'Year'}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      className="absolute right-2 top-4"
+                      onPress={() => setShowYearDropdown(true)}
+                    >
+                      <Text className="text-gray-500">▼</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
                 {errors.dateOfBirth ? (
                   <Text className="text-red-500 text-sm mt-1">{errors.dateOfBirth}</Text>
                 ) : null}
@@ -434,7 +581,7 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
                   multiline
                 />
                 <Text className="absolute -top-3 left-3 px-1 text-sm font-medium text-gray-700">
-                  Full Address
+                  Full Address *
                 </Text>
                 {errors.fullAddress ? (
                   <Text className="text-red-500 text-sm mt-1">{errors.fullAddress}</Text>
@@ -502,7 +649,7 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
                   />
                 </View>
                 <Text className="absolute -top-3 left-3 px-1 text-sm font-medium text-gray-700">
-                  Phone Number (Call)
+                  Phone Number (Call) *
                 </Text>
                 {errors.phoneCall ? (
                   <Text className="text-red-500 text-sm mt-1">{errors.phoneCall}</Text>
@@ -530,7 +677,7 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
                   />
                 </View>
                 <Text className="absolute -top-3 left-3 px-1 text-sm font-medium text-gray-700">
-                  Phone Number (Text)
+                  Phone Number (Text) *
                 </Text>
                 {errors.phoneText ? (
                   <Text className="text-red-500 text-sm mt-1">{errors.phoneText}</Text>
@@ -541,15 +688,18 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
               <View className="mb-4 relative">
                 <TextInput
                   className="px-4 py-4 rounded-xl border border-gray-200 text-base bg-transparent"
-                  placeholder="Enter years of experience"
+                  placeholder="Enter years of experience (0-99)"
                   placeholderTextColor="#9CA3AF"
                   value={formData.yearsOfExperience}
                   onChangeText={(text) => updateFormData('yearsOfExperience', text)}
                   keyboardType="numeric"
                 />
                 <Text className="absolute -top-3 left-3 px-1 text-sm font-medium text-gray-700">
-                  Years of Experience
+                  Years of Experience *
                 </Text>
+                {errors.yearsOfExperience ? (
+                  <Text className="text-red-500 text-sm mt-1">{errors.yearsOfExperience}</Text>
+                ) : null}
               </View>
 
               {/* Skills */}
@@ -583,13 +733,13 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
                     value={formData.otherSkills}
                     onChangeText={(text) => updateFormData('otherSkills', text)}
                     multiline
-                    maxLength={200}
+                    maxLength={150}
                   />
                   <Text className="absolute -top-3 left-3 px-1 text-sm font-medium text-gray-700">
                     Other Skills
                   </Text>
                   <Text className="text-xs text-gray-500 mt-1 text-right">
-                    {formData.otherSkills.length}/200
+                    {formData.otherSkills.length}/150 characters
                   </Text>
                 </View>
               )}
@@ -604,13 +754,13 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
                   onChangeText={(text) => updateFormData('aboutMe', text)}
                   multiline
                   textAlignVertical="top"
-                  maxLength={300}
+                  maxLength={1000}
                 />
                 <Text className="absolute -top-3 left-3 px-1 text-sm font-medium text-gray-700">
                   About Me
                 </Text>
                 <Text className="text-xs text-gray-500 mt-1 text-right">
-                  {formData.aboutMe.length}/300
+                  {formData.aboutMe.length}/1000 characters
                 </Text>
                 {errors.aboutMe ? (
                   <Text className="text-red-500 text-sm mt-1">{errors.aboutMe}</Text>
@@ -618,7 +768,7 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
               </View>
 
               {/* Where did you hear about us */}
-              <View className="mb-4 relative">
+              <View className="mb-8 relative">
                 <TouchableOpacity 
                   className="px-4 py-4 rounded-xl border border-gray-200 pr-12 bg-transparent"
                   onPress={() => setShowHeardAboutDropdown(true)}
@@ -636,29 +786,8 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
                 >
                   <Text className="text-gray-500">▼</Text>
                 </TouchableOpacity>
-                {errors.heardAboutUs ? (
-                  <Text className="text-red-500 text-sm mt-1">{errors.heardAboutUs}</Text>
-                ) : null}
               </View>
 
-              {/* Age Confirmation */}
-              <View className="mb-8">
-                <TouchableOpacity
-                  className="flex-row items-center"
-                  onPress={() => updateFormData('isOver18', !formData.isOver18)}
-                >
-                  <View className={`w-5 h-5 rounded border-2 mr-3 ${
-                    formData.isOver18 ? 'bg-green-500 border-green-500' : 'border-gray-300'
-                  }`}>
-                    {formData.isOver18 && (
-                      <Text className="text-white text-xs text-center">✓</Text>
-                    )}
-                  </View>
-                  <Text className="text-gray-700 flex-1">
-                    I am 18+ years of age or older and agree to the Terms of Service
-                  </Text>
-                </TouchableOpacity>
-              </View>
 
               {/* Complete Profile Button */}
               <View className="mb-8">
@@ -768,6 +897,105 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
                 </TouchableOpacity>
               ))}
             </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Birth Day Dropdown Modal */}
+      <Modal
+        visible={showDayDropdown}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowDayDropdown(false)}
+      >
+        <TouchableOpacity 
+          className="flex-1 bg-black/50 justify-center px-6"
+          activeOpacity={1}
+          onPress={() => setShowDayDropdown(false)}
+        >
+          <View className="bg-white rounded-xl max-w-sm mx-auto w-full max-h-96">
+            <View className="py-4 border-b border-gray-200">
+              <Text className="text-lg font-semibold text-gray-800 text-center">
+                Select Day
+              </Text>
+            </View>
+            <ScrollView className="max-h-64">
+              {dayOptions.map((day, index) => (
+                <TouchableOpacity
+                  key={index}
+                  className="py-4 px-6 border-b border-gray-100 last:border-b-0"
+                  onPress={() => handleDateSelect('birthDay', day)}
+                >
+                  <Text className="text-base text-gray-800 text-center">{day}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Birth Month Dropdown Modal */}
+      <Modal
+        visible={showMonthDropdown}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowMonthDropdown(false)}
+      >
+        <TouchableOpacity 
+          className="flex-1 bg-black/50 justify-center px-6"
+          activeOpacity={1}
+          onPress={() => setShowMonthDropdown(false)}
+        >
+          <View className="bg-white rounded-xl max-w-sm mx-auto w-full">
+            <View className="py-4 border-b border-gray-200">
+              <Text className="text-lg font-semibold text-gray-800 text-center">
+                Select Month
+              </Text>
+            </View>
+            <ScrollView className="max-h-64">
+              {monthOptions.map((month, index) => (
+                <TouchableOpacity
+                  key={index}
+                  className="py-4 px-6 border-b border-gray-100 last:border-b-0"
+                  onPress={() => handleDateSelect('birthMonth', month.value)}
+                >
+                  <Text className="text-base text-gray-800 text-center">{month.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Birth Year Dropdown Modal */}
+      <Modal
+        visible={showYearDropdown}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowYearDropdown(false)}
+      >
+        <TouchableOpacity 
+          className="flex-1 bg-black/50 justify-center px-6"
+          activeOpacity={1}
+          onPress={() => setShowYearDropdown(false)}
+        >
+          <View className="bg-white rounded-xl max-w-sm mx-auto w-full max-h-96">
+            <View className="py-4 border-b border-gray-200">
+              <Text className="text-lg font-semibold text-gray-800 text-center">
+                Select Year
+              </Text>
+            </View>
+            <ScrollView className="max-h-64">
+              {yearOptions.map((year, index) => (
+                <TouchableOpacity
+                  key={index}
+                  className="py-4 px-6 border-b border-gray-100 last:border-b-0"
+                  onPress={() => handleDateSelect('birthYear', year)}
+                >
+                  <Text className="text-base text-gray-800 text-center">{year}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </View>
         </TouchableOpacity>
       </Modal>

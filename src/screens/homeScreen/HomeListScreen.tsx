@@ -358,10 +358,23 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications }: HomeLis
           ListEmptyComponent={
             !isLoading ? (
               <View className="flex-1 justify-center items-center py-20">
-                <Text className="text-gray-500 text-lg mb-2">No favors available</Text>
-                <Text className="text-gray-400 text-center px-4">
-                  Check back later or adjust your filters
+                <Text className="text-gray-500 text-lg mb-2">
+                  {hasActiveFilters() ? "No favor found" : "No favors available"}
                 </Text>
+                <Text className="text-gray-400 text-center px-4">
+                  {hasActiveFilters() 
+                    ? "Try adjusting your filters to see more results"
+                    : "Check back later for new favors"
+                  }
+                </Text>
+                {hasActiveFilters() && (
+                  <TouchableOpacity 
+                    className="mt-4 bg-[#44A27B] px-6 py-3 rounded-lg"
+                    onPress={onFilter}
+                  >
+                    <Text className="text-white font-medium">Adjust Filters</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             ) : null
           }
