@@ -263,9 +263,44 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
 
   const updateFormData = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    // Clear error when user starts typing
-    if (typeof value === 'string' && value && errors[field as keyof typeof errors]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
+    
+    // Real-time validation
+    if (typeof value === 'string') {
+      const newErrors = { ...errors };
+      
+      if (field === 'email') {
+        if (!value) {
+          newErrors.email = 'Email is required';
+        } else if (!validateEmail(value)) {
+          newErrors.email = 'Please enter correct email';
+        } else {
+          newErrors.email = '';
+        }
+      }
+      
+      if (field === 'password') {
+        if (!value) {
+          newErrors.password = 'Password is required';
+        } else if (value.length < 8) {
+          newErrors.password = 'Password must be at least 8 characters';
+        } else if (activeTab === 'signup' && !validatePassword(value)) {
+          newErrors.password = 'Password must include at least one lowercase, one uppercase, one digit, and one special character';
+        } else {
+          newErrors.password = '';
+        }
+      }
+      
+      if (field === 'confirmPassword') {
+        if (!value) {
+          newErrors.confirmPassword = 'Please confirm your password';
+        } else if (formData.password !== value) {
+          newErrors.confirmPassword = 'Passwords do not match';
+        } else {
+          newErrors.confirmPassword = '';
+        }
+      }
+      
+      setErrors(newErrors);
     }
   };
 
@@ -336,35 +371,38 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
             {/* Form */}
             <View className="flex-1">
               {/* Email Field */}
-              <View className="relative">
-                <TextInput
-                  className="px-4 py-3 rounded-xl border border-gray-200 text-base bg-transparent"
-                  style={{ 
-                    backgroundColor: 'transparent',
-                    fontSize: 16,
-                    lineHeight: 22,
-                    height: 56
-                  }}
-                  placeholder="Enter your email"
-                  placeholderTextColor="#9CA3AF"
-                  value={formData.email}
-                  onChangeText={(text) => updateFormData('email', text)}
-                  onFocus={() => {
-                    // Show dropdown only for signin tab and if there are saved credentials
-                    if (activeTab === 'signin' && savedCredentials.length > 0) {
-                      setShowEmailDropdown(true);
-                    }
-                  }}
-                  onBlur={() => {
-                    // Hide dropdown after a short delay to allow selection
-                    setTimeout(() => setShowEmailDropdown(false), 150);
-                  }}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-                <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700 ">
+              <View className="mb-2">
+                <Text className="text-sm font-medium text-gray-700 mb-2">
                   Email
                 </Text>
+                <View className="relative">
+                  <TextInput
+                    className={`px-4 py-3 rounded-xl border text-base bg-transparent ${
+                      errors.email ? 'border-red-500' : 'border-gray-200'
+                    }`}
+                    style={{ 
+                      backgroundColor: 'transparent',
+                      fontSize: 16,
+                      lineHeight: 22,
+                      height: 56
+                    }}
+                    placeholder="Enter your email"
+                    placeholderTextColor="#9CA3AF"
+                    value={formData.email}
+                    onChangeText={(text) => updateFormData('email', text)}
+                    onFocus={() => {
+                      // Show dropdown only for signin tab and if there are saved credentials
+                      if (activeTab === 'signin' && savedCredentials.length > 0) {
+                        setShowEmailDropdown(true);
+                      }
+                    }}
+                    onBlur={() => {
+                      // Hide dropdown after a short delay to allow selection
+                      setTimeout(() => setShowEmailDropdown(false), 150);
+                    }}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
                 
                 {/* Credential Dropdown */}
                 {showEmailDropdown && activeTab === 'signin' && savedCredentials.length > 0 && (
@@ -400,78 +438,35 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
                   </View>
                 )}
                 
-                {/* Error message container with dynamic spacing */}
-                <View className={`${errors.email ? 'mt-2 mb-4' : 'mt-0.5'} min-h-[16px]`}>
+                  {/* Error message */}
                   {errors.email ? (
-                    <View className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 mt-1">
-                      <Text className="text-red-600 text-xs leading-3">{errors.email}</Text>
-                    </View>
+                    <Text className="text-red-500 text-sm mt-1">{errors.email}</Text>
                   ) : null}
                 </View>
               </View>
               
               {/* Password Field */}
-              <View className="relative">
-                <TextInput
-                  className="px-4 py-3 rounded-xl border border-gray-200 pr-12 text-base bg-transparent"
-                  style={{ 
-                    backgroundColor: 'transparent',
-                    fontSize: 16,
-                    lineHeight: 22,
-                    height: 56
-                  }}
-                  placeholder="Enter your password"
-                  placeholderTextColor="#9CA3AF"
-                  value={formData.password}
-                  onChangeText={(text) => updateFormData('password', text)}
-                  secureTextEntry={!showPassword}
-                />
-                <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700">
+              <View className="mb-2">
+                <Text className="text-sm font-medium text-gray-700 mb-2">
                   Password
                 </Text>
-                <TouchableOpacity
-                  className="absolute right-3"
-                  style={{
-                    top: 56 / 2 - 12, // Center of 56px height minus half icon height
-                    height: 24,
-                    width: 24,
-                    justifyContent: 'center',
-                    alignItems: 'center'
-                  }}
-                  onPress={() => setShowPassword(!showPassword)}
-                >
-                  <EyeSvg />
-                </TouchableOpacity>
-                {/* Error message container with dynamic spacing */}
-                <View className={`${errors.password ? 'mt-2 mb-4' : 'mt-0.5'} min-h-[16px]`}>
-                  {errors.password ? (
-                    <View className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 mt-1">
-                      <Text className="text-red-600 text-xs leading-3">{errors.password}</Text>
-                    </View>
-                  ) : null}
-                </View>
-              </View>
-
-              {/* Confirm Password Field (Sign Up only) */}
-              {activeTab === 'signup' && (
-                <View className=" relative">
+                <View className="relative">
                   <TextInput
-                    className="px-4 py-3 rounded-xl border border-gray-200 pr-12 text-base bg-transparent"
+                    className={`px-4 py-3 rounded-xl border pr-12 text-base bg-transparent ${
+                      errors.password ? 'border-red-500' : 'border-gray-200'
+                    }`}
                     style={{ 
                       backgroundColor: 'transparent',
                       fontSize: 16,
                       lineHeight: 22,
                       height: 56
                     }}
-                    placeholder="Confirm your password"
+                    placeholder="Enter your password"
                     placeholderTextColor="#9CA3AF"
-                    value={formData.confirmPassword}
-                    onChangeText={(text) => updateFormData('confirmPassword', text)}
-                    secureTextEntry={!showConfirmPassword}
+                    value={formData.password}
+                    onChangeText={(text) => updateFormData('password', text)}
+                    secureTextEntry={!showPassword}
                   />
-                  <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700">
-                    Confirm Password
-                  </Text>
                   <TouchableOpacity
                     className="absolute right-3"
                     style={{
@@ -481,16 +476,56 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
                       justifyContent: 'center',
                       alignItems: 'center'
                     }}
-                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                    onPress={() => setShowPassword(!showPassword)}
                   >
                     <EyeSvg />
                   </TouchableOpacity>
-                  {/* Error message container with dynamic spacing */}
-                  <View className={`${errors.confirmPassword ? 'mt-2 mb-4' : 'mt-0.5'} min-h-[16px]`}>
+                  {/* Error message */}
+                  {errors.password ? (
+                    <Text className="text-red-500 text-sm mt-1">{errors.password}</Text>
+                  ) : null}
+                </View>
+              </View>
+
+              {/* Confirm Password Field (Sign Up only) */}
+              {activeTab === 'signup' && (
+                <View className="mb-2">
+                  <Text className="text-sm font-medium text-gray-700 mb-2">
+                    Confirm Password
+                  </Text>
+                  <View className="relative">
+                    <TextInput
+                      className={`px-4 py-3 rounded-xl border pr-12 text-base bg-transparent ${
+                        errors.confirmPassword ? 'border-red-500' : 'border-gray-200'
+                      }`}
+                      style={{ 
+                        backgroundColor: 'transparent',
+                        fontSize: 16,
+                        lineHeight: 22,
+                        height: 56
+                      }}
+                      placeholder="Confirm your password"
+                      placeholderTextColor="#9CA3AF"
+                      value={formData.confirmPassword}
+                      onChangeText={(text) => updateFormData('confirmPassword', text)}
+                      secureTextEntry={!showConfirmPassword}
+                    />
+                    <TouchableOpacity
+                      className="absolute right-3"
+                      style={{
+                        top: 56 / 2 - 12, // Center of 56px height minus half icon height
+                        height: 24,
+                        width: 24,
+                        justifyContent: 'center',
+                        alignItems: 'center'
+                      }}
+                      onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                    >
+                      <EyeSvg />
+                    </TouchableOpacity>
+                    {/* Error message */}
                     {errors.confirmPassword ? (
-                      <View className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 mt-1">
-                        <Text className="text-red-600 text-xs leading-3">{errors.confirmPassword}</Text>
-                      </View>
+                      <Text className="text-red-500 text-sm mt-1">{errors.confirmPassword}</Text>
                     ) : null}
                   </View>
                 </View>

@@ -31,19 +31,41 @@ export function NewPasswordScreen({ onPasswordReset, email, resetToken }: NewPas
   });
   const resetPasswordMutation = useResetPasswordMutation();
 
-  // Password validation
+  // Comprehensive password validation
   const validatePassword = (password: string) => {
+    const errors = [];
+    
+    // Check length requirements
     if (password.length < 8) {
-      return 'Password must be at least 8 characters';
+      errors.push('minimum 8 characters');
     }
+    if (password.length > 50) {
+      errors.push('maximum 50 characters');
+    }
+    
+    // Check character requirements
     const hasLowercase = /[a-z]/.test(password);
     const hasUppercase = /[A-Z]/.test(password);
     const hasDigit = /\d/.test(password);
-    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(password);
     
-    if (!hasLowercase || !hasUppercase || !hasDigit || !hasSpecialChar) {
-      return 'Password must include at least one lowercase, one uppercase, one digit, and one special character';
+    if (!hasLowercase) {
+      errors.push('one lowercase letter');
     }
+    if (!hasUppercase) {
+      errors.push('one uppercase letter');
+    }
+    if (!hasDigit) {
+      errors.push('one digit');
+    }
+    if (!hasSpecialChar) {
+      errors.push('one special character');
+    }
+    
+    if (errors.length > 0) {
+      return `Password must include at least ${errors.join(', ')}`;
+    }
+    
     return '';
   };
 
@@ -88,7 +110,7 @@ export function NewPasswordScreen({ onPasswordReset, email, resetToken }: NewPas
         });
         
         setShowSuccessModal(true);
-        
+      
       } catch (error: any) {
         console.error('Reset password error:', error);
         console.error('Error response:', error.response?.data);
@@ -121,7 +143,14 @@ export function NewPasswordScreen({ onPasswordReset, email, resetToken }: NewPas
     }
   };
 
-  const isFormValid = password && confirmPassword && password === confirmPassword && password.length >= 8 && !validatePassword(password) && !resetPasswordMutation.isPending && resetToken;
+  const isFormValid = () => {
+    return password && 
+           confirmPassword && 
+           password === confirmPassword && 
+           !validatePassword(password) && 
+           !resetPasswordMutation.isPending && 
+           resetToken;
+  };
 
   return (
     <ImageBackground 
@@ -164,14 +193,17 @@ export function NewPasswordScreen({ onPasswordReset, email, resetToken }: NewPas
               value={password}
               onChangeText={(text) => {
                 setPassword(text);
-                if (errors.password) {
-                  setErrors(prev => ({ ...prev, password: '' }));
-                }
+                // Real-time validation
+                const passwordError = validatePassword(text);
+                setErrors(prev => ({ ...prev, password: passwordError }));
               }}
               secureTextEntry={!showPassword}
             />
             <Text className="absolute -top-3 left-3 px-1 text-sm font-medium text-gray-700">
-              Password
+              New Password *
+            </Text>
+            <Text className="text-xs text-gray-500 mt-1">
+              Must include: 8-50 characters, lowercase, uppercase, digit, special character
             </Text>
             <TouchableOpacity
               className="absolute right-3 top-4"
@@ -196,14 +228,17 @@ export function NewPasswordScreen({ onPasswordReset, email, resetToken }: NewPas
               value={confirmPassword}
               onChangeText={(text) => {
                 setConfirmPassword(text);
-                if (errors.confirmPassword) {
-                  setErrors(prev => ({ ...prev, confirmPassword: '' }));
+                // Real-time password match validation
+                let confirmError = '';
+                if (text && text !== password) {
+                  confirmError = 'Passwords do not match';
                 }
+                setErrors(prev => ({ ...prev, confirmPassword: confirmError }));
               }}
               secureTextEntry={!showConfirmPassword}
             />
             <Text className="absolute -top-3 left-3 px-1 text-sm font-medium text-gray-700">
-              Confirm Password
+              Confirm Password *
             </Text>
             <TouchableOpacity
               className="absolute right-3 top-4"
@@ -221,7 +256,7 @@ export function NewPasswordScreen({ onPasswordReset, email, resetToken }: NewPas
             <CarouselButton
               title={resetPasswordMutation.isPending ? "Resetting..." : "Submit"}
               onPress={handleSubmit}
-              disabled={!isFormValid}
+              disabled={!isFormValid()}
             />
           </View>
 

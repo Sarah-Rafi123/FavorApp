@@ -17,10 +17,11 @@ import Toast from 'react-native-toast-message';
 interface SignupOtpScreenProps {
   onBack: () => void;
   onVerifySuccess: () => void;
+  onBackToLogin: () => void;
   email: string;
 }
 
-export function SignupOtpScreen({ onBack, onVerifySuccess, email }: SignupOtpScreenProps) {
+export function SignupOtpScreen({ onBack, onVerifySuccess, onBackToLogin, email }: SignupOtpScreenProps) {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [timer, setTimer] = useState(300); // 5 minutes = 300 seconds
   const [canResend, setCanResend] = useState(false);
@@ -134,6 +135,14 @@ export function SignupOtpScreen({ onBack, onVerifySuccess, email }: SignupOtpScr
       setTimer(300); // Reset to 5 minutes
       setCanResend(false);
       setOtp(['', '', '', '', '', '']);
+      
+      // Show success message
+      Toast.show({
+        type: 'success',
+        text1: 'Code Resent',
+        text2: 'OTP code has been resent successfully'
+      });
+      
       // Reset timer
       const interval = setInterval(() => {
         setTimer((prev) => {
@@ -215,7 +224,7 @@ export function SignupOtpScreen({ onBack, onVerifySuccess, email }: SignupOtpScr
         </View>
 
         {/* Timer and Resend */}
-        <View className="items-center">
+        <View className="items-center mb-8">
           <Text className="text-2xl font-bold text-gray-800 mb-2">
             {formatTime(timer)}
           </Text>
@@ -229,15 +238,27 @@ export function SignupOtpScreen({ onBack, onVerifySuccess, email }: SignupOtpScr
           </View>
         </View>
 
+        {/* Back to Login */}
+        <View className="items-center">
+          <View className="flex-row items-center">
+            <Text className="text-gray-600">Already have an account? </Text>
+            <TouchableOpacity onPress={onBackToLogin}>
+              <Text className="font-medium text-[#44A27B]">
+                Back to Login
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
       </View>
 
       <SuccessModal
         visible={showSuccessModal}
         title="Success"
-        message="Your email verification process is complete."
+        message="Your email verification process is complete. You can now login with your credentials."
         onContinue={() => {
           setShowSuccessModal(false);
-          onVerifySuccess();
+          onBackToLogin();
         }}
       />
     </ImageBackground>

@@ -9,7 +9,7 @@
     "scheme": "favorapp",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/logo.png",
+      "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#71DFB1"
     },
@@ -29,7 +29,8 @@
       "icon": "./assets/logo_app_icon.png",
       "adaptiveIcon": {
         "foregroundImage": "./assets/logo_app_icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#71DFB1",
+        "monochromeImage": "./assets/logo_app_icon.png"
       },
       "package": "com.favor.app",
       "config": {

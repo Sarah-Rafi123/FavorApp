@@ -15,6 +15,7 @@ import { LockIcon } from '../../assets/icons';
 import { SuccessModal } from '../../components/overlays/SuccessModal';
 import { useResendOtpMutation, useVerifyResetOtpMutation } from '../../services/mutations/AuthMutations';
 import Toast from 'react-native-toast-message';
+import BackSvg from '../../assets/icons/Back';
 
 interface OtpVerificationScreenProps {
   onBack: () => void;
@@ -213,7 +214,7 @@ export function OtpVerificationScreen({ onBack, onVerifySuccess, email }: OtpVer
           onPress={onBack}
           className="w-10 h-10 rounded-full bg-green-500 items-center justify-center mb-8"
         >
-          <Text className="text-white text-lg font-bold">←</Text>
+         <BackSvg />
         </TouchableOpacity>
 
         {/* Lock Icon */}

@@ -492,7 +492,10 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
               </View>
 
               <View>
-                <View className="mb-6 relative">
+                <View className="mb-2">
+                  <Text className="text-sm font-medium text-gray-700 mb-2">
+                    First Name
+                  </Text>
                   <TextInput
                     value={profileData.firstName}
                     onChangeText={(text) => updateField('firstName', text)}
@@ -506,15 +509,15 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
                       height: 50
                     }}
                   />
-                  <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700 bg-[#FBFFF0]">
-                    Full Name
-                  </Text>
                   {errors.firstName ? (
                     <Text className="text-red-500 text-sm mt-1">{errors.firstName}</Text>
                   ) : null}
                 </View>
 
-                <View className="mb-6 relative">
+                <View className="mb-2">
+                  <Text className="text-sm font-medium text-gray-700 mb-2">
+                    Last Name
+                  </Text>
                   <TextInput
                     value={profileData.lastName}
                     onChangeText={(text) => updateField('lastName', text)}
@@ -528,15 +531,15 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
                       height: 50
                     }}
                   />
-                  <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700 bg-[#FBFFF0]">
-                    Last Name
-                  </Text>
                   {errors.lastName ? (
                     <Text className="text-red-500 text-sm mt-1">{errors.lastName}</Text>
                   ) : null}
                 </View>
 
-                <View className="mb-6 relative">
+                <View className="mb-2">
+                  <Text className="text-sm font-medium text-gray-700 mb-2">
+                    Date of Birth
+                  </Text>
                   <TouchableOpacity 
                     onPress={() => setShowCalendar(true)}
                     className="bg-transparent border border-gray-300 rounded-xl px-4 py-3 flex-row items-center justify-between" 
@@ -547,15 +550,15 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
                     </Text>
                     <CalendarSvg />
                   </TouchableOpacity>
-                  <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700 bg-[#FBFFF0]">
-                    Date of Birth
-                  </Text>
                   {errors.dateOfBirth ? (
                     <Text className="text-red-500 text-sm mt-1">{errors.dateOfBirth}</Text>
                   ) : null}
                 </View>
 
-                <View className="mb-6 relative">
+                <View className="mb-2">
+                  <Text className="text-sm font-medium text-gray-700 mb-2">
+                    Full Address
+                  </Text>
                   <TextInput
                     value={profileData.address}
                     onChangeText={(text) => updateField('address', text)}
@@ -569,15 +572,15 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
                       height: 50
                     }}
                   />
-                  <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700 bg-[#FBFFF0]">
-                    Full Address
-                  </Text>
                   {errors.address ? (
                     <Text className="text-red-500 text-sm mt-1">{errors.address}</Text>
                   ) : null}
                 </View>
 
-                <View className="mb-6 relative">
+                <View className="mb-2">
+                  <Text className="text-sm font-medium text-gray-700 mb-2">
+                    Phone Number (Call)
+                  </Text>
                   <View className="bg-transparent border border-gray-300 rounded-xl px-4 py-3 flex-row items-center justify-between" style={{ height: 56 }}>
                     <TextInput
                       value={profileData.phoneCall}
@@ -594,15 +597,15 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
                     />
                     <PhoneSvg />
                   </View>
-                  <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700 bg-[#FBFFF0]">
-                    Phone Number (Call)
-                  </Text>
                   {errors.phoneCall ? (
                     <Text className="text-red-500 text-sm mt-1">{errors.phoneCall}</Text>
                   ) : null}
                 </View>
 
-                <View className="mb-6 relative">
+                <View className="mb-2">
+                  <Text className="text-sm font-medium text-gray-700 mb-2">
+                    Phone Number (Text)
+                  </Text>
                   <View className="bg-transparent border border-gray-300 rounded-xl px-4 py-3 flex-row items-center justify-between" style={{ height: 56 }}>
                     <TextInput
                       value={profileData.phoneText}
@@ -619,9 +622,6 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
                     />
                     <ChatSvg />
                   </View>
-                  <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700 bg-[#FBFFF0]">
-                    Phone Number (Text)
-                  </Text>
                   {errors.phoneText ? (
                     <Text className="text-red-500 text-sm mt-1">{errors.phoneText}</Text>
                   ) : null}
