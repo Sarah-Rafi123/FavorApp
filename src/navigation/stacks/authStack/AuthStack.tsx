@@ -2,21 +2,14 @@ import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import { AuthScreen, ForgotPasswordScreen, OtpVerificationScreen, NewPasswordScreen, SignupOtpScreen, CreateProfileScreen, LocationPermissionScreen } from '../../../screens';
 import { AppRoutes } from '../../../types';
-
 const Stack = createStackNavigator<AppRoutes>();
 
-import useAuthStore from '../../../store/useAuthStore';
-
 export function AuthStack() {
-  const setUser = useAuthStore((state) => state.setUser);
 
   const handleLogin = () => {
-    // Set user state to trigger navigation to MainTabs
-    setUser({
-      id: '1',
-      firstName: 'John',
-      email: 'user@example.com',
-    });
+    // Login success is already handled in AuthScreen.tsx
+    // User data and tokens are already set by the successful API call
+    // Navigation will be handled automatically by the auth state change
   };
 
   return (
@@ -96,6 +89,7 @@ export function AuthStack() {
           <SignupOtpScreen 
             onBack={() => navigation.navigate('auth-screen')}
             onVerifySuccess={handleLogin}
+            onBackToLogin={() => navigation.navigate('auth-screen')}
             email={(route.params as any)?.email || 'user@example.com'}
           />
         )}
@@ -121,7 +115,7 @@ export function AuthStack() {
           headerShown: false,
         }}
       >
-        {({ navigation }) => (
+        {() => (
           <LocationPermissionScreen 
             onLocationGranted={handleLogin}
             onSkip={handleLogin}

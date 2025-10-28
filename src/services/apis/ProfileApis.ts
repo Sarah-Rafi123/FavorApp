@@ -436,33 +436,35 @@ export const removeProfileImage = async (): Promise<RemoveImageResponse> => {
   }
 };
 
-export const exportProfilePDF = async (params?: ExportProfileParams): Promise<Blob> => {
+export const exportProfilePDF = async (params?: ExportProfileParams): Promise<ExportProfileJSONResponse> => {
   try {
-    console.log(`🚀 Making Export Profile PDF API call to: /profile/export`);
+    console.log(`🚀 Making Export Profile Data API call to: /profile/export`);
     console.log('📤 Request Params:', JSON.stringify(params, null, 2));
     
-    // Build query parameters
+    // Build query parameters (same as Postman)
     const queryParams = new URLSearchParams();
     if (params?.start_date) queryParams.append('start_date', params.start_date);
     if (params?.end_date) queryParams.append('end_date', params.end_date);
     if (params?.debug) queryParams.append('debug', '1');
     
+    // Use the JSON endpoint since PDF is not supported
     const url = `/profile/export${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     
     const response = await axiosInstance.get(url, {
       headers: {
-        'Accept': 'application/pdf',
+        'Accept': 'application/json',
       },
-      responseType: 'blob', // Important for PDF download
     });
     
-    console.log('🎉 Export Profile PDF API Success!');
+    console.log('🎉 Export Profile Data API Success!');
     console.log('📊 Response Status:', response.status);
     console.log('📄 Response Type:', response.headers['content-type']);
+    console.log('📄 Export Data Retrieved:', JSON.stringify(response.data, null, 2));
     
     return response.data;
+    
   } catch (error: any) {
-    console.error('❌ Export Profile PDF API Error!');
+    console.error('❌ Export Profile Data API Error!');
     console.error('📄 Full API Error:', error);
     console.error('📊 Error Response Status:', error.response?.status);
     console.error('📄 Error Response Data:', error.response?.data);
@@ -471,7 +473,7 @@ export const exportProfilePDF = async (params?: ExportProfileParams): Promise<Bl
     if (error.response?.status === 401) {
       throw new Error('Session expired. Please log in again.');
     } else if (error.response?.status === 500) {
-      throw new Error('Failed to generate PDF. Please try again later.');
+      throw new Error('Failed to generate export data. Please try again later.');
     } else if (error.response?.data?.message) {
       throw new Error(error.response.data.message);
     } else {
@@ -485,7 +487,7 @@ export const exportProfileJSON = async (params?: ExportProfileParams): Promise<E
     console.log(`🚀 Making Export Profile JSON API call to: /profile/export`);
     console.log('📤 Request Params:', JSON.stringify(params, null, 2));
     
-    // Build query parameters
+    // Build query parameters (same as Postman)
     const queryParams = new URLSearchParams();
     if (params?.start_date) queryParams.append('start_date', params.start_date);
     if (params?.end_date) queryParams.append('end_date', params.end_date);
@@ -517,7 +519,7 @@ export const exportProfileJSON = async (params?: ExportProfileParams): Promise<E
       throw new Error('Failed to generate export data. Please try again later.');
     } else if (error.response?.data?.message) {
       throw new Error(error.response.data.message);
-    } else {
+    } else { 
       throw new Error('Failed to export profile. Please check your connection and try again.');
     }
   }

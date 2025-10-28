@@ -35,6 +35,7 @@ export default function Navigator() {
   const [appIsReady, setAppIsReady] = useState(false);
   const [showCustomSplash, setShowCustomSplash] = useState(false);
   const [carouselCompleted, setCarouselCompleted] = useState(false);
+  const [shouldShowSplashCarousel, setShouldShowSplashCarousel] = useState(true);
 
   useEffect(() => {
     const prepare = async () => {
@@ -51,17 +52,27 @@ export default function Navigator() {
     prepare();
   }, [initializeAuth]);
 
-  // Show custom splash after app is ready
+  // Determine if splash and carousel should be shown based on auth state
   useEffect(() => {
     if (appIsReady) {
-      setShowCustomSplash(true);
-      
-      // Show custom splash for 2 seconds then move to carousel
-      setTimeout(() => {
+      // If user is already logged in, skip splash and carousel
+      if (user && accessToken) {
+        console.log('✅ User logged in - skipping splash and carousel');
+        setShouldShowSplashCarousel(false);
         setShowCustomSplash(false);
-      }, 2000);
+        setCarouselCompleted(true);
+      } else {
+        console.log('❌ User not logged in - showing splash and carousel');
+        setShouldShowSplashCarousel(true);
+        setShowCustomSplash(true);
+        
+        // Show custom splash for 2 seconds then move to carousel
+        setTimeout(() => {
+          setShowCustomSplash(false);
+        }, 2000);
+      }
     }
-  }, [appIsReady]);
+  }, [appIsReady, user, accessToken]);
 
   // Debug auth state
   useEffect(() => {
@@ -69,8 +80,9 @@ export default function Navigator() {
     console.log('User:', !!user, user?.firstName);
     console.log('Access Token:', !!accessToken);
     console.log('App Ready:', appIsReady);
+    console.log('Should Show Splash/Carousel:', shouldShowSplashCarousel);
     console.log('Carousel Completed:', carouselCompleted);
-  }, [user, accessToken, appIsReady, carouselCompleted]);
+  }, [user, accessToken, appIsReady, shouldShowSplashCarousel, carouselCompleted]);
 
   // Cleanup when component unmounts
   useEffect(()=>{
@@ -79,13 +91,13 @@ export default function Navigator() {
     }
   }, []);
 
-  // Show custom splash screen for 2 seconds after expo splash
-  if (!appIsReady || showCustomSplash) {
+  // Show custom splash screen for 2 seconds after expo splash (only for non-logged-in users)
+  if (!appIsReady || (shouldShowSplashCarousel && showCustomSplash)) {
     return <CustomSplashScreen />;
   }
 
-  // Show carousel after custom splash screen but before main navigation
-  if (!carouselCompleted) {
+  // Show carousel after custom splash screen but before main navigation (only for non-logged-in users)
+  if (shouldShowSplashCarousel && !carouselCompleted) {
     return (
       <>
         <StatusBar barStyle={'light-content'} backgroundColor="transparent" translucent />

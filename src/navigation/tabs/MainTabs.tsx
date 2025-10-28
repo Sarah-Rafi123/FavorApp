@@ -48,13 +48,17 @@ function HomeStack() {
   );
 }
 
-// Provide Favor Stack that includes Ask Favor screen and Favor Details screen
+// Provide Favor Stack that includes Ask Favor screen, Favor Details screen, and Filter screen
 function ProvideFavorStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen 
         name="ProvideFavorMain" 
         component={ProvideFavorScreen}
+      />
+      <Stack.Screen 
+        name="FilterScreen" 
+        component={FilterScreen}
       />
       <Stack.Screen 
         name="AskFavorScreen" 
@@ -88,7 +92,7 @@ function CreateFavorStack() {
   );
 }
 
-// Settings Stack that includes Get Certified and Change Password screens
+// Settings Stack that includes Get Certified and  word screens
 function SettingsStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>

@@ -58,7 +58,7 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
     loadSavedCredentials();
   }, []);
 
-  // Auto-populate with most recent credentials when they're loaded
+  // Auto-populate with most recent credentials when they're loaded (only on component mount)
   useEffect(() => {
     if (savedCredentials.length > 0 && activeTab === 'signin' && !formData.email && !formData.password) {
       const mostRecent = savedCredentials[0]; // First item is most recent
@@ -70,7 +70,7 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
       }));
       console.log('🔄 Auto-populated credentials for:', mostRecent.email);
     }
-  }, [savedCredentials, activeTab]);
+  }, [savedCredentials]); // Removed activeTab dependency to prevent auto-fill when switching tabs
 
   // Utility functions for credential management
   const loadSavedCredentials = async () => {
@@ -216,17 +216,18 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
             // Double check storage worked
             const verifyToken = await AsyncStorage.getItem('auth_token');
             console.log('🔍 Verification: Token in AsyncStorage:', !!verifyToken);
+            
+            // Set user data AFTER tokens are stored
+            setUser({
+              id: response.data?.user?.id?.toString() || '1',
+              firstName: response.data?.user?.first_name || 'User',
+              email: formData.email,
+            });
+            console.log('✅ User data set successfully');
           } else {
             console.warn('⚠️ No token in login response');
             console.warn('⚠️ Available response keys:', Object.keys(response.data || {}));
           }
-          
-          // Set user data
-          setUser({
-            id: response.data?.user?.id?.toString() || '1',
-            firstName: response.data?.user?.first_name || 'User',
-            email: formData.email,
-          });
           
           // Setup Intent creation is now handled on-demand when user adds payment method
           
@@ -240,6 +241,9 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
             text1: 'Success',
             text2: 'Login successful!'
           });
+          
+          // Clear form data after successful login
+          clearFormData();
           
           onLogin();
         } catch (error: any) {
@@ -256,9 +260,28 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
           password: formData.password,
           termsAccepted: formData.agreeTerms,
         });
+        
+        // Clear form data after successful signup initiation
+        clearFormData();
+        
         onCreateProfile?.();
       }
     }
+  };
+
+  const clearFormData = () => {
+    setFormData({
+      email: '',
+      password: '',
+      confirmPassword: '',
+      rememberMe: false,
+      agreeTerms: false,
+    });
+    setErrors({
+      email: '',
+      password: '',
+      confirmPassword: '',
+    });
   };
 
   const updateFormData = (field: string, value: string | boolean) => {
@@ -346,7 +369,10 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
                 className={`flex-1 py-3 rounded-full ${
                   activeTab === 'signin' ? 'bg-green-500' : ''
                 }`}
-                onPress={() => setActiveTab('signin')}
+                onPress={() => {
+                  setActiveTab('signin');
+                  clearFormData();
+                }}
               >
                 <Text className={`text-center font-semibold ${
                   activeTab === 'signin' ? 'text-white' : 'text-gray-600'
@@ -358,7 +384,10 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
                 className={`flex-1 py-3 rounded-full ${
                   activeTab === 'signup' ? 'bg-green-500' : ''
                 }`}
-                onPress={() => setActiveTab('signup')}
+                onPress={() => {
+                  setActiveTab('signup');
+                  clearFormData();
+                }}
               >
                 <Text className={`text-center font-semibold ${
                   activeTab === 'signup' ? 'text-white' : 'text-gray-600'
@@ -478,7 +507,7 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
                     }}
                     onPress={() => setShowPassword(!showPassword)}
                   >
-                    <EyeSvg />
+                    <EyeSvg isVisible={showPassword} />
                   </TouchableOpacity>
                   {/* Error message */}
                   {errors.password ? (
@@ -521,7 +550,7 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
                       }}
                       onPress={() => setShowConfirmPassword(!showConfirmPassword)}
                     >
-                      <EyeSvg />
+                      <EyeSvg isVisible={showConfirmPassword} />
                     </TouchableOpacity>
                     {/* Error message */}
                     {errors.confirmPassword ? (
@@ -554,7 +583,7 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
               )}
 
               {/* Submit Button */}
-              <View className="mb-6">
+              <View className="mb-6 mt-8">
                 <CarouselButton
                   title={activeTab === 'signin' ? (loginMutation.isPending ? 'Logging in...' : 'Login') : 'Create Account'}
                   onPress={handleSubmit}

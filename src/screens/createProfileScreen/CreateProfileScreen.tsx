@@ -110,6 +110,26 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
     ageConsent: '',
   });
 
+  // Phone number formatting functions
+  const formatPhoneNumber = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    
+    if (numbers.length <= 3) {
+      return numbers;
+    } else if (numbers.length <= 6) {
+      return `(${numbers.slice(0, 3)}) ${numbers.slice(3)}`;
+    } else {
+      return `(${numbers.slice(0, 3)}) ${numbers.slice(3, 6)}-${numbers.slice(6, 10)}`;
+    }
+  };
+
+  const validatePhone = (phone: string) => {
+    if (!phone.trim()) return 'Phone number is required';
+    const phoneRegex = /^\(\d{3}\)\s\d{3}-\d{4}$/;
+    if (!phoneRegex.test(phone)) return 'Please use (XXX) XXX-XXXX format';
+    return '';
+  };
+
   const updateFormData = (field: string, value: string | boolean | string[] | Date) => {
     // Field-specific validations and character limits
     if (typeof value === 'string') {
@@ -121,12 +141,13 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
         }
       }
       
-      // Phone fields: no letters, min 9, max 20 characters
+      // Phone fields: format as (XXX) XXX-XXXX
       if ((field === 'phoneCall' || field === 'phoneText')) {
-        const hasLetters = /[a-zA-Z]/.test(value);
-        if (hasLetters || value.length > 20) {
+        const formattedPhone = formatPhoneNumber(value);
+        if (formattedPhone.length > 14) { // Max length for (XXX) XXX-XXXX
           return;
         }
+        value = formattedPhone;
       }
       
       // Years of experience: only numbers, 0-99
@@ -233,19 +254,15 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
       isValid = false;
     }
 
-    if (!formData.phoneCall.trim()) {
-      newErrors.phoneCall = 'Phone number (call) is required';
-      isValid = false;
-    } else if (formData.phoneCall.trim().length < 9) {
-      newErrors.phoneCall = 'Phone number (call) must be at least 9 digits';
+    const phoneCallError = validatePhone(formData.phoneCall);
+    if (phoneCallError) {
+      newErrors.phoneCall = phoneCallError;
       isValid = false;
     }
 
-    if (!formData.phoneText.trim()) {
-      newErrors.phoneText = 'Phone number (text) is required';
-      isValid = false;
-    } else if (formData.phoneText.trim().length < 9) {
-      newErrors.phoneText = 'Phone number (text) must be at least 9 digits';
+    const phoneTextError = validatePhone(formData.phoneText);
+    if (phoneTextError) {
+      newErrors.phoneText = phoneTextError;
       isValid = false;
     }
 
@@ -323,8 +340,8 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
         password_confirmation: registrationData.password,
         first_name: formData.firstName,
         last_name: formData.lastName,
-        phone_no_call: `${selectedCountryCall.dialCode}${formData.phoneCall}`,
-        phone_no_text: `${selectedCountryText.dialCode}${formData.phoneText}`,
+        phone_no_call: `${selectedCountryCall.dialCode}${formData.phoneCall.replace(/\D/g, '')}`,
+        phone_no_text: `${selectedCountryText.dialCode}${formData.phoneText.replace(/\D/g, '')}`,
         date_of_birth: formatDate(formData.dateOfBirth),
         years_of_experience: formData.yearsOfExperience || "0",
         about_me: formData.aboutMe || undefined,
@@ -393,8 +410,8 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
     const requiredFieldsComplete = formData.firstName.trim() && 
            formData.lastName.trim() && 
            formData.fullAddress.trim() && 
-           formData.phoneCall.trim().length >= 9 && 
-           formData.phoneText.trim().length >= 9 && 
+           validatePhone(formData.phoneCall) === '' && 
+           validatePhone(formData.phoneText) === '' && 
            formData.yearsOfExperience.trim() &&
            formData.aboutMe.trim().length >= 20 &&
            formData.ageConsent;
@@ -453,13 +470,14 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
             <View className="flex-1">
           
               {/* First Name */}
-              <View className="mb-4 relative">
+              <View className="mb-2">
+                <Text className="text-sm font-medium text-gray-700 mb-2">
+                  First Name *
+                </Text>
                 <TextInput
-                 style={{ 
+                  style={{ 
                     backgroundColor: 'transparent',
- 
                     lineHeight: 20,
-
                   }}
                   className="px-4 py-4 rounded-xl border border-gray-200 text-base bg-transparent"
                   placeholder="Enter your first name"
@@ -467,32 +485,27 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
                   value={formData.firstName}
                   onChangeText={(text) => updateFormData('firstName', text)}
                 />
-                <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700" >
-                  First Name *
-                </Text>
                 {errors.firstName ? (
                   <Text className="text-red-500 text-sm mt-1">{errors.firstName}</Text>
                 ) : null}
               </View>
 
               {/* Last Name */}
-              <View className="mb-4 relative">
+              <View className="mb-2">
+                <Text className="text-sm font-medium text-gray-700 mb-2">
+                  Last Name *
+                </Text>
                 <TextInput
                   className="px-4 py-4 rounded-xl border border-gray-200 text-base bg-transparent"
-                   style={{ 
+                  style={{ 
                     backgroundColor: 'transparent',
-
                     lineHeight: 20,
-                 
                   }}
                   placeholder="Enter your last name"
                   placeholderTextColor="#9CA3AF"
                   value={formData.lastName}
                   onChangeText={(text) => updateFormData('lastName', text)}
                 />
-                <Text className="absolute -top-3 left-3 px-1 text-sm font-medium text-gray-700">
-                  Last Name *
-                </Text>
                 {errors.lastName ? (
                   <Text className="text-red-500 text-sm mt-1">{errors.lastName}</Text>
                 ) : null}
@@ -500,31 +513,36 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
 
 
               {/* Date of Birth */}
-              <View className="mb-4 relative">
-                <TouchableOpacity
-                  className="px-4 py-4 rounded-xl border border-gray-200 pr-12 bg-transparent"
-                  onPress={() => setShowDatePicker(true)}
-                >
-                  <Text className="text-base text-gray-800">
-                    {formatDateDisplay(formData.dateOfBirth)}
-                  </Text>
-                </TouchableOpacity>
-                <Text className="absolute -top-3 left-3 px-1 text-sm font-medium text-gray-700">
+              <View className="mb-2">
+                <Text className="text-sm font-medium text-gray-700 mb-2">
                   Date of Birth *
                 </Text>
-                <TouchableOpacity 
-                  className="absolute right-3 top-4"
-                  onPress={() => setShowDatePicker(true)}
-                >
-                  <CalenderSvg />
-                </TouchableOpacity>
+                <View className="relative">
+                  <TouchableOpacity
+                    className="px-4 py-4 rounded-xl border border-gray-200 pr-12 bg-transparent"
+                    onPress={() => setShowDatePicker(true)}
+                  >
+                    <Text className="text-base text-gray-800">
+                      {formatDateDisplay(formData.dateOfBirth)}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    className="absolute right-3 top-4"
+                    onPress={() => setShowDatePicker(true)}
+                  >
+                    <CalenderSvg />
+                  </TouchableOpacity>
+                </View>
                 {errors.dateOfBirth ? (
                   <Text className="text-red-500 text-sm mt-1">{errors.dateOfBirth}</Text>
                 ) : null}
               </View>
 
               {/* Full Address */}
-              <View className="mb-4 relative">
+              <View className="mb-2">
+                <Text className="text-sm font-medium text-gray-700 mb-2">
+                  Full Address *
+                </Text>
                 <TextInput
                   className="px-4 py-4 rounded-xl border border-gray-200 text-base bg-transparent"
                   placeholder="Enter your address"
@@ -533,9 +551,6 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
                   onChangeText={(text) => updateFormData('fullAddress', text)}     
                   multiline
                 />
-                <Text className="absolute -top-3 left-3 px-1 text-sm font-medium text-gray-700">
-                  Full Address *
-                </Text>
                 <Text className="text-xs text-gray-500 mt-1">
                   Example: 123 Main St, New York, NY
                 </Text>
@@ -546,10 +561,13 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
 
 
               {/* Phone Number (Call) */}
-              <View className="mb-4 relative">
+              <View className="mb-2">
+                <Text className="text-sm font-medium text-gray-700 mb-2">
+                  Phone Number (Call) *
+                </Text>
                 <View className="flex-row">
                   <TouchableOpacity 
-                    className="px-3 py-4 rounded-l-xl border border-r-0 buser border-gray-200 bg-transparent flex-row items-center"
+                    className="px-3 py-4 rounded-l-xl border border-r-0 border-gray-200 bg-transparent flex-row items-center"
                     onPress={() => setShowCountryCallDropdown(true)}
                   >
                     <Text className="text-lg mr-2">{selectedCountryCall.flag}</Text>
@@ -558,18 +576,16 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
                   </TouchableOpacity>
                   <TextInput
                     className="flex-1 px-4 py-4 rounded-r-xl border border-gray-200 text-base bg-transparent"
-                    placeholder="Phone number"
+                    placeholder="(XXX) XXX-XXXX"
                     placeholderTextColor="#9CA3AF"
                     value={formData.phoneCall}
                     onChangeText={(text) => updateFormData('phoneCall', text)}
                     keyboardType="phone-pad"
+                    maxLength={14}
                   />
                 </View>
-                <Text className="absolute -top-3 left-3 px-1 text-sm font-medium text-gray-700">
-                  Phone Number (Call) *
-                </Text>
                 <Text className="text-xs text-gray-500 mt-1">
-                  Minimum 9 digits required
+                  Format: (XXX) XXX-XXXX
                 </Text>
                 {errors.phoneCall ? (
                   <Text className="text-red-500 text-sm mt-1">{errors.phoneCall}</Text>
@@ -577,7 +593,10 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
               </View>
 
               {/* Phone Number (Text) */}
-              <View className="mb-4 relative">
+              <View className="mb-2">
+                <Text className="text-sm font-medium text-gray-700 mb-2">
+                  Phone Number (Text) *
+                </Text>
                 <View className="flex-row">
                   <TouchableOpacity 
                     className="px-3 py-4 rounded-l-xl border border-r-0 border-gray-200 bg-transparent flex-row items-center"
@@ -589,66 +608,51 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
                   </TouchableOpacity>
                   <TextInput
                     className="flex-1 px-4 py-4 rounded-r-xl border border-gray-200 text-base bg-transparent"
-                    placeholder="Text number"
+                    placeholder="(XXX) XXX-XXXX"
                     placeholderTextColor="#9CA3AF"
                     value={formData.phoneText}
                     onChangeText={(text) => updateFormData('phoneText', text)}
                     keyboardType="phone-pad"
+                    maxLength={14}
                   />
                 </View>
-                <Text className="absolute -top-3 left-3 px-1 text-sm font-medium text-gray-700">
-                  Phone Number (Text) *
-                </Text>
                 <Text className="text-xs text-gray-500 mt-1">
-                  Minimum 9 digits required
+                  Format: (XXX) XXX-XXXX
                 </Text>
                 {errors.phoneText ? (
                   <Text className="text-red-500 text-sm mt-1">{errors.phoneText}</Text>
                 ) : null}
               </View>
 
-              {/* Years of Experience */}
-              <View className="mb-4 relative">
-                <TextInput
-                  className="px-4 py-4 rounded-xl border border-gray-200 text-base bg-transparent"
-                  placeholder="Enter years of experience (0-99)"
-                  placeholderTextColor="#9CA3AF"
-                  value={formData.yearsOfExperience}
-                  onChangeText={(text) => updateFormData('yearsOfExperience', text)}
-                  keyboardType="numeric"
-                />
-                <Text className="absolute -top-3 left-3 px-1 text-sm font-medium text-gray-700">
-                  Years of Experience *
-                </Text>
-                {errors.yearsOfExperience ? (
-                  <Text className="text-red-500 text-sm mt-1">{errors.yearsOfExperience}</Text>
-                ) : null}
-              </View>
-
               {/* Skills */}
-              <View className="mb-4 relative">
-                <TouchableOpacity 
-                  className="px-4 py-4 rounded-xl border border-gray-200 pr-12 bg-transparent"
-                  onPress={() => setShowSkillsDropdown(true)}
-                >
-                  <Text className={`text-base ${formData.skills.length > 0 ? 'text-gray-800' : 'text-gray-400'}`}>
-                    {formData.skills.length > 0 ? `${formData.skills.length} skill(s) selected` : 'Select skills'}
-                  </Text>
-                </TouchableOpacity>
-                <Text className="absolute -top-3 left-3 px-1 text-sm font-medium text-gray-700">
+              <View className="mb-2">
+                <Text className="text-sm font-medium text-gray-700 mb-2">
                   Skills
                 </Text>
-                <TouchableOpacity 
-                  className="absolute right-3 top-4"
-                  onPress={() => setShowSkillsDropdown(true)}
-                >
-                  <Text className="text-gray-500">▼</Text>
-                </TouchableOpacity>
+                <View className="relative">
+                  <TouchableOpacity 
+                    className="px-4 py-4 rounded-xl border border-gray-200 pr-12 bg-transparent"
+                    onPress={() => setShowSkillsDropdown(true)}
+                  >
+                    <Text className={`text-base ${formData.skills.length > 0 ? 'text-gray-800' : 'text-gray-400'}`}>
+                      {formData.skills.length > 0 ? `${formData.skills.length} skill(s) selected` : 'Select skills'}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    className="absolute right-3 top-4"
+                    onPress={() => setShowSkillsDropdown(true)}
+                  >
+                    <Text className="text-gray-500">▼</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
 
               {/* Other Skills */}
               {formData.skills.includes('Others') && (
-                <View className="mb-4 relative">
+                <View className="mb-2">
+                  <Text className="text-sm font-medium text-gray-700 mb-2">
+                    Other Skills
+                  </Text>
                   <TextInput
                     className="px-4 py-4 rounded-xl border border-gray-200 text-base bg-transparent"
                     placeholder="Describe your other skills..."
@@ -658,17 +662,35 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
                     multiline
                     maxLength={150}
                   />
-                  <Text className="absolute -top-3 left-3 px-1 text-sm font-medium text-gray-700">
-                    Other Skills
-                  </Text>
                   <Text className="text-xs text-gray-500 mt-1 text-right">
                     {formData.otherSkills.length}/150 characters
                   </Text>
                 </View>
               )}
 
+              {/* Years of Experience */}
+              <View className="mb-2">
+                <Text className="text-sm font-medium text-gray-700 mb-2">
+                  Years of Experience *
+                </Text>
+                <TextInput
+                  className="px-4 py-4 rounded-xl border border-gray-200 text-base bg-transparent"
+                  placeholder="Enter years of experience (0-99)"
+                  placeholderTextColor="#9CA3AF"
+                  value={formData.yearsOfExperience}
+                  onChangeText={(text) => updateFormData('yearsOfExperience', text)}
+                  keyboardType="numeric"
+                />
+                {errors.yearsOfExperience ? (
+                  <Text className="text-red-500 text-sm mt-1">{errors.yearsOfExperience}</Text>
+                ) : null}
+              </View>
+
               {/* About Me */}
-              <View className="mb-4 relative">
+              <View className="mb-2">
+                <Text className="text-sm font-medium text-gray-700 mb-2">
+                  About Me *
+                </Text>
                 <TextInput
                   className="px-4 py-4 rounded-xl border border-gray-200 text-base bg-transparent h-24"
                   placeholder="Tell us about yourself..."
@@ -679,9 +701,6 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
                   textAlignVertical="top"
                   maxLength={1000}
                 />
-                <Text className="absolute -top-3 left-3 px-1 text-sm font-medium text-gray-700">
-                  About Me *
-                </Text>
                 <View className="flex-row justify-between items-center mt-1">
                   <Text className="text-xs text-gray-500">
                     Minimum 20 characters required
@@ -696,24 +715,26 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
               </View>
 
               {/* Where did you hear about us */}
-              <View className="mb-8 relative">
-                <TouchableOpacity 
-                  className="px-4 py-4 rounded-xl border border-gray-200 pr-12 bg-transparent"
-                  onPress={() => setShowHeardAboutDropdown(true)}
-                >
-                  <Text className={`text-base ${formData.heardAboutUs ? 'text-gray-800' : 'text-gray-400'}`}>
-                    {formData.heardAboutUs || 'Select an option'}
-                  </Text>
-                </TouchableOpacity>
-                <Text className="absolute -top-3 left-3 px-1 text-sm font-medium text-gray-700">
+              <View className="mb-8">
+                <Text className="text-sm font-medium text-gray-700 mb-2">
                   Where did you hear about us?
                 </Text>
-                <TouchableOpacity 
-                  className="absolute right-3 top-4"
-                  onPress={() => setShowHeardAboutDropdown(true)}
-                >
-                  <Text className="text-gray-500">▼</Text>
-                </TouchableOpacity>
+                <View className="relative">
+                  <TouchableOpacity 
+                    className="px-4 py-4 rounded-xl border border-gray-200 pr-12 bg-transparent"
+                    onPress={() => setShowHeardAboutDropdown(true)}
+                  >
+                    <Text className={`text-base ${formData.heardAboutUs ? 'text-gray-800' : 'text-gray-400'}`}>
+                      {formData.heardAboutUs || 'Select an option'}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    className="absolute right-3 top-4"
+                    onPress={() => setShowHeardAboutDropdown(true)}
+                  >
+                    <Text className="text-gray-500">▼</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
 
               {/* Age Consent Checkbox */}
@@ -819,20 +840,20 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
           activeOpacity={1}
           onPress={() => setShowSkillsDropdown(false)}
         >
-          <View className="bg-white rounded-xl max-w-sm mx-auto w-full p-6">
+          <View className="bg-[#F4F5DE] rounded-xl max-w-sm mx-auto w-full p-6">
             <View className="mb-4 flex-row justify-between items-center">
-              <Text className="text-lg font-semibold text-gray-800">
+              <Text className="text-xl font-semibold text-gray-800">
                 Select Skills
               </Text>
               <TouchableOpacity onPress={() => setShowSkillsDropdown(false)}>
-                <Text className="text-blue-500 font-semibold">Done</Text>
+                <Text className="text-green-500 font-semibold">Done</Text>
               </TouchableOpacity>
             </View>
-            <View className="bg-gray-50 rounded-lg p-4">
+            <View className="space-y-5">
               {skillsOptions.map((skill, index) => (
                 <TouchableOpacity
                   key={index}
-                  className="flex-row items-center mb-3 last:mb-0"
+                  className="flex-row items-center"
                   onPress={() => handleSkillToggle(skill)}
                 >
                   <View className={`w-5 h-5 rounded border-2 mr-3 ${
@@ -842,7 +863,7 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
                       <Text className="text-white text-xs text-center leading-4">✓</Text>
                     )}
                   </View>
-                  <Text className="text-base text-gray-800">{skill}</Text>
+                  <Text className="text-lg text-gray-800">{skill}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -862,7 +883,7 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
           activeOpacity={1}
           onPress={() => setShowHeardAboutDropdown(false)}
         >
-          <View className="bg-white rounded-xl max-w-sm mx-auto w-full">
+          <View className="bg-[#F4F5DE] rounded-xl max-w-sm mx-auto w-full">
             <View className="py-4 border-b border-gray-200">
               <Text className="text-lg font-semibold text-gray-800 text-center">
                 Where did you hear about us?

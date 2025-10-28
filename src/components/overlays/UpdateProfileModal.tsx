@@ -7,6 +7,8 @@ import ImagePicker from 'react-native-image-crop-picker';
 import CalendarSvg from '../../assets/icons/Calender';
 import PhoneSvg from '../../assets/icons/Phone';
 import ChatSvg from '../../assets/icons/Chat';
+import { CountryCode } from '../../types';
+import { countryData } from '../../utils/countryData';
 
 interface UpdateProfileModalProps {
   visible: boolean;
@@ -49,14 +51,47 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
     return `${month}/${day}/${year}`;
   };
 
-  // Helper function to format phone number for form display
-  const formatPhoneForForm = (phone: string) => {
+  // Helper function to format phone number for form display (without country code)
+  const formatPhoneForForm = (phone: string, selectedCountry: CountryCode) => {
     if (!phone) return '';
     const numbers = phone.replace(/\D/g, '');
-    if (numbers.length === 10) {
-      return `(${numbers.slice(0, 3)}) ${numbers.slice(3, 6)}-${numbers.slice(6)}`;
+    
+    // Remove the selected country's dial code from the number
+    const dialCodeDigits = selectedCountry.dialCode.replace(/\D/g, '');
+    let cleanNumber = numbers;
+    
+    if (numbers.startsWith(dialCodeDigits)) {
+      cleanNumber = numbers.slice(dialCodeDigits.length);
     }
-    return phone;
+    
+    // Format the clean number (without country code)
+    if (cleanNumber.length === 10) {
+      return `(${cleanNumber.slice(0, 3)}) ${cleanNumber.slice(3, 6)}-${cleanNumber.slice(6)}`;
+    } else if (cleanNumber.length > 0) {
+      // For partial numbers, format as much as possible
+      if (cleanNumber.length <= 3) {
+        return `(${cleanNumber}`;
+      } else if (cleanNumber.length <= 6) {
+        return `(${cleanNumber.slice(0, 3)}) ${cleanNumber.slice(3)}`;
+      } else {
+        return `(${cleanNumber.slice(0, 3)}) ${cleanNumber.slice(3, 6)}-${cleanNumber.slice(6)}`;
+      }
+    }
+    
+    return cleanNumber;
+  };
+
+  // Format phone number input (only digits, formatted as (XXX) XXX-XXXX)
+  const formatPhoneNumber = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    
+    if (numbers.length <= 3) {
+      return numbers;
+    } else if (numbers.length <= 6) {
+      return `(${numbers.slice(0, 3)}) ${numbers.slice(3)}`;
+    } else {
+      return `(${numbers.slice(0, 3)}) ${numbers.slice(3, 6)}-${numbers.slice(6, 10)}`;
+    }
   };
 
   const [profileData, setProfileData] = useState<ProfileData>({
@@ -84,8 +119,8 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
         middleName: profile.middle_name || '',
         dateOfBirth: formatDateForForm(profile.date_of_birth) || '',
         address: profile.address?.full_address || '',
-        phoneCall: formatPhoneForForm(profile.phone_no_call) || '',
-        phoneText: formatPhoneForForm(profile.phone_no_text) || '',
+        phoneCall: formatPhoneForForm(profile.phone_no_call || '', getCountryFromPhone(profile.phone_no_call || '')) || '',
+        phoneText: formatPhoneForForm(profile.phone_no_text || '', getCountryFromPhone(profile.phone_no_text || '')) || '',
         yearsOfExperience: profile.years_of_experience || 0,
         aboutMe: profile.about_me || '',
         skills: profile.skills || [],
@@ -106,12 +141,17 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
     phoneText: '',
     yearsOfExperience: '',
     aboutMe: '',
-    city: '',
-    state: '',
   });
 
   const [showCalendar, setShowCalendar] = useState(false);
   const [showYearPicker, setShowYearPicker] = useState(false);
+  const [showSkillsDropdown, setShowSkillsDropdown] = useState(false);
+  const [showCountryCallDropdown, setShowCountryCallDropdown] = useState(false);
+  const [showCountryTextDropdown, setShowCountryTextDropdown] = useState(false);
+  
+  // Country selection state
+  const [selectedCountryCall, setSelectedCountryCall] = useState<CountryCode>(countryData[0]);
+  const [selectedCountryText, setSelectedCountryText] = useState<CountryCode>(countryData[0]);
 
   // Generate calendar dates
   const generateCalendarDates = (year: number, month: number) => {
@@ -133,6 +173,19 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
 
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+
+  // Initialize calendar to show user's birth date when opened
+  React.useEffect(() => {
+    if (showCalendar && profileData.dateOfBirth) {
+      const birthDate = new Date(profileData.dateOfBirth);
+      if (!isNaN(birthDate.getTime())) {
+        setCurrentMonth(birthDate.getMonth());
+        setCurrentYear(birthDate.getFullYear());
+        setSelectedDate(birthDate);
+      }
+    }
+  }, [showCalendar, profileData.dateOfBirth]);
 
   const monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -141,16 +194,98 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
 
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+  // Skills options
+  const skillsOptions = [
+    'Manual Labor',
+    'General Repairs',
+    'Mechanical',
+    'Technical',
+    'Dump Runs/Removals',
+    'Pets',
+    'Furniture Assembly',
+    'Handyman',
+    'Contractor',
+    'Volunteer',
+    'Others'
+  ];
+
+  const handleSkillToggle = (skill: string) => {
+    const currentSkills = profileData.skills || [];
+    const updatedSkills = currentSkills.includes(skill)
+      ? currentSkills.filter(s => s !== skill)
+      : [...currentSkills, skill];
+    updateField('skills', updatedSkills);
+  };
+
+  // Get country from phone number
+  const getCountryFromPhone = (phone: string): CountryCode => {
+    if (!phone) return countryData[0]; // Default to US
+    
+    const numbers = phone.replace(/\D/g, '');
+    
+    // Find matching country by dial code
+    for (const country of countryData) {
+      const dialCodeDigits = country.dialCode.replace(/\D/g, '');
+      if (numbers.startsWith(dialCodeDigits)) {
+        return country;
+      }
+    }
+    
+    return countryData[0]; // Default to US if no match
+  };
+
+  // Initialize countries from existing phone numbers
+  React.useEffect(() => {
+    if (profile?.phone_no_call) {
+      const countryCall = getCountryFromPhone(profile.phone_no_call);
+      setSelectedCountryCall(countryCall);
+    }
+    if (profile?.phone_no_text) {
+      const countryText = getCountryFromPhone(profile.phone_no_text);
+      setSelectedCountryText(countryText);
+    }
+  }, [profile?.phone_no_call, profile?.phone_no_text]);
+
   const calendarDates = generateCalendarDates(currentYear, currentMonth);
 
-  const handleDateSelect = (date: Date) => {
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
-    const year = date.getFullYear();
-    const formattedDate = `${month}/${day}/${year}`;
+  const isDateValidAge = (date: Date) => {
+    const today = new Date();
+    const age = today.getFullYear() - date.getFullYear();
+    const monthDiff = today.getMonth() - date.getMonth();
+    const dayDiff = today.getDate() - date.getDate();
     
-    updateField('dateOfBirth', formattedDate);
-    setShowCalendar(false);
+    const actualAge = monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? age - 1 : age;
+    return actualAge >= 18;
+  };
+
+  const handleDateSelect = (date: Date) => {
+    // Only allow selection of dates that result in 18+ age
+    if (isDateValidAge(date)) {
+      setSelectedDate(date);
+      // Clear any existing date error when valid date is selected
+      setErrors(prev => ({ ...prev, dateOfBirth: '' }));
+    }
+  };
+
+  const handleDateUpdate = () => {
+    if (selectedDate) {
+      const month = (selectedDate.getMonth() + 1).toString().padStart(2, '0');
+      const day = selectedDate.getDate().toString().padStart(2, '0');
+      const year = selectedDate.getFullYear();
+      const formattedDate = `${month}/${day}/${year}`;
+      
+      // Validate age before updating
+      const validationError = validateDate(formattedDate);
+      if (validationError) {
+        // Show error but don't close modal
+        setErrors(prev => ({ ...prev, dateOfBirth: validationError }));
+        return;
+      }
+      
+      updateField('dateOfBirth', formattedDate);
+      setShowCalendar(false);
+      setSelectedDate(null);
+    }
   };
 
   const navigateMonth = (direction: 'prev' | 'next') => {
@@ -209,12 +344,28 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
     if (inputDate > today) return 'Date cannot be in the future';
     if (year < 1900) return 'Please enter a valid year';
     
+    // Age validation - user must be 18 or older
+    const age = today.getFullYear() - inputDate.getFullYear();
+    const monthDiff = today.getMonth() - inputDate.getMonth();
+    const dayDiff = today.getDate() - inputDate.getDate();
+    
+    const actualAge = monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? age - 1 : age;
+    
+    if (actualAge < 18) return 'You must be 18 years or above';
+    
     return '';
   };
 
   const validateAddress = (address: string) => {
     if (!address.trim()) return 'Address is required';
     if (address.trim().length < 10) return 'Please enter a complete address';
+    
+    // Check if address likely contains city and state
+    const commaCount = (address.match(/,/g) || []).length;
+    if (commaCount < 1) {
+      return 'Please include city and state (e.g., "123 Main St, New York, NY")';
+    }
+    
     return '';
   };
 
@@ -223,19 +374,6 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
     const phoneRegex = /^\(\d{3}\)\s\d{3}-\d{4}$/;
     if (!phoneRegex.test(phone)) return 'Please use (XXX) XXX-XXXX format';
     return '';
-  };
-
-  // Format phone number as user types
-  const formatPhoneNumber = (value: string) => {
-    const numbers = value.replace(/\D/g, '');
-    
-    if (numbers.length <= 3) {
-      return numbers;
-    } else if (numbers.length <= 6) {
-      return `(${numbers.slice(0, 3)}) ${numbers.slice(3)}`;
-    } else {
-      return `(${numbers.slice(0, 3)}) ${numbers.slice(3, 6)}-${numbers.slice(6, 10)}`;
-    }
   };
 
   const validateExperience = (experience: string) => {
@@ -260,8 +398,6 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
       phoneText: validatePhone(profileData.phoneText),
       yearsOfExperience: validateExperience(profileData.yearsOfExperience?.toString() || '0'),
       aboutMe: validateAboutMe(profileData.aboutMe || ''),
-      city: !profileData.city?.trim() ? 'City is required' : '',
-      state: !profileData.state?.trim() ? 'State is required' : '',
     };
 
     setErrors(newErrors);
@@ -270,23 +406,88 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
 
   const handleUpdate = () => {
     if (validateForm()) {
+      // Convert date from MM/DD/YYYY to YYYY-MM-DD format
+      const convertDateFormat = (dateStr: string) => {
+        if (!dateStr) return '';
+        const [month, day, year] = dateStr.split('/');
+        return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+      };
+
+      // Extract city and state from address (improved extraction)
+      const extractCityState = (address: string) => {
+        if (!address) return { city: '', state: '' };
+        
+        const parts = address.split(',').map(part => part.trim());
+        
+        // Try different address formats:
+        // "123 Main St, New York, NY 10001"
+        // "456 Oak Avenue, Brooklyn, NY"
+        // "789 Pine St, Los Angeles, CA"
+        
+        let city = '';
+        let state = '';
+        
+        if (parts.length >= 3) {
+          // Format: Street, City, State ZIP
+          city = parts[parts.length - 2];
+          const lastPart = parts[parts.length - 1];
+          state = lastPart.split(' ')[0]; // Extract state before ZIP code
+        } else if (parts.length === 2) {
+          // Format: Street, City State or City, State
+          const lastPart = parts[1];
+          const words = lastPart.split(' ');
+          if (words.length >= 2) {
+            // Assume last word is state, rest is city
+            state = words[words.length - 1];
+            city = words.slice(0, -1).join(' ');
+          } else {
+            city = lastPart;
+          }
+        } else {
+          // Single part - try to extract from end
+          const words = address.split(' ');
+          if (words.length >= 2) {
+            state = words[words.length - 1];
+            city = words[words.length - 2];
+          }
+        }
+        
+        // Fallback values if extraction fails
+        if (!city && !state) {
+          city = 'Not specified';
+          state = 'Not specified';
+        }
+        
+        return { city: city.trim(), state: state.trim() };
+      };
+
+      const { city, state } = extractCityState(profileData.address || '');
+
+      // Ensure city and state are not empty (API requirement)
+      if (!city || !state) {
+        setErrors(prev => ({ 
+          ...prev, 
+          address: 'Address must include city and state (e.g., "123 Main St, New York, NY")' 
+        }));
+        return;
+      }
+
       // Transform form data to API format
       const updateData = {
         profile: {
           first_name: profileData.firstName,
           last_name: profileData.lastName,
-          middle_name: profileData.middleName || '',
-          phone_no_call: profileData.phoneCall.replace(/\D/g, ''),
-          phone_no_text: profileData.phoneText.replace(/\D/g, ''),
+          phone_no_call: `${selectedCountryCall.dialCode}${profileData.phoneCall.replace(/\D/g, '')}`,
+          phone_no_text: `${selectedCountryText.dialCode}${profileData.phoneText.replace(/\D/g, '')}`,
+          date_of_birth: convertDateFormat(profileData.dateOfBirth),
           years_of_experience: profileData.yearsOfExperience || 0,
           about_me: profileData.aboutMe || '',
           skills: profileData.skills || [],
           other_skills: profileData.otherSkills || '',
-          remove_image: "0" as "0" | "1",
           address_attributes: {
-            full_address: profileData.address,
-            city: profileData.city || '',
-            state: profileData.state || '',
+            full_address: profileData.address || '',
+            city: city,
+            state: state,
           },
         },
       };
@@ -581,21 +782,31 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
                   <Text className="text-sm font-medium text-gray-700 mb-2">
                     Phone Number (Call)
                   </Text>
-                  <View className="bg-transparent border border-gray-300 rounded-xl px-4 py-3 flex-row items-center justify-between" style={{ height: 56 }}>
-                    <TextInput
-                      value={profileData.phoneCall}
-                      onChangeText={(text) => updateField('phoneCall', text)}
-                      className="flex-1 text-black"
-                      placeholder={formatPhoneForForm(profile?.phone_no_call || '') || "(629) 555-0129"}
-                      placeholderTextColor="#9CA3AF"
-                      keyboardType="phone-pad"
-                      style={{ 
-                        backgroundColor: 'transparent',
-                        fontSize: 16,
-                        lineHeight: 22
-                      }}
-                    />
-                    <PhoneSvg />
+                  <View className="flex-row">
+                    <TouchableOpacity 
+                      className="px-3 py-4 rounded-l-xl border border-r-0 border-gray-300 bg-transparent flex-row items-center"
+                      onPress={() => setShowCountryCallDropdown(true)}
+                    >
+                      <Text className="text-lg mr-2">{selectedCountryCall.flag}</Text>
+                      <Text className="text-base text-gray-800">{selectedCountryCall.dialCode}</Text>
+                      <Text className="text-gray-500 ml-1">▼</Text>
+                    </TouchableOpacity>
+                    <View className="flex-1 bg-transparent border border-gray-300 rounded-r-xl px-4 py-3 flex-row items-center justify-between" style={{ height: 56 }}>
+                      <TextInput
+                        value={profileData.phoneCall}
+                        onChangeText={(text) => updateField('phoneCall', text)}
+                        className="flex-1 text-black"
+                        placeholder={formatPhoneForForm(profile?.phone_no_call || '', selectedCountryCall) || "(629) 555-0129"}
+                        placeholderTextColor="#9CA3AF"
+                        keyboardType="phone-pad"
+                        style={{ 
+                          backgroundColor: 'transparent',
+                          fontSize: 16,
+                          lineHeight: 22
+                        }}
+                      />
+                      <PhoneSvg />
+                    </View>
                   </View>
                   {errors.phoneCall ? (
                     <Text className="text-red-500 text-sm mt-1">{errors.phoneCall}</Text>
@@ -606,27 +817,137 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
                   <Text className="text-sm font-medium text-gray-700 mb-2">
                     Phone Number (Text)
                   </Text>
-                  <View className="bg-transparent border border-gray-300 rounded-xl px-4 py-3 flex-row items-center justify-between" style={{ height: 56 }}>
-                    <TextInput
-                      value={profileData.phoneText}
-                      onChangeText={(text) => updateField('phoneText', text)}
-                      className="flex-1 text-black"
-                      placeholder={formatPhoneForForm(profile?.phone_no_text || '') || "(406) 555-0120"}
-                      placeholderTextColor="#9CA3AF"
-                      keyboardType="phone-pad"
-                      style={{ 
-                        backgroundColor: 'transparent',
-                        fontSize: 16,
-                        lineHeight: 22
-                      }}
-                    />
-                    <ChatSvg />
+                  <View className="flex-row">
+                    <TouchableOpacity 
+                      className="px-3 py-4 rounded-l-xl border border-r-0 border-gray-300 bg-transparent flex-row items-center"
+                      onPress={() => setShowCountryTextDropdown(true)}
+                    >
+                      <Text className="text-lg mr-2">{selectedCountryText.flag}</Text>
+                      <Text className="text-base text-gray-800">{selectedCountryText.dialCode}</Text>
+                      <Text className="text-gray-500 ml-1">▼</Text>
+                    </TouchableOpacity>
+                    <View className="flex-1 bg-transparent border border-gray-300 rounded-r-xl px-4 py-3 flex-row items-center justify-between" style={{ height: 56 }}>
+                      <TextInput
+                        value={profileData.phoneText}
+                        onChangeText={(text) => updateField('phoneText', text)}
+                        className="flex-1 text-black"
+                        placeholder={formatPhoneForForm(profile?.phone_no_text || '', selectedCountryText) || "(406) 555-0120"}
+                        placeholderTextColor="#9CA3AF"
+                        keyboardType="phone-pad"
+                        style={{ 
+                          backgroundColor: 'transparent',
+                          fontSize: 16,
+                          lineHeight: 22
+                        }}
+                      />
+                      <ChatSvg />
+                    </View>
                   </View>
                   {errors.phoneText ? (
                     <Text className="text-red-500 text-sm mt-1">{errors.phoneText}</Text>
                   ) : null}
                 </View>
               </View>
+
+              {/* Years of Experience */}
+              <View className="mb-2">
+                <Text className="text-sm font-medium text-gray-700 mb-2">
+                  Years of Experience
+                </Text>
+                <TextInput
+                  value={profileData.yearsOfExperience?.toString() || ''}
+                  onChangeText={(text) => updateField('yearsOfExperience', parseInt(text) || 0)}
+                  className="bg-transparent border border-gray-300 rounded-xl px-4 py-3 text-black"
+                  placeholder="Enter years of experience"
+                  placeholderTextColor="#9CA3AF"
+                  keyboardType="numeric"
+                  maxLength={2}
+                  style={{ 
+                    backgroundColor: 'transparent',
+                    fontSize: 16,
+                    lineHeight: 20,
+                    height: 50
+                  }}
+                />
+                {errors.yearsOfExperience ? (
+                  <Text className="text-red-500 text-sm mt-1">{errors.yearsOfExperience}</Text>
+                ) : null}
+              </View>
+
+              {/* About Me */}
+              <View className="mb-2">
+                <Text className="text-sm font-medium text-gray-700 mb-2">
+                  About Me
+                </Text>
+                <TextInput
+                  value={profileData.aboutMe || ''}
+                  onChangeText={(text) => updateField('aboutMe', text)}
+                  className="bg-transparent border border-gray-300 rounded-xl px-4 py-3 text-black"
+                  placeholder="Tell us about yourself..."
+                  placeholderTextColor="#9CA3AF"
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                  maxLength={1000}
+                  style={{ 
+                    backgroundColor: 'transparent',
+                    fontSize: 16,
+                    lineHeight: 20,
+                    minHeight: 100
+                  }}
+                />
+                <Text className="text-xs text-gray-500 mt-1 text-right">
+                  {(profileData.aboutMe || '').length}/1000 characters
+                </Text>
+                {errors.aboutMe ? (
+                  <Text className="text-red-500 text-sm mt-1">{errors.aboutMe}</Text>
+                ) : null}
+              </View>
+
+              {/* Skills */}
+              <View className="mb-2">
+                <Text className="text-sm font-medium text-gray-700 mb-2">
+                  Skills (You can add multiple skills)
+                </Text>
+                <TouchableOpacity 
+                  className="bg-transparent border border-gray-300 rounded-xl px-4 py-3 min-h-[50px] justify-center"
+                  onPress={() => setShowSkillsDropdown(true)}
+                >
+                  <Text className="text-black" style={{ fontSize: 16, lineHeight: 20 }}>
+                    {profileData.skills && profileData.skills.length > 0 
+                      ? profileData.skills.join(', ')
+                      : 'Select skills'
+                    }
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Other Skills */}
+              {profileData.skills?.includes('Others') && (
+                <View className="mb-2">
+                  <Text className="text-sm font-medium text-gray-700 mb-2">
+                    Other Skills
+                  </Text>
+                  <TextInput
+                    value={profileData.otherSkills || ''}
+                    onChangeText={(text) => updateField('otherSkills', text)}
+                    className="bg-transparent border border-gray-300 rounded-xl px-4 py-3 text-black"
+                    placeholder="Describe your other skills..."
+                    placeholderTextColor="#9CA3AF"
+                    maxLength={150}
+                    style={{ 
+                      backgroundColor: 'transparent',
+                      fontSize: 16,
+                      lineHeight: 20,
+                      height: 50
+                    }}
+                  />
+                  <Text className="text-xs text-gray-500 mt-1 text-right">
+                    {(profileData.otherSkills || '').length}/150 characters
+                  </Text>
+                </View>
+              )}
+
 
               <View className="mt-6">
                 <CustomButton
@@ -696,27 +1017,30 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
             <View className="flex-wrap flex-row mb-4">
               {calendarDates.map((date, index) => {
                 const isCurrentMonth = date.getMonth() === currentMonth;
+                const isValidAge = isDateValidAge(date);
                 const isToday = 
                   date.getDate() === new Date().getDate() &&
                   date.getMonth() === new Date().getMonth() &&
                   date.getFullYear() === new Date().getFullYear();
-                const isSelected = profileData.dateOfBirth === 
-                  `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
+                const isSelected = selectedDate && 
+                  date.getDate() === selectedDate.getDate() &&
+                  date.getMonth() === selectedDate.getMonth() &&
+                  date.getFullYear() === selectedDate.getFullYear();
                 
                 return (
                   <TouchableOpacity
                     key={index}
                     onPress={() => handleDateSelect(date)}
                     className={`w-[14.28%] h-12 items-center justify-center m-0.5 rounded-xl ${
-                      isSelected 
-                        ? 'bg-[#71DFB1]' 
-                        : isToday 
-                          ? 'bg-[#71DFB1]/20 border-2 border-[#71DFB1]' 
-                          : isCurrentMonth 
-                            ? 'bg-white hover:bg-gray-50' 
-                            : ''
+                      !isCurrentMonth || !isValidAge
+                        ? 'bg-gray-100'
+                        : isSelected 
+                          ? 'bg-[#71DFB1]' 
+                          : isToday 
+                            ? 'bg-[#71DFB1]/20 border-2 border-[#71DFB1]' 
+                            : 'bg-white hover:bg-gray-50'
                     }`}
-                    disabled={!isCurrentMonth}
+                    disabled={!isCurrentMonth || !isValidAge}
                     style={{
                       shadowColor: isSelected || isToday ? '#71DFB1' : '#000',
                       shadowOffset: { width: 0, height: 1 },
@@ -726,7 +1050,7 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
                     }}
                   >
                     <Text className={`text-sm font-medium ${
-                      !isCurrentMonth 
+                      !isCurrentMonth || !isValidAge
                         ? 'text-gray-300' 
                         : isSelected 
                           ? 'text-white font-bold' 
@@ -750,13 +1074,15 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
                 <Text className="text-gray-700 text-center font-semibold">Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={() => {
-                  const today = new Date();
-                  handleDateSelect(today);
-                }}
-                className="flex-1 bg-[#71DFB1] rounded-full py-3"
+                onPress={handleDateUpdate}
+                className={`flex-1 rounded-full py-3 ${
+                  selectedDate ? 'bg-[#71DFB1]' : 'bg-gray-300'
+                }`}
+                disabled={!selectedDate}
               >
-                <Text className="text-white text-center font-semibold">Today</Text>
+                <Text className={`text-center font-semibold ${
+                  selectedDate ? 'text-white' : 'text-gray-500'
+                }`}>Update</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -822,6 +1148,125 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
           </TouchableOpacity>
         </Modal>
       )}
+
+      {/* Skills Dropdown Modal */}
+      <Modal
+        visible={showSkillsDropdown}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowSkillsDropdown(false)}
+      >
+        <TouchableOpacity 
+          className="flex-1 bg-black/50 justify-center px-6"
+          activeOpacity={1}
+          onPress={() => setShowSkillsDropdown(false)}
+        >
+          <View className="bg-[#FBFFF0] rounded-3xl max-w-sm mx-auto w-full p-6 border-4 border-[#71DFB1]">
+            <View className="mb-4 flex-row justify-between items-center">
+              <Text className="text-xl font-semibold text-black">
+                Select Skills
+              </Text>
+              <TouchableOpacity onPress={() => setShowSkillsDropdown(false)}>
+                <Text className="text-[#71DFB1] font-semibold">Done</Text>
+              </TouchableOpacity>
+            </View>
+            <View className="space-y-3">
+              {skillsOptions.map((skill, index) => (
+                <TouchableOpacity
+                  key={index}
+                  className="flex-row items-center py-2"
+                  onPress={() => handleSkillToggle(skill)}
+                >
+                  <View className={`w-5 h-5 rounded border-2 mr-3 ${
+                    profileData.skills?.includes(skill) ? 'bg-[#71DFB1] border-[#71DFB1]' : 'bg-white border-gray-300'
+                  }`}>
+                    {profileData.skills?.includes(skill) && (
+                      <Text className="text-white text-xs text-center leading-4">✓</Text>
+                    )}
+                  </View>
+                  <Text className="text-base text-black">{skill}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Country Call Dropdown Modal */}
+      <Modal
+        visible={showCountryCallDropdown}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowCountryCallDropdown(false)}
+      >
+        <TouchableOpacity 
+          className="flex-1 bg-black/50 justify-center px-6"
+          activeOpacity={1}
+          onPress={() => setShowCountryCallDropdown(false)}
+        >
+          <View className="bg-[#FBFFF0] rounded-3xl max-w-sm mx-auto w-full max-h-96 border-4 border-[#71DFB1]">
+            <View className="py-4 border-b border-gray-200">
+              <Text className="text-lg font-semibold text-black text-center">
+                Select Country (Call)
+              </Text>
+            </View>
+            <ScrollView className="max-h-80" showsVerticalScrollIndicator={false}>
+              {countryData.map((country, index) => (
+                <TouchableOpacity
+                  key={index}
+                  className="py-3 px-6 border-b border-gray-100 flex-row items-center"
+                  onPress={() => {
+                    setSelectedCountryCall(country);
+                    setShowCountryCallDropdown(false);
+                  }}
+                >
+                  <Text className="text-lg mr-3">{country.flag}</Text>
+                  <Text className="flex-1 text-base text-black">{country.name}</Text>
+                  <Text className="text-base text-gray-600">{country.dialCode}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Country Text Dropdown Modal */}
+      <Modal
+        visible={showCountryTextDropdown}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowCountryTextDropdown(false)}
+      >
+        <TouchableOpacity 
+          className="flex-1 bg-black/50 justify-center px-6"
+          activeOpacity={1}
+          onPress={() => setShowCountryTextDropdown(false)}
+        >
+          <View className="bg-[#FBFFF0] rounded-3xl max-w-sm mx-auto w-full max-h-96 border-4 border-[#71DFB1]">
+            <View className="py-4 border-b border-gray-200">
+              <Text className="text-lg font-semibold text-black text-center">
+                Select Country (Text)
+              </Text>
+            </View>
+            <ScrollView className="max-h-80" showsVerticalScrollIndicator={false}>
+              {countryData.map((country, index) => (
+                <TouchableOpacity
+                  key={index}
+                  className="py-3 px-6 border-b border-gray-100 flex-row items-center"
+                  onPress={() => {
+                    setSelectedCountryText(country);
+                    setShowCountryTextDropdown(false);
+                  }}
+                >
+                  <Text className="text-lg mr-3">{country.flag}</Text>
+                  <Text className="flex-1 text-base text-black">{country.name}</Text>
+                  <Text className="text-base text-gray-600">{country.dialCode}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </Modal>
   );
 }

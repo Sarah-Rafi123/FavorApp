@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -6,12 +6,10 @@ import {
   StatusBar,
   ScrollView,
   TextInput,
-  Alert,
   ImageBackground,
-  Keyboard,
 } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
 import BackSvg from '../../assets/icons/Back';
+import EyeSvg from '../../assets/icons/Eye';
 import { useUpdatePasswordMutation } from '../../services/mutations/ProfileMutations';
 
 interface ChangePasswordScreenProps {
@@ -19,49 +17,21 @@ interface ChangePasswordScreenProps {
 }
 
 
-const EyeIcon = () => (
-  <Svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-    <Path
-      d="M1 10S4 4 10 4S19 10 19 10S16 16 10 16S1 10 1 10Z"
-      stroke="#9CA3AF"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <Path
-      d="M10 13C11.6569 13 13 11.6569 13 10C13 8.34315 11.6569 7 10 7C8.34315 7 7 8.34315 7 10C7 11.6569 8.34315 13 10 13Z"
-      stroke="#9CA3AF"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </Svg>
-);
-
-const EyeOffIcon = () => (
-  <Svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-    <Path
-      d="M14.12 14.12C13.0802 15.0556 11.5752 15.5929 10.0108 15.5929C8.4464 15.5929 6.94138 15.0556 5.90156 14.12M9.9 5.9C11.1148 5.87463 12.2812 6.34334 13.12 7.2M2.45 2.45L17.55 17.55M1 10S4 4 10 4C11.7 4 13.1 4.6 14.2 5.4"
-      stroke="#9CA3AF"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </Svg>
-);
-
 
 export function ChangePasswordScreen({ navigation }: ChangePasswordScreenProps) {
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [formData, setFormData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [errors, setErrors] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  
-  const currentPasswordRef = useRef<TextInput>(null);
-  const newPasswordRef = useRef<TextInput>(null);
-  const confirmPasswordRef = useRef<TextInput>(null);
   
   const updatePasswordMutation = useUpdatePasswordMutation();
 
@@ -72,44 +42,67 @@ export function ChangePasswordScreen({ navigation }: ChangePasswordScreenProps) 
     const hasNumbers = /\d/.test(password);
     const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(password);
     
+    // Full regex validation as specified
+    const fullRegexValid = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W]).{8,}$/.test(password) && password.length <= 50;
+    
     return {
       hasMinLength,
       hasUpperCase,
       hasLowerCase,
       hasNumbers,
       hasSpecialChar,
-      isValid: hasMinLength && hasUpperCase && hasLowerCase && hasNumbers && hasSpecialChar
+      isValid: hasMinLength && hasUpperCase && hasLowerCase && hasNumbers && hasSpecialChar && fullRegexValid
     };
   };
 
-  const passwordValidation = useMemo(() => validatePassword(newPassword), [newPassword]);
+  const passwordValidation = useMemo(() => validatePassword(formData.newPassword), [formData.newPassword]);
+
+  const updateFormData = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    
+    // Clear errors when user starts typing
+    if (errors[field as keyof typeof errors]) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
+    }
+  };
 
   const handleChangePassword = async () => {
-    if (!currentPassword.trim()) {
-      Alert.alert('Error', 'Please enter your current password');
-      return;
+    // Reset errors
+    const newErrors = {
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: '',
+    };
+
+    // Validation
+    if (!formData.currentPassword.trim()) {
+      newErrors.currentPassword = 'Current password is required';
     }
 
     if (!passwordValidation.isValid) {
-      Alert.alert('Error', 'Please ensure your new password meets all requirements');
-      return;
+      newErrors.newPassword = 'Password must include at least one lowercase letter, one uppercase letter, one digit, and one special character';
     }
 
-    if (newPassword !== confirmPassword) {
-      Alert.alert('Error', 'New password and confirm password do not match');
-      return;
+    if (formData.newPassword !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
     }
 
-    if (currentPassword === newPassword) {
-      Alert.alert('Error', 'New password must be different from current password');
+    if (formData.currentPassword === formData.newPassword) {
+      newErrors.newPassword = 'New password must be different from current password';
+    }
+
+    setErrors(newErrors);
+
+    // If there are errors, don't proceed
+    if (Object.values(newErrors).some(error => error !== '')) {
       return;
     }
 
     const passwordData = {
       profile: {
-        current_password: currentPassword,
-        password: newPassword,
-        password_confirmation: confirmPassword,
+        current_password: formData.currentPassword,
+        password: formData.newPassword,
+        password_confirmation: formData.confirmPassword,
       },
     };
 
@@ -120,73 +113,6 @@ export function ChangePasswordScreen({ navigation }: ChangePasswordScreenProps) 
     });
   };
 
-  const PasswordInput = ({ 
-    label, 
-    value, 
-    onChangeText, 
-    show, 
-    onToggleShow, 
-    placeholder,
-    inputRef
-  }: {
-    label: string;
-    value: string;
-    onChangeText: (text: string) => void;
-    show: boolean;
-    onToggleShow: () => void;
-    placeholder: string;
-    inputRef?: React.RefObject<TextInput>;
-  }) => (
-    <View style={{ marginBottom: 24 }}>
-      <Text style={{ fontSize: 16, fontWeight: '500', color: 'black', marginBottom: 8 }}>
-        {label}
-      </Text>
-      <View style={{ position: 'relative' }}>
-        <TextInput
-          ref={inputRef}
-          style={{ 
-            backgroundColor: '#FBFFF0',
-            borderWidth: 1,
-            borderColor: '#D0D5DD',
-            borderRadius: 12,
-            paddingHorizontal: 16,
-            paddingRight: 48,
-            paddingVertical: 16,
-            fontSize: 16,
-            color: 'black'
-          }}
-          placeholder={placeholder}
-          placeholderTextColor="#9CA3AF"
-          value={value}
-          onChangeText={onChangeText}
-          secureTextEntry={!show}
-          autoCapitalize="none"
-          autoCorrect={false}
-          keyboardType="default"
-          textContentType="password"
-          blurOnSubmit={false}
-          returnKeyType="next"
-        />
-        <TouchableOpacity
-          style={{ 
-            position: 'absolute', 
-            right: 16, 
-            top: 0, 
-            bottom: 0, 
-            justifyContent: 'center',
-            alignItems: 'center',
-            width: 24,
-            height: 24,
-            marginTop: 16
-          }}
-          onPress={onToggleShow}
-          activeOpacity={0.7}
-        >
-          {show ? <EyeOffIcon /> : <EyeIcon />}
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
 
 
   return (
@@ -219,35 +145,155 @@ export function ChangePasswordScreen({ navigation }: ChangePasswordScreenProps) 
       >
         <View className="px-6 pt-6">
 
-          <PasswordInput
-            label="Old Password"
-            value={currentPassword}
-            onChangeText={setCurrentPassword}
-            show={showCurrentPassword}
-            onToggleShow={() => setShowCurrentPassword(!showCurrentPassword)}
-            placeholder="••••••••••"
-            inputRef={currentPasswordRef}
-          />
+          {/* Current Password Field */}
+          <View className="mb-4">
+            <Text className="text-sm font-medium text-gray-700 mb-2">
+              Current Password
+            </Text>
+            <View className="relative">
+              <TextInput
+                className={`px-4 py-3 rounded-xl border pr-12 text-base bg-transparent ${
+                  errors.currentPassword ? 'border-red-500' : 'border-gray-200'
+                }`}
+                style={{ 
+                  backgroundColor: 'transparent',
+                  fontSize: 16,
+                  lineHeight: 22,
+                  height: 56
+                }}
+                placeholder="Enter your current password"
+                placeholderTextColor="#9CA3AF"
+                value={formData.currentPassword}
+                onChangeText={(text) => updateFormData('currentPassword', text)}
+                secureTextEntry={!showCurrentPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              <TouchableOpacity
+                className="absolute right-3"
+                style={{
+                  top: 56 / 2 - 12,
+                  height: 24,
+                  width: 24,
+                  justifyContent: 'center',
+                  alignItems: 'center'
+                }}
+                onPress={() => setShowCurrentPassword(!showCurrentPassword)}
+              >
+                <EyeSvg isVisible={showCurrentPassword} />
+              </TouchableOpacity>
+            </View>
+            {errors.currentPassword ? (
+              <Text className="text-red-500 text-sm mt-1">{errors.currentPassword}</Text>
+            ) : null}
+          </View>
 
-          <PasswordInput
-            label="New Password"
-            value={newPassword}
-            onChangeText={setNewPassword}
-            show={showNewPassword}
-            onToggleShow={() => setShowNewPassword(!showNewPassword)}
-            placeholder="••••••••••"
-            inputRef={newPasswordRef}
-          />
+          {/* New Password Field */}
+          <View className="mb-4">
+            <Text className="text-sm font-medium text-gray-700 mb-2">
+              New Password
+            </Text>
+            <View className="relative">
+              <TextInput
+                className={`px-4 py-3 rounded-xl border pr-12 text-base bg-transparent ${
+                  errors.newPassword ? 'border-red-500' : 'border-gray-200'
+                }`}
+                style={{ 
+                  backgroundColor: 'transparent',
+                  fontSize: 16,
+                  lineHeight: 22,
+                  height: 56
+                }}
+                placeholder="Enter your new password"
+                placeholderTextColor="#9CA3AF"
+                value={formData.newPassword}
+                onChangeText={(text) => updateFormData('newPassword', text)}
+                secureTextEntry={!showNewPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              <TouchableOpacity
+                className="absolute right-3"
+                style={{
+                  top: 56 / 2 - 12,
+                  height: 24,
+                  width: 24,
+                  justifyContent: 'center',
+                  alignItems: 'center'
+                }}
+                onPress={() => setShowNewPassword(!showNewPassword)}
+              >
+                <EyeSvg isVisible={showNewPassword} />
+              </TouchableOpacity>
+            </View>
+            {errors.newPassword ? (
+              <Text className="text-red-500 text-sm mt-1">{errors.newPassword}</Text>
+            ) : null}
+          </View>
 
-          <PasswordInput
-            label="Confirm Password"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            show={showConfirmPassword}
-            onToggleShow={() => setShowConfirmPassword(!showConfirmPassword)}
-            placeholder="••••••••••"
-            inputRef={confirmPasswordRef}
-          />
+          {/* Confirm Password Field */}
+          <View className="mb-4">
+            <Text className="text-sm font-medium text-gray-700 mb-2">
+              Confirm Password
+            </Text>
+            <View className="relative">
+              <TextInput
+                className={`px-4 py-3 rounded-xl border pr-12 text-base bg-transparent ${
+                  errors.confirmPassword ? 'border-red-500' : 'border-gray-200'
+                }`}
+                style={{ 
+                  backgroundColor: 'transparent',
+                  fontSize: 16,
+                  lineHeight: 22,
+                  height: 56
+                }}
+                placeholder="Confirm your new password"
+                placeholderTextColor="#9CA3AF"
+                value={formData.confirmPassword}
+                onChangeText={(text) => updateFormData('confirmPassword', text)}
+                secureTextEntry={!showConfirmPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              <TouchableOpacity
+                className="absolute right-3"
+                style={{
+                  top: 56 / 2 - 12,
+                  height: 24,
+                  width: 24,
+                  justifyContent: 'center',
+                  alignItems: 'center'
+                }}
+                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+              >
+                <EyeSvg isVisible={showConfirmPassword} />
+              </TouchableOpacity>
+            </View>
+            {errors.confirmPassword ? (
+              <Text className="text-red-500 text-sm mt-1">{errors.confirmPassword}</Text>
+            ) : null}
+          </View>
+
+          {/* Password Validation Errors */}
+          {formData.newPassword.length > 0 && !passwordValidation.isValid && (
+            <View className="mt-3 ">
+              {!passwordValidation.hasMinLength && (
+                <Text className="text-red-500 text-sm mb-1">• Password must be 8-50 characters</Text>
+              )}
+              {!passwordValidation.hasLowerCase && (
+                <Text className="text-red-500 text-sm mb-1">• Password must include at least one lowercase letter</Text>
+              )}
+              {!passwordValidation.hasUpperCase && (
+                <Text className="text-red-500 text-sm mb-1">• Password must include at least one uppercase letter</Text>
+              )}
+              {!passwordValidation.hasNumbers && (
+                <Text className="text-red-500 text-sm mb-1">• Password must include at least one digit</Text>
+              )}
+              {!passwordValidation.hasSpecialChar && (
+                <Text className="text-red-500 text-sm mb-1">• Password must include at least one special character</Text>
+              )}
+            </View>
+          )}
 
           {/* Change Password Button */}
           <View className="mt-12">

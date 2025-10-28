@@ -6,10 +6,8 @@ import {
   StatusBar,
   ScrollView,
   TextInput,
-  Alert,
   ImageBackground,
 } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
 import BackSvg from '../../assets/icons/Back';
 import { useSubmitSupportRequest } from '../../services/mutations/SupportMutations';
 
@@ -19,60 +17,78 @@ interface HelpSupportScreenProps {
 
 
 export function HelpSupportScreen({ navigation }: HelpSupportScreenProps) {
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [subject, setSubject] = useState('');
-  const [description, setDescription] = useState('');
+  const [formData, setFormData] = useState({
+    fullName: '',
+    email: '',
+    subject: '',
+    description: '',
+  });
+  const [errors, setErrors] = useState({
+    fullName: '',
+    email: '',
+    subject: '',
+    description: '',
+  });
   
   // Support API mutation
   const submitSupportRequestMutation = useSubmitSupportRequest();
 
-  const handleSubmit = async () => {
-    // Validation according to API requirements
-    if (!fullName.trim()) {
-      Alert.alert('Error', 'Full name is required');
-      return;
-    }
+  const updateFormData = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
     
-    if (fullName.trim().length > 50) {
-      Alert.alert('Error', 'Full name must be 50 characters or less');
-      return;
+    // Clear errors when user starts typing
+    if (errors[field as keyof typeof errors]) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
     }
+  };
 
-    if (!email.trim()) {
-      Alert.alert('Error', 'Email is required');
-      return;
-    }
-    
-    if (email.trim().length > 50) {
-      Alert.alert('Error', 'Email must be 50 characters or less');
-      return;
-    }
-
-    // Email validation using API pattern
+  const validateEmail = (email: string) => {
     const emailRegex = /^[\w+\-.]+@[a-z\d\-]+(\.[a-z\d\-]+)*\.[a-z]+$/i;
-    if (!emailRegex.test(email.trim())) {
-      Alert.alert('Error', 'Please enter a valid email address');
-      return;
+    return emailRegex.test(email.trim());
+  };
+
+  const handleSubmit = async () => {
+    // Reset errors
+    const newErrors = {
+      fullName: '',
+      email: '',
+      subject: '',
+      description: '',
+    };
+
+    // Validation
+    if (!formData.fullName.trim()) {
+      newErrors.fullName = 'Full name is required';
+    } else if (formData.fullName.trim().length > 50) {
+      newErrors.fullName = 'Full name must be 50 characters or less';
     }
 
-    if (!subject.trim()) {
-      Alert.alert('Error', 'Subject is required');
-      return;
-    }
-    
-    if (subject.trim().length > 50) {
-      Alert.alert('Error', 'Subject must be 50 characters or less');
-      return;
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!validateEmail(formData.email)) {
+      newErrors.email = 'Please enter a valid email address';
+    } else if (formData.email.trim().length > 50) {
+      newErrors.email = 'Email must be 50 characters or less';
     }
 
-    if (!description.trim()) {
-      Alert.alert('Error', 'Description is required');
-      return;
+    if (!formData.subject.trim()) {
+      newErrors.subject = 'Subject is required';
+    } else if (formData.subject.trim().length > 50) {
+      newErrors.subject = 'Subject must be 50 characters or less';
     }
-    
-    if (description.trim().length > 200) {
-      Alert.alert('Error', 'Description must be 200 characters or less');
+
+    if (!formData.description.trim()) {
+      newErrors.description = 'Description is required';
+    } else if (formData.description.trim().length < 20) {
+      newErrors.description = 'Description must be at least 20 characters';
+    } else if (formData.description.trim().length > 200) {
+      newErrors.description = 'Description must be 200 characters or less';
+    }
+
+    setErrors(newErrors);
+
+    // If there are errors, don't proceed
+    if (Object.values(newErrors).some(error => error !== '')) {
       return;
     }
 
@@ -80,20 +96,22 @@ export function HelpSupportScreen({ navigation }: HelpSupportScreenProps) {
       console.log('📝 Submitting support request...');
       
       await submitSupportRequestMutation.mutateAsync({
-        full_name: fullName.trim(),
-        email: email.trim(),
-        subject: subject.trim(),
-        description: description.trim(),
+        full_name: formData.fullName.trim(),
+        email: formData.email.trim(),
+        subject: formData.subject.trim(),
+        description: formData.description.trim(),
       });
       
       // Success is handled by the mutation's onSuccess callback
       console.log('✅ Support request submitted successfully');
       
       // Clear form and navigate back on success
-      setFullName('');
-      setEmail('');
-      setSubject('');
-      setDescription('');
+      setFormData({
+        fullName: '',
+        email: '',
+        subject: '',
+        description: '',
+      });
       navigation?.goBack();
       
     } catch (error: any) {
@@ -131,9 +149,14 @@ export function HelpSupportScreen({ navigation }: HelpSupportScreenProps) {
         <View className="px-6 pt-6">
           
           {/* Full Name */}
-          <View className="mb-6 relative">
+          <View className="mb-4">
+            <Text className="text-sm font-medium text-gray-700 mb-2">
+              Full Name
+            </Text>
             <TextInput
-              className="px-4 py-3 rounded-xl border border-gray-200 text-base bg-transparent"
+              className={`px-4 py-3 rounded-xl border text-base bg-transparent ${
+                errors.fullName ? 'border-red-500' : 'border-gray-200'
+              }`}
               style={{ 
                 backgroundColor: 'transparent',
                 fontSize: 16,
@@ -142,20 +165,25 @@ export function HelpSupportScreen({ navigation }: HelpSupportScreenProps) {
               }}
               placeholder="Enter your full name"
               placeholderTextColor="#9CA3AF"
-              value={fullName}
-              onChangeText={setFullName}
+              value={formData.fullName}
+              onChangeText={(text) => updateFormData('fullName', text)}
               autoCapitalize="words"
               maxLength={50}
             />
-            <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700">
-              Full Name ({fullName.length}/50)
-            </Text>
+            {errors.fullName ? (
+              <Text className="text-red-500 text-sm mt-1">{errors.fullName}</Text>
+            ) : null}
           </View>
 
           {/* Email */}
-          <View className="mb-6 relative">
+          <View className="mb-4">
+            <Text className="text-sm font-medium text-gray-700 mb-2">
+              Email
+            </Text>
             <TextInput
-              className="px-4 py-3 rounded-xl border border-gray-200 text-base bg-transparent"
+              className={`px-4 py-3 rounded-xl border text-base bg-transparent ${
+                errors.email ? 'border-red-500' : 'border-gray-200'
+              }`}
               style={{ 
                 backgroundColor: 'transparent',
                 fontSize: 16,
@@ -164,21 +192,26 @@ export function HelpSupportScreen({ navigation }: HelpSupportScreenProps) {
               }}
               placeholder="Enter your email address"
               placeholderTextColor="#9CA3AF"
-              value={email}
-              onChangeText={setEmail}
+              value={formData.email}
+              onChangeText={(text) => updateFormData('email', text)}
               keyboardType="email-address"
               autoCapitalize="none"
               maxLength={50}
             />
-            <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700">
-              Email ({email.length}/50)
-            </Text>
+            {errors.email ? (
+              <Text className="text-red-500 text-sm mt-1">{errors.email}</Text>
+            ) : null}
           </View>
 
           {/* Subject */}
-          <View className="mb-6 relative">
-            <TextInput
-              className="px-4 py-3 rounded-xl border border-gray-200 text-base bg-transparent"
+          <View className="mb-4">
+            <Text className="text-sm font-medium text-gray-700 mb-2">
+              Subject
+            </Text>
+            <TextInput 
+              className={`px-4 py-3 rounded-xl border text-base bg-transparent ${
+                errors.subject ? 'border-red-500' : 'border-gray-200'
+              }`}
               style={{ 
                 backgroundColor: 'transparent',
                 fontSize: 16,
@@ -187,37 +220,60 @@ export function HelpSupportScreen({ navigation }: HelpSupportScreenProps) {
               }}
               placeholder="Brief subject of your inquiry"
               placeholderTextColor="#9CA3AF"
-              value={subject}
-              onChangeText={setSubject}
+              value={formData.subject}
+              onChangeText={(text) => updateFormData('subject', text)}
               maxLength={50}
             />
-            <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700">
-              Subject ({subject.length}/50)
-            </Text>
+            {errors.subject ? (
+              <Text className="text-red-500 text-sm mt-1">{errors.subject}</Text>
+            ) : null}
           </View>
 
           {/* Description */}
-          <View className="mb-8 relative">
+          <View className="mb-6">
+            <Text className="text-sm font-medium text-gray-700 mb-2">
+              Description
+            </Text>
             <TextInput
-              className="px-4 py-3 rounded-xl border border-gray-200 text-base bg-transparent"
+              className={`px-4 py-3 rounded-xl border text-base bg-transparent ${
+                errors.description ? 'border-red-500' : 'border-gray-200'
+              }`}
               style={{ 
                 backgroundColor: 'transparent',
                 fontSize: 16,
                 lineHeight: 22,
                 minHeight: 120
               }}
-              placeholder="Detailed description of your issue or question (max 200 characters)"
+              placeholder="Detailed description of your issue or question (min 20, max 200 characters)"
               placeholderTextColor="#9CA3AF"
-              value={description}
-              onChangeText={setDescription}
+              value={formData.description}
+              onChangeText={(text) => updateFormData('description', text)}
               multiline
               textAlignVertical="top"
               maxLength={200}
             />
-            <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700">
-              Description ({description.length}/200)
-            </Text>
+            {errors.description ? (
+              <Text className="text-red-500 text-sm mt-1">{errors.description}</Text>
+            ) : null}
           </View>
+
+          {/* Validation Errors */}
+          {Object.values(errors).some(error => error !== '') && (
+            <View className="mb-4">
+              {errors.fullName && (
+                <Text className="text-red-500 text-sm mb-1">• {errors.fullName}</Text>
+              )}
+              {errors.email && (
+                <Text className="text-red-500 text-sm mb-1">• {errors.email}</Text>
+              )}
+              {errors.subject && (
+                <Text className="text-red-500 text-sm mb-1">• {errors.subject}</Text>
+              )}
+              {errors.description && (
+                <Text className="text-red-500 text-sm mb-1">• {errors.description}</Text>
+              )}
+            </View>
+          )}
 
           {/* Submit Button */}
           <TouchableOpacity 

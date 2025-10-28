@@ -47,6 +47,15 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
     name: string;
     fileSize?: number;
   } | null>(null);
+  
+  // Error state for form validation
+  const [errors, setErrors] = useState({
+    favorSubjectId: '',
+    otherSubjectName: '',
+    tip: '',
+    address: '',
+    description: ''
+  });
 
   // Hardcoded favor subjects with their IDs
   const favorSubjects = [
@@ -101,6 +110,61 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
     }
     
     setFormData(prev => ({ ...prev, [field]: value }));
+    
+    // Clear error for the field being updated and validate
+    validateField(field, value);
+  };
+  
+  const validateField = (field: string, value: any) => {
+    const newErrors = { ...errors };
+    
+    switch (field) {
+      case 'favorSubjectId':
+        if (!value) {
+          newErrors.favorSubjectId = 'Please select a subject for your favor.';
+        } else {
+          newErrors.favorSubjectId = '';
+        }
+        break;
+        
+      case 'otherSubjectName':
+        if (formData.favorSubjectId === 8 && (!value || !value.trim())) {
+          newErrors.otherSubjectName = 'Please provide a custom subject name.';
+        } else {
+          newErrors.otherSubjectName = '';
+        }
+        break;
+        
+      case 'tip':
+        if (formData.favorPrice === 'Paid' && (value <= 0 || isNaN(value))) {
+          newErrors.tip = 'Please provide a valid tip amount greater than 0.';
+        } else {
+          newErrors.tip = '';
+        }
+        break;
+        
+      case 'address':
+        if (!value || !value.trim()) {
+          newErrors.address = 'Please provide an address for your favor.';
+        } else {
+          newErrors.address = '';
+        }
+        break;
+        
+      case 'description':
+        if (!value || !value.trim()) {
+          newErrors.description = 'Please provide a description for your favor.';
+        } else if (value.trim().length < 20) {
+          newErrors.description = 'Description must be at least 20 characters long.';
+        } else if (value.trim().length > 200) {
+          newErrors.description = 'Description must not exceed 200 characters.';
+        } else {
+          newErrors.description = '';
+        }
+        break;
+    }
+    
+    setErrors(newErrors);
   };
 
   const pickImage = async () => {
@@ -249,33 +313,57 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
       return;
     }
 
-    // Validate form
+    // Validate all fields
+    const newErrors = {
+      favorSubjectId: '',
+      otherSubjectName: '',
+      tip: '',
+      address: '',
+      description: ''
+    };
+    
+    let hasErrors = false;
+    
     if (!formData.favorSubjectId) {
-      Alert.alert('Error', 'Please select a subject for your favor.');
-      return;
+      newErrors.favorSubjectId = 'Please select a subject for your favor.';
+      hasErrors = true;
     }
+    
     if (formData.favorSubjectId === 8 && !formData.otherSubjectName.trim()) {
-      Alert.alert('Error', 'Please provide a custom subject name.');
-      return;
+      newErrors.otherSubjectName = 'Please provide a custom subject name.';
+      hasErrors = true;
     }
+    
     if (!formData.description.trim()) {
-      Alert.alert('Error', 'Please provide a description for your favor.');
-      return;
+      newErrors.description = 'Please provide a description for your favor.';
+      hasErrors = true;
+    } else if (formData.description.trim().length < 20) {
+      newErrors.description = 'Description must be at least 20 characters long.';
+      hasErrors = true;
+    } else if (formData.description.trim().length > 200) {
+      newErrors.description = 'Description must not exceed 200 characters.';
+      hasErrors = true;
     }
-    if (formData.description.trim().length < 20) {
-      Alert.alert('Error', 'Description must be at least 20 characters long.');
-      return;
-    }
+    
     if (!formData.address.trim()) {
-      Alert.alert('Error', 'Please provide an address for your favor.');
-      return;
+      newErrors.address = 'Please provide an address for your favor.';
+      hasErrors = true;
     }
+    
     if (formData.favorPrice === 'Paid' && (formData.tip <= 0 || isNaN(formData.tip))) {
-      Alert.alert('Error', 'Please provide a valid tip amount greater than 0 for paid favors.');
-      return;
+      newErrors.tip = 'Please provide a valid tip amount greater than 0 for paid favors.';
+      hasErrors = true;
     }
+    
     if (!formData.city.trim() || !formData.state.trim()) {
       Alert.alert('Error', 'Please ensure city and state are provided.');
+      return;
+    }
+    
+    setErrors(newErrors);
+    
+    if (hasErrors) {
+      Alert.alert('Please fix the errors below', 'Please correct the highlighted fields and try again.');
       return;
     }
 
@@ -405,12 +493,17 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
                 </TouchableOpacity>
               </View>
             </View>
+            {errors.favorSubjectId ? (
+              <Text className="text-red-500 text-sm mt-1">{errors.favorSubjectId}</Text>
+            ) : null}
             
             {/* Custom Subject Name Input - Only show when Other is selected */}
             {formData.favorSubjectId === 8 && (
               <View className="mt-4">
                 <Text className="text-lg font-semibold text-black mb-3">Please specify:</Text>
-                <View className="bg-white border-2 border-white rounded-2xl px-4 py-4">
+                <View className={`bg-white border-2 rounded-2xl px-4 py-4 ${
+                  errors.otherSubjectName ? 'border-red-500' : 'border-white'
+                }`}>
                   <TextInput
                     className="text-black text-base min-h-[60px]"
                     placeholder="Enter custom subject name"
@@ -422,6 +515,9 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
                   />
                 </View>
                 <Text className="text-gray-300 text-sm mt-2">/50 characters</Text>
+                {errors.otherSubjectName ? (
+                  <Text className="text-red-500 text-sm mt-1">{errors.otherSubjectName}</Text>
+                ) : null}
               </View>
             )}
           </View>
@@ -429,19 +525,17 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
           {/* Time To Complete Section */}
           <View className="mb-8">
             <Text className="text-xl font-bold text-black mb-6">Time To Complete</Text>
-            <View className="relative">
-              <TouchableOpacity
-                className="px-4 py-3 rounded-xl border border-gray-200 bg-transparent flex-row justify-between items-center"
-                style={{ height: 56 }}
-                onPress={() => setShowTimeDropdown(true)}
-              >
-                <Text className="text-base text-gray-800">{formData.timeToComplete}</Text>
-                <Text className="text-gray-400">▼</Text>
-              </TouchableOpacity>
-              <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700 bg-transparent">
-                Time to complete
-              </Text>
-            </View>
+            <Text className="text-sm font-medium text-gray-700 mb-2">
+              Time to complete
+            </Text>
+            <TouchableOpacity
+              className="px-4 py-3 rounded-xl border border-gray-200 bg-transparent flex-row justify-between items-center"
+              style={{ height: 56 }}
+              onPress={() => setShowTimeDropdown(true)}
+            >
+              <Text className="text-base text-gray-800">{formData.timeToComplete}</Text>
+              <Text className="text-gray-400">▼</Text>
+            </TouchableOpacity>
           </View>
 
           {/* Favor Price Section */}
@@ -463,9 +557,14 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
             {/* Tip Inputs - Only show when Paid is selected */}
             {formData.favorPrice === 'Paid' && (
               <View>
-                <View className="relative mb-4">
+                <View className="mb-4">
+                  <Text className="text-sm font-medium text-gray-700 mb-2">
+                    Tip Amount ($) *
+                  </Text>
                   <TextInput
-                    className="px-4 py-3 rounded-xl border border-gray-200 text-base bg-transparent"
+                    className={`px-4 py-3 rounded-xl border text-base bg-transparent ${
+                      errors.tip ? 'border-red-500' : 'border-gray-200'
+                    }`}
                     style={{
                       backgroundColor: 'transparent',
                       fontSize: 16,
@@ -481,12 +580,15 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
                     }}
                     keyboardType="numeric"
                   />
-                  <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700 bg-transparent">
-                    Tip Amount ($) *
-                  </Text>
+                  {errors.tip ? (
+                    <Text className="text-red-500 text-sm mt-1">{errors.tip}</Text>
+                  ) : null}
                 </View>
                 
-                <View className="relative">
+                <View>
+                  <Text className="text-sm font-medium text-gray-700 mb-2">
+                    Additional Tip ($) - Optional
+                  </Text>
                   <TextInput
                     className="px-4 py-3 rounded-xl border border-gray-200 text-base bg-transparent"
                     style={{
@@ -504,9 +606,6 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
                     }}
                     keyboardType="numeric"
                   />
-                  <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700 bg-transparent">
-                    Additional Tip ($) - Optional
-                  </Text>
                 </View>
               </View>
             )}
@@ -515,50 +614,64 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
           {/* Address Section */}
           <View className="mb-8">
             <Text className="text-xl font-bold text-black mb-6">Address</Text>
-            <View className="relative">
-              <TextInput
-                className="px-4 py-3 rounded-xl border border-gray-200 text-base bg-transparent"
-                style={{
-                  backgroundColor: 'transparent',
-                  fontSize: 16,
-                  lineHeight: 22,
-                  height: 56
-                }}
-                placeholder="Enter your address"
-                placeholderTextColor="#9CA3AF"
-                value={formData.address}
-                onChangeText={(text) => updateFormData('address', text)}
-                editable={false}
-              />
-              <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700 bg-transparent">
-                Address
-              </Text>
-            </View>
+            <Text className="text-sm font-medium text-gray-700 mb-2">
+              Address
+            </Text>
+            <TextInput
+              className={`px-4 py-3 rounded-xl border text-base bg-transparent ${
+                errors.address ? 'border-red-500' : 'border-gray-200'
+              }`}
+              style={{
+                backgroundColor: 'transparent',
+                fontSize: 16,
+                lineHeight: 22,
+                height: 56
+              }}
+              placeholder="Enter your address"
+              placeholderTextColor="#9CA3AF"
+              value={formData.address}
+              onChangeText={(text) => updateFormData('address', text)}
+              editable={false}
+            />
+            {errors.address ? (
+              <Text className="text-red-500 text-sm mt-1">{errors.address}</Text>
+            ) : null}
           </View>
 
           {/* Description Section */}
           <View className="mb-8">
             <Text className="text-xl font-bold text-black mb-6">Description</Text>
-            <View className="relative">
-              <TextInput
-                className="px-4 py-3 rounded-xl border border-gray-200 text-base bg-transparent"
-                style={{
-                  backgroundColor: 'transparent',
-                  fontSize: 16,
-                  lineHeight: 22,
-                  minHeight: 120
-                }}
-                placeholder="Enter description about the work"
-                placeholderTextColor="#9CA3AF"
-                value={formData.description}
-                onChangeText={(text) => updateFormData('description', text)}
-                multiline
-                textAlignVertical="top"
-              />
-              <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700 bg-transparent">
-                Description
-              </Text>
-            </View>
+            <Text className="text-sm font-medium text-gray-700 mb-2">
+              Description
+            </Text>
+            <TextInput
+              className={`px-4 py-3 rounded-xl border text-base bg-transparent ${
+                errors.description ? 'border-red-500' : 'border-gray-200'
+              }`}
+              style={{
+                backgroundColor: 'transparent',
+                fontSize: 16,
+                lineHeight: 22,
+                minHeight: 120
+              }}
+              placeholder="Enter description about the work (min 20, max 200 characters)"
+              placeholderTextColor="#9CA3AF"
+              value={formData.description}
+              onChangeText={(text) => {
+                if (text.length <= 200) {
+                  updateFormData('description', text);
+                }
+              }}
+              multiline
+              textAlignVertical="top"
+              maxLength={200}
+            />
+            <Text className={`text-sm mt-2 ${formData.description.length < 20 ? 'text-red-500' : formData.description.length >= 200 ? 'text-orange-500' : 'text-gray-500'}`}>
+              {formData.description.length}/200 characters {formData.description.length < 20 ? '(minimum 20)' : ''}
+            </Text>
+            {errors.description ? (
+              <Text className="text-red-500 text-sm mt-1">{errors.description}</Text>
+            ) : null}
           </View>
 
           {/* File Upload Section */}

@@ -626,13 +626,15 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
           />
         </View>
 
-        {/* Ask Favor Button */}
-        <View className="px-4">
-          <CarouselButton
-            title="Ask Favor"
-            onPress={handleAskFavor}
-          />
-        </View>
+        {/* Ask Favor Button - only show when there are favors in the list */}
+        {currentFavors.length > 0 && (
+          <View className="px-4">
+            <CarouselButton
+              title="Ask Favor"
+              onPress={handleAskFavor}
+            />
+          </View>
+        )}
       </View>
 
       {/* Content Area */}

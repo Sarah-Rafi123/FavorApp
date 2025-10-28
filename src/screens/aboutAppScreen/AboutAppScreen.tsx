@@ -45,13 +45,13 @@ export function AboutAppScreen({ navigation }: AboutAppScreenProps) {
       >
         <View className="px-6 pt-6">
           {/* App Logo */}
-          <View className="items-center mb-8">
+          {/* <View className="items-center mb-8">
             <Image 
-              source={require('../../../assets/logo.png')} 
+              source={require('../../assets/images/AppLogo.png')} 
               className="w-40 h-20"
               resizeMode="contain"
             />
-          </View>
+          </View> */}
 
           <View className="px-6">
             <Text className="text-base text-gray-700 leading-6 mb-6">

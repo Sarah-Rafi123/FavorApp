@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,13 +6,13 @@ import {
   StatusBar,
   ImageBackground,
   ScrollView,
+  FlatList,
   Image,
   ActivityIndicator,
   RefreshControl,
   Alert,
 } from 'react-native';
 import { CarouselButton } from '../../components/buttons';
-import Svg, { Path } from 'react-native-svg';
 import ProvideFavorSvg from '../../assets/icons/ProvideFavor';
 import PersonwithHeartSvg from '../../assets/icons/PersonwithHeart';
 import { TimerSvg } from '../../assets/icons/Timer';
@@ -33,101 +33,6 @@ interface ProvideFavorScreenProps {
   navigation?: any;
 }
 
-const FilterIcon = () => (
-  <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-    <Path
-      d="M3 7H21L15 13V19L9 16V13L3 7Z"
-      stroke="#374151"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </Svg>
-);
-
-const BellIcon = () => (
-  <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-    <Path
-      d="M18 8A6 6 0 0 0 6 8C6 15 3 17 3 17H21S18 15 18 8Z"
-      stroke="#374151"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <Path
-      d="M13.73 21A2 2 0 0 1 10.27 21"
-      stroke="#374151"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </Svg>
-);
-
-const LocationHeartIcon = () => (
-  <Svg width="80" height="80" viewBox="0 0 80 80" fill="none">
-    <Path
-      d="M40 70L25 55C15 45.7 10 38.3 10 30C10 21.7 16.7 15 25 15C29.3 15 33.3 17 36 20.2C38.7 17 42.7 15 47 15C55.3 15 62 21.7 62 30C62 38.3 57 45.7 47 55L40 70Z"
-      stroke="#44A27B"
-      strokeWidth="3"
-      fill="none"
-    />
-    <Path
-      d="M40 35C42.7614 35 45 32.7614 45 30C45 27.2386 42.7614 25 40 25C37.2386 25 35 27.2386 35 30C35 32.7614 37.2386 35 40 35Z"
-      fill="#44A27B"
-    />
-    <Path
-      d="M40 70L32 62"
-      stroke="#44A27B"
-      strokeWidth="3"
-      strokeLinecap="round"
-    />
-  </Svg>
-);
-
-const HistoryClockIcon = () => (
-  <Svg width="80" height="80" viewBox="0 0 80 80" fill="none">
-    <Path
-      d="M40 70C56.5685 70 70 56.5685 70 40C70 23.4315 56.5685 10 40 10C23.4315 10 10 23.4315 10 40C10 56.5685 23.4315 70 40 70Z"
-      stroke="#44A27B"
-      strokeWidth="3"
-      fill="none"
-    />
-    <Path
-      d="M40 20V40L55 55"
-      stroke="#44A27B"
-      strokeWidth="3"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </Svg>
-);
-
-const PersonHeartIcon = () => (
-  <Svg width="80" height="80" viewBox="0 0 80 80" fill="none">
-    <Path
-      d="M40 20C45.5228 20 50 15.5228 50 10C50 4.47715 45.5228 0 40 0C34.4772 0 30 4.47715 30 10C30 15.5228 34.4772 20 40 20Z"
-      stroke="#44A27B"
-      strokeWidth="3"
-      fill="none"
-    />
-    <Path
-      d="M20 70V60C20 48.9543 28.9543 40 40 40C51.0457 40 60 48.9543 60 60V70"
-      stroke="#44A27B"
-      strokeWidth="3"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <Path
-      d="M65 35L60 30C55 25 50 25 45 30C45 25 45 20 50 15C55 10 65 10 70 15C75 20 75 30 70 35L65 40L60 35"
-      stroke="#44A27B"
-      strokeWidth="3"
-      fill="none"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </Svg>
-);
 
 export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
   const [activeTab, setActiveTab] = useState<'All' | 'Active' | 'History'>('All');
@@ -136,6 +41,11 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
   const [showCategoryFilter, setShowCategoryFilter] = useState(false);
   const [selectedFavorId, setSelectedFavorId] = useState<number | null>(null);
   const [showFavorDetailsModal, setShowFavorDetailsModal] = useState(false);
+  
+  // Pagination state (same as HomeListScreen)
+  const [currentPage, setCurrentPage] = useState(1);
+  const [allFavors, setAllFavors] = useState<Favor[]>([]);
+  const [hasMorePages, setHasMorePages] = useState(true);
   
   // Get auth store state for debugging
   const { user, accessToken } = useAuthStore();
@@ -149,30 +59,30 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
   const stripeConnectManager = StripeConnectManager.getInstance();
 
   // Fetch favor subjects/categories
-  const { data: favorSubjectsResponse, isLoading: categoriesLoading } = useFavorSubjects();
+  const { data: favorSubjectsResponse } = useFavorSubjects();
 
-  // Use browseFavors when filters are active, useFavors when not (for All tab only)
-  const useFilteredData = activeTab === 'All' && hasActiveFilters();
+  // Use browseFavors when filters are active, useFavors when not (same logic as HomeListScreen)
+  const useFilteredData = hasActiveFilters();
   
-  // Browse favors with filters when filters are active
+  // Browse favors with filters when filters are active (same params as HomeListScreen)
   const {
     data: browseFavorsResponse,
     isLoading: browseFavorsLoading,
     error: browseFavorsError,
     refetch: refetchBrowseFavors,
   } = useBrowseFavors(
-    toBrowseParams(1, 12),
-    { enabled: useFilteredData }
+    toBrowseParams(currentPage, 12),
+    { enabled: activeTab === 'All' && useFilteredData }
   );
 
-  // Fetch data using regular favors API: /api/v1/favors?page=1&per_page=12
+  // Fetch data using regular favors API with pagination (same as HomeListScreen)
   const {
     data: allFavorsResponse,
     isLoading: allFavorsLoading,
     error: allFavorsError,
     refetch: refetchAllFavors,
   } = useFavors(
-    1, // page
+    currentPage, // page - now uses currentPage for pagination
     12, // per_page 
     { enabled: activeTab === 'All' && !useFilteredData }
   );
@@ -241,15 +151,18 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
     { enabled: activeTab === 'History' }
   );
 
+  // Use the appropriate data source for "All" tab (same as HomeListScreen)
+  const currentAllTabData = useFilteredData ? browseFavorsResponse : allFavorsResponse;
+  const currentAllTabLoading = useFilteredData ? browseFavorsLoading : allFavorsLoading;
+  const currentAllTabError = useFilteredData ? browseFavorsError : allFavorsError;
+  const currentAllTabRefetch = useFilteredData ? refetchBrowseFavors : refetchAllFavors;
+
   // Get current data based on active tab
   const getCurrentData = () => {
     switch (activeTab) {
       case 'All':
-        // Use filtered data when filters are active, otherwise use regular favors
-        if (useFilteredData) {
-          return browseFavorsResponse?.data.favors || [];
-        }
-        return allFavorsResponse?.data.favors || [];
+        // For "All" tab, use paginated data from allFavors state (same as HomeListScreen)
+        return allFavors;
       case 'Active':
         // Combine active and in-progress favors
         const activeFavors = activeMyFavorsResponse?.data.favors || [];
@@ -268,10 +181,8 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
   const getCurrentLoading = () => {
     switch (activeTab) {
       case 'All':
-        if (useFilteredData) {
-          return browseFavorsLoading;
-        }
-        return allFavorsLoading;
+        // Same logic as HomeListScreen
+        return currentAllTabLoading;
       case 'Active':
         return activeMyFavorsLoading || inProgressMyFavorsLoading;
       case 'History':
@@ -284,10 +195,8 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
   const getCurrentError = () => {
     switch (activeTab) {
       case 'All':
-        if (useFilteredData) {
-          return browseFavorsError;
-        }
-        return allFavorsError;
+        // Same logic as HomeListScreen
+        return currentAllTabError;
       case 'Active':
         return activeMyFavorsError || inProgressMyFavorsError;
       case 'History':
@@ -323,28 +232,46 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
     debugAuth();
   }, [activeTab, currentFavors, isLoading, error, allFavorsResponse, allFavorsError, user, accessToken]);
 
-  // Reset and refetch data when switching between filtered and unfiltered
+  // Reset pagination when switching between filtered and unfiltered or changing tabs (same as HomeListScreen)
   React.useEffect(() => {
-    if (activeTab === 'All') {
-      // Trigger refetch when filter state changes
-      if (useFilteredData) {
-        refetchBrowseFavors();
-      } else {
-        refetchAllFavors();
-      }
-    }
+    setCurrentPage(1);
+    setAllFavors([]);
+    setHasMorePages(true);
   }, [useFilteredData, activeTab]);
 
-  const handleRefresh = async () => {
+  // Update allFavors when new data arrives for "All" tab (same as HomeListScreen)
+  React.useEffect(() => {
+    if (activeTab === 'All' && currentAllTabData?.data.favors) {
+      if (currentPage === 1) {
+        // First page - replace all favors
+        setAllFavors(currentAllTabData.data.favors);
+      } else {
+        // Additional pages - append to existing favors
+        setAllFavors(prev => [...prev, ...currentAllTabData.data.favors]);
+      }
+      
+      // Check if there are more pages
+      setHasMorePages(currentPage < currentAllTabData.data.meta.total_pages);
+    }
+  }, [currentAllTabData, currentPage, activeTab]);
+
+  // Load more favors function (same as HomeListScreen)
+  const loadMoreFavors = useCallback(() => {
+    if (activeTab === 'All' && !isLoading && hasMorePages) {
+      setCurrentPage(prev => prev + 1);
+    }
+  }, [activeTab, isLoading, hasMorePages]);
+
+  const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
       switch (activeTab) {
         case 'All':
-          if (useFilteredData) {
-            await refetchBrowseFavors();
-          } else {
-            await refetchAllFavors();
-          }
+          // Reset pagination and refresh (same as HomeListScreen)
+          setCurrentPage(1);
+          setAllFavors([]);
+          setHasMorePages(true);
+          await currentAllTabRefetch();
           break;
         case 'Active':
           await Promise.all([refetchActiveMyFavors(), refetchInProgressMyFavors()]);
@@ -358,7 +285,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
     } finally {
       setRefreshing(false);
     }
-  };
+  }, [activeTab, currentAllTabRefetch, refetchActiveMyFavors, refetchInProgressMyFavors, refetchCompletedMyFavors, refetchCancelledMyFavors]);
 
   const handleAskFavor = () => {
     navigation?.navigate('AskFavorScreen');
@@ -385,16 +312,6 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
 
   const categories = favorSubjectsResponse?.data.favor_subjects || [];
 
-  // Temporary debug function to test token storage
-  const handleDebugToken = async () => {
-
- 
-    
-    // Verify it was stored
-    
-    // Trigger a refetch
-    await refetchAllFavors();
-  };
 
   // Check if user needs to re-authenticate
   React.useEffect(() => {
@@ -791,23 +708,57 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
           </TouchableOpacity>
         </View>
       ) : currentFavors.length > 0 ? (
-        <ScrollView 
-          className="flex-1"
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingTop: 16, paddingBottom: 120 }}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              colors={['#44A27B']}
-              tintColor="#44A27B"
-            />
-          }
-        >
-          {currentFavors.map((favor) => (
-            <FavorCard key={favor.id} favor={favor} />
-          ))}
-        </ScrollView>
+        activeTab === 'All' ? (
+          // Use FlatList with pagination for "All" tab (same as HomeListScreen)
+          <FlatList
+            data={currentFavors}
+            keyExtractor={(item) => item.id.toString()}
+            renderItem={({ item }) => <FavorCard favor={item} />}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingTop: 16, paddingBottom: 120 }}
+            refreshControl={
+              <RefreshControl
+                refreshing={isLoading && currentPage === 1}
+                onRefresh={handleRefresh}
+                colors={['#44A27B']}
+                tintColor="#44A27B"
+              />
+            }
+            onEndReached={loadMoreFavors}
+            onEndReachedThreshold={0.5}
+            ListFooterComponent={
+              isLoading && currentPage > 1 ? (
+                <View className="py-4 items-center">
+                  <ActivityIndicator size="small" color="#44A27B" />
+                  <Text className="text-gray-500 mt-2">Loading more...</Text>
+                </View>
+              ) : !hasMorePages && currentFavors.length > 0 ? (
+                <View className="py-4 items-center">
+                  <Text className="text-gray-500">No more favors to load</Text>
+                </View>
+              ) : null
+            }
+          />
+        ) : (
+          // Use ScrollView for other tabs (Active/History)
+          <ScrollView 
+            className="flex-1"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingTop: 16, paddingBottom: 120 }}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+                colors={['#44A27B']}
+                tintColor="#44A27B"
+              />
+            }
+          >
+            {currentFavors.map((favor) => (
+              <FavorCard key={favor.id} favor={favor} />
+            ))}
+          </ScrollView>
+        )
       ) : (
         /* Empty State */
         <View className="flex-1 items-center justify-center px-6">
@@ -822,22 +773,33 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
           </View>
           
           <Text className="text-2xl font-bold text-[#000000B8] mb-4 text-center">
-            {activeTab === 'All' && 'No New Favors Yet'}
+            {activeTab === 'All' && (hasActiveFilters() ? 'No favor found' : 'No New Favors Yet')}
             {activeTab === 'Active' && 'No Active Favors'}
             {activeTab === 'History' && 'No History Yet'}
           </Text>
           
           <Text className="text-[#000000B] text-center mb-12 leading-6">
-            {activeTab === 'All' && 'Check back soon or post a favor to get\nhelp from your community.'}
+            {activeTab === 'All' && (
+              hasActiveFilters() 
+                ? 'Try adjusting your filters to see more results'
+                : 'Check back soon or post a favor to get\nhelp from your community.'
+            )}
             {activeTab === 'Active' && "You don't have any ongoing favors right\nnow. Start helping or request a hand to see\nthem here."}
             {activeTab === 'History' && 'Once you help someone, your favor history\nwill appear here.'}
           </Text>
           
           <View className="w-full max-w-sm">
-            <CarouselButton
-              title={activeTab === 'All' ? 'Ask Favor' : 'Explore Favors'}
-              onPress={activeTab === 'All' ? handleAskFavor : handleExploreFavors}
-            />
+            {activeTab === 'All' && hasActiveFilters() ? (
+              <CarouselButton
+                title="Adjust Filters"
+                onPress={() => navigation?.navigate('FilterScreen')}
+              />
+            ) : (
+              <CarouselButton
+                title={activeTab === 'All' ? 'Ask Favor' : 'Explore Favors'}
+                onPress={activeTab === 'All' ? handleAskFavor : handleExploreFavors}
+              />
+            )}
           </View>
         </View>
       )}

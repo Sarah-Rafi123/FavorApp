@@ -4,17 +4,12 @@
     "slug": "favorapp",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/logo.png",
+    "icon": "./assets/AppLogo.png",
     "userInterfaceStyle": "light",
     "scheme": "favorapp",
     "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#71DFB1"
-    },
     "ios": {
-      "icon": "./assets/logo.png",
+      "icon": "./assets/AppLogo.png",
       "supportsTablet": true,
       "bundleIdentifier": "com.favor.app",
       "config": {
@@ -26,11 +21,11 @@
       }
     },
     "android": {
-      "icon": "./assets/logo_app_icon.png",
+      "icon": "./assets/AppLogo.png",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/logo_app_icon.png",
+        "foregroundImage": "./assets/AppLogo.png",
         "backgroundColor": "#71DFB1",
-        "monochromeImage": "./assets/logo_app_icon.png"
+        "monochromeImage": "./assets/AppLogo.png"
       },
       "package": "com.favor.app",
       "config": {
@@ -48,7 +43,7 @@
     },
     "web": {
       "bundler": "metro",
-      "favicon": "./assets/logo.png"
+      "favicon": "./assets/AppLogo.png"
     },
     "plugins": [
       "expo-font",

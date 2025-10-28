@@ -373,7 +373,7 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
             </View>
 
             <View className="flex-row items-start">
-              <Text className="text-gray-700 text-base w-20">Description</Text>
+              <Text className="text-gray-700 text-base w-24">Description</Text>
               <Text className="text-gray-700 text-base mr-2">:</Text>
               <Text className="text-gray-800 text-base flex-1">{favor.description}</Text>
             </View>

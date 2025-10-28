@@ -10,7 +10,7 @@ import {
 import { CarouselButton } from '../../components/buttons';
 import { LockIcon } from '../../assets/icons';
 import { SuccessModal } from '../../components/overlays/SuccessModal';
-import { useVerifyOtpMutation } from '../../services/mutations/AuthMutations';
+import { useVerifyOtpMutation, useResendOtpMutation } from '../../services/mutations/AuthMutations';
 import useAuthStore from '../../store/useAuthStore';
 import Toast from 'react-native-toast-message';
 
@@ -30,6 +30,7 @@ export function SignupOtpScreen({ onBack, onVerifySuccess, onBackToLogin, email 
   const inputRefs = useRef<TextInput[]>([]);
   
   const verifyOtpMutation = useVerifyOtpMutation();
+  const resendOtpMutation = useResendOtpMutation();
   const setUser = useAuthStore((state) => state.setUser);
   const registrationData = useAuthStore((state) => state.registrationData);
   const clearRegistrationData = useAuthStore((state) => state.clearRegistrationData);
@@ -130,30 +131,56 @@ export function SignupOtpScreen({ onBack, onVerifySuccess, onBackToLogin, email 
     }
   };
 
-  const handleResendCode = () => {
-    if (canResend) {
-      setTimer(300); // Reset to 5 minutes
-      setCanResend(false);
-      setOtp(['', '', '', '', '', '']);
-      
-      // Show success message
-      Toast.show({
-        type: 'success',
-        text1: 'Code Resent',
-        text2: 'OTP code has been resent successfully'
-      });
-      
-      // Reset timer
-      const interval = setInterval(() => {
-        setTimer((prev) => {
-          if (prev <= 1) {
-            setCanResend(true);
-            clearInterval(interval);
-            return 0;
-          }
-          return prev - 1;
+  const handleResendCode = async () => {
+    if (canResend && !resendOtpMutation.isPending) {
+      try {
+        console.log('Resending OTP to:', email);
+        const response = await resendOtpMutation.mutateAsync({ email });
+        console.log('Resend OTP response:', response);
+        
+        // Reset timer and form state
+        setTimer(300); // Reset to 5 minutes
+        setCanResend(false);
+        setOtp(['', '', '', '', '', '']);
+        
+        // Show success message
+        Toast.show({
+          type: 'success',
+          text1: 'Code Resent',
+          text2: response.message || 'OTP code has been resent successfully'
         });
-      }, 1000);
+        
+        // Reset timer
+        const interval = setInterval(() => {
+          setTimer((prev) => {
+            if (prev <= 1) {
+              setCanResend(true);
+              clearInterval(interval);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+        
+      } catch (error: any) {
+        console.error('Resend OTP error:', error);
+        console.error('Error response:', error.response?.data);
+        
+        let errorMessage = 'Failed to resend OTP. Please try again.';
+        if (error.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.userMessage) {
+          errorMessage = error.userMessage;
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        
+        Toast.show({
+          type: 'error',
+          text1: 'Resend Failed',
+          text2: errorMessage
+        });
+      }
     }
   };
 
@@ -224,15 +251,15 @@ export function SignupOtpScreen({ onBack, onVerifySuccess, onBackToLogin, email 
         </View>
 
         {/* Timer and Resend */}
-        <View className="items-center mb-8">
+        <View className="items-center mb-4">
           <Text className="text-2xl font-bold text-gray-800 mb-2">
             {formatTime(timer)}
           </Text>
           <View className="flex-row items-center">
             <Text className="text-gray-600">Didn't receive OTP code? </Text>
-            <TouchableOpacity onPress={handleResendCode} disabled={!canResend}>
-              <Text className={`font-medium ${canResend ? 'text-[#44A27B]' : 'text-black'}`}>
-                Resend Code
+            <TouchableOpacity onPress={handleResendCode} disabled={!canResend || resendOtpMutation.isPending}>
+              <Text className={`font-medium ${canResend && !resendOtpMutation.isPending ? 'text-[#44A27B]' : 'text-black'}`}>
+                {resendOtpMutation.isPending ? 'Sending...' : 'Resend Code'}
               </Text>
             </TouchableOpacity>
           </View>

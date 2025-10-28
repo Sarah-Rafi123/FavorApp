@@ -79,7 +79,7 @@ const faqData: FAQItem[] = [
 ];
 
 export function FAQScreen({ navigation }: FAQScreenProps) {
-  const [expandedItems, setExpandedItems] = useState<number[]>([4]); // Q4 is expanded by default as shown in image
+  const [expandedItems, setExpandedItems] = useState<number[]>([]); // All questions closed by default
 
   const toggleExpand = (id: number) => {
     setExpandedItems(prev => 
@@ -93,9 +93,9 @@ export function FAQScreen({ navigation }: FAQScreenProps) {
     const isExpanded = expandedItems.includes(item.id);
     
     return (
-      <View className="mb-3">
+      <View className="mb-4 border border-gray-300 rounded-xl bg-transparent">
         <TouchableOpacity
-          className="bg-transparent rounded-xl px-4 py-4 flex-row justify-between items-center"
+          className="px-4 py-4 flex-row justify-between items-center"
           onPress={() => toggleExpand(item.id)}
         >
           <Text className="flex-1 text-base font-medium text-gray-800 mr-3">
@@ -105,7 +105,7 @@ export function FAQScreen({ navigation }: FAQScreenProps) {
         </TouchableOpacity>
         
         {isExpanded && (
-          <View className="bg-transparent rounded-xl mt-1 px-4 py-4">
+          <View className="px-4 pb-4">
             <Text className="text-sm text-gray-600 leading-6">
               {item.answer}
             </Text>

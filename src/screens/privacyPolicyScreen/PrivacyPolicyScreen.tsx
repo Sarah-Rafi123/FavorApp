@@ -40,7 +40,7 @@ export function PrivacyPolicyScreen({ navigation }: PrivacyPolicyScreenProps) {
       <ScrollView 
         className="flex-1"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: 80 }}
       >
         <View className="px-6 pt-6">
           <Text className="text-sm text-gray-500 mb-4">Effective date: February 14, 2025</Text>

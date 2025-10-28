@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Image, TouchableOpacity, StatusBar, ImageBackground, ActivityIndicator, Alert, Platform } from 'react-native';
+import { View, Text, ScrollView, Image, TouchableOpacity, StatusBar, ImageBackground, ActivityIndicator, Alert, Platform, Modal } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { CarouselButton } from '../../components/buttons';
 import { UpdateProfileModal } from '../../components/overlays/UpdateProfileModal';
 import { ExportPDFModal } from '../../components/overlays/ExportPDFModal';
 import { useProfileQuery } from '../../services/queries/ProfileQueries';
-import { exportProfilePDF, ExportProfileParams } from '../../services/apis/ProfileApis';
+import { exportProfilePDF, ExportProfileParams, ExportProfileJSONResponse } from '../../services/apis/ProfileApis';
 import Toast from 'react-native-toast-message';
+import * as FileSystem from 'expo-file-system';
+import { PDFViewerModal } from '../../components/overlays/PDFViewerModal';
 import EditSvg from '../../assets/icons/Edit';
 import FilterSvg from '../../assets/icons/Filter';
 import BellSvg from '../../assets/icons/Bell';
@@ -26,6 +28,10 @@ export function ProfileScreen() {
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState('');
+  const [showPDFViewer, setShowPDFViewer] = useState(false);
+  const [pdfUri, setPdfUri] = useState('');
   const { data: profileResponse, isLoading, error } = useProfileQuery();
   
   const [profileData, setProfileData] = useState<ProfileData>({
@@ -37,7 +43,8 @@ export function ProfileScreen() {
     phoneText: '(209) 555-0104',
   });
   
-  const profile = profileResponse?.data?.profile;
+  const profile = profileResponse?.data
+  ?.profile;
 
   const handleUpdateProfile = (newProfileData: ProfileData) => {
     setProfileData(newProfileData);
@@ -47,8 +54,242 @@ export function ProfileScreen() {
     setShowExportModal(true);
   };
 
+  const generatePDFFromData = (exportData: ExportProfileJSONResponse, startDate: string, endDate: string): string => {
+    const { user, statistics } = exportData.data;
+    
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Profile Export - ${user.first_name} ${user.last_name}</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+          }
+          .header {
+            text-align: center;
+            border-bottom: 2px solid #44A27B;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+          }
+          .header h1 {
+            color: #44A27B;
+            margin: 0;
+            font-size: 28px;
+          }
+          .header p {
+            margin: 5px 0;
+            color: #666;
+          }
+          .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+          }
+          .section h2 {
+            color: #44A27B;
+            border-bottom: 1px solid #44A27B;
+            padding-bottom: 10px;
+            margin-top: 0;
+          }
+          .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+          }
+          .info-item {
+            display: flex;
+            flex-direction: column;
+          }
+          .info-label {
+            font-weight: bold;
+            color: #666;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+          }
+          .info-value {
+            color: #333;
+            font-size: 14px;
+          }
+          .skills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+          }
+          .skill-tag {
+            background-color: #E8F5E8;
+            color: #44A27B;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+          }
+          .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+          }
+          .stat-card {
+            text-align: center;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+          }
+          .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #44A27B;
+          }
+          .stat-label {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+          }
+          .monthly-hours {
+            margin-top: 20px;
+          }
+          .monthly-hours table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+          }
+          .monthly-hours th,
+          .monthly-hours td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+          }
+          .monthly-hours th {
+            background-color: #44A27B;
+            color: white;
+            font-weight: 600;
+          }
+          .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+            color: #666;
+            font-size: 12px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>${user.first_name} ${user.last_name}</h1>
+          <p>Community Service Profile Export</p>
+          <p>Period: ${startDate} to ${endDate}</p>
+          <p>Generated on: ${new Date().toLocaleDateString()}</p>
+        </div>
+
+        <div class="section">
+          <h2>Personal Information</h2>
+          <div class="info-grid">
+            <div class="info-item">
+              <div class="info-label">Email</div>
+              <div class="info-value">${user.email}</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Age</div>
+              <div class="info-value">Not specified</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Phone (Call)</div>
+              <div class="info-value">${user.phone_no_call || 'Not specified'}</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Phone (Text)</div>
+              <div class="info-value">${user.phone_no_text || 'Not specified'}</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Experience</div>
+              <div class="info-value">${user.years_of_experience ? `${user.years_of_experience} year${user.years_of_experience !== 1 ? 's' : ''}` : 'Not specified'}</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Member Since</div>
+              <div class="info-value">${new Date(user.created_at).toLocaleDateString()}</div>
+            </div>
+          </div>
+          ${user.about_me ? `
+            <div class="info-item">
+              <div class="info-label">About Me</div>
+              <div class="info-value">${user.about_me}</div>
+            </div>
+          ` : ''}
+          ${user.skills && user.skills.length > 0 ? `
+            <div class="info-item">
+              <div class="info-label">Skills</div>
+              <div class="skills">
+                ${user.skills.map(skill => `<span class="skill-tag">${skill}</span>`).join('')}
+              </div>
+              ${user.other_skills ? `<div class="info-value" style="margin-top: 10px;"><strong>Other:</strong> ${user.other_skills}</div>` : ''}
+            </div>
+          ` : ''}
+        </div>
+
+        <div class="section">
+          <h2>Community Service Statistics</h2>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-number">${statistics.favors_requested.count}</div>
+              <div class="stat-label">Favors Requested</div>
+              <div style="font-size: 12px; margin-top: 5px;">${statistics.favors_requested.total_hours} hours</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">${statistics.favors_provided.count}</div>
+              <div class="stat-label">Favors Provided</div>
+              <div style="font-size: 12px; margin-top: 5px;">${statistics.favors_provided.total_hours} hours</div>
+            </div>
+          </div>
+
+          ${statistics.monthly_unpaid_hours && statistics.monthly_unpaid_hours.length > 0 ? `
+            <div class="monthly-hours">
+              <h3>Monthly Unpaid Community Service Hours</h3>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Month</th>
+                    <th>Hours</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${statistics.monthly_unpaid_hours.map(item => `
+                    <tr>
+                      <td>${item.month}</td>
+                      <td>${item.hours}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          ` : ''}
+        </div>
+
+        <div class="footer">
+          <p>This document certifies the community service hours completed by ${user.first_name} ${user.last_name}</p>
+          <p>Generated from FavorApp - Community Service Platform</p>
+        </div>
+      </body>
+      </html>
+    `;
+    
+    return htmlContent;
+  };
+
   const handleExportPDF = async (startDate: string, endDate: string) => {
     setIsExporting(true);
+    setIsDownloading(true);
+    setDownloadProgress('Fetching export data...');
     
     try {
       const params: ExportProfileParams = {
@@ -58,41 +299,49 @@ export function ProfileScreen() {
 
       console.log('🚀 Starting PDF export with params:', params);
       
-      const pdfBlob = await exportProfilePDF(params);
+      setDownloadProgress('Connecting to server...');
+      const exportData = await exportProfilePDF(params);
       
-      console.log('✅ PDF export successful, blob size:', pdfBlob.size);
+      console.log('✅ Export data received:', exportData);
+      setDownloadProgress('Generating PDF content...');
       
-      // Handle PDF download based on platform
-      if (Platform.OS === 'web') {
-        // Web platform - trigger download
-        const url = window.URL.createObjectURL(pdfBlob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `Profile_${profile?.first_name || 'User'}_${startDate}_${endDate}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-      } else {
-        // Mobile platform - need to use file system or sharing
-        // For now, show success message and inform user
-        Alert.alert(
-          'Export Successful',
-          'Your profile PDF has been generated successfully. The file will be available in your downloads.',
-          [{ text: 'OK' }]
-        );
-      }
+      // Generate HTML content from the export data
+      const htmlContent = generatePDFFromData(exportData, startDate, endDate);
+      
+      setDownloadProgress('Creating PDF file...');
+      
+      // For now, let's save the HTML content as a file so users can view it
+      // In a real app, you would use expo-print to convert HTML to PDF
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const fileName = `Profile_${exportData.data.user.first_name || 'User'}_${startDate}_${endDate}_${timestamp}.html`;
+      const filePath = `${FileSystem.documentDirectory}${fileName}`;
+      
+      setDownloadProgress('Saving file...');
+      
+      await FileSystem.writeAsStringAsync(filePath, htmlContent, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+      
+      console.log('✅ HTML file saved to:', filePath);
+      setDownloadProgress('File ready!');
       
       // Show success toast
       Toast.show({
         type: 'success',
-        text1: 'PDF Export Complete! 📄',
-        text2: 'Your profile has been exported successfully',
+        text1: 'Export Complete! 📄',
+        text2: 'Your profile export has been saved as HTML',
         visibilityTime: 4000,
       });
 
       // Close the modal on success
       setShowExportModal(false);
+      
+      // Show alert with file path
+      Alert.alert(
+        'Export Successful',
+        `Your profile has been exported and saved to:\n${fileName}\n\nYou can find it in your device's Documents folder.`,
+        [{ text: 'OK' }]
+      );
       
     } catch (error: any) {
       console.error('❌ PDF export failed:', error);
@@ -101,18 +350,20 @@ export function ProfileScreen() {
       Toast.show({
         type: 'error',
         text1: 'Export Failed',
-        text2: error.message || 'Failed to export PDF. Please try again.',
+        text2: error.message || 'Failed to export profile. Please try again.',
         visibilityTime: 4000,
       });
       
       // Also show alert for better visibility
       Alert.alert(
         'Export Failed',
-        error.message || 'Failed to export PDF. Please try again.',
+        error.message || 'Failed to export profile. Please try again.',
         [{ text: 'OK' }]
       );
     } finally {
       setIsExporting(false);
+      setIsDownloading(false);
+      setDownloadProgress('');
     }
   };
 
@@ -201,17 +452,17 @@ export function ProfileScreen() {
           {/* Personal Details */}
           <View className="mb-6">
             <View className="space-y-2">
-              <Text className="text-gray-600 text-sm">Email: <Text className="text-black font-medium">{profile?.email || 'kathrynmurphy@gmail.com'}</Text></Text>
-              <Text className="text-gray-600 text-sm">Age: <Text className="text-black font-medium">{profile?.age || '26'}</Text></Text>
-              <Text className="text-gray-600 text-sm">Call: <Text className="text-black font-medium">{profile?.phone_no_call || profileData.phoneCall}</Text></Text>
-              <Text className="text-gray-600 text-sm">Text: <Text className="text-black font-medium">{profile?.phone_no_text || profileData.phoneText}</Text></Text>
-              <Text className="text-gray-600 text-sm">Experience: <Text className="text-black font-medium">{profile?.years_of_experience ? `${profile.years_of_experience} year${profile.years_of_experience !== 1 ? 's' : ''}` : 'Not specified'}</Text></Text>
-              <Text className="text-gray-600 text-sm">Since: <Text className="text-black font-medium">{profile?.member_since || 'March 2025'}</Text></Text>
+              <Text className="text-gray-600 text-base">Email: <Text className="text-black font-medium text-base">{profile?.email || 'kathrynmurphy@gmail.com'}</Text></Text>
+              <Text className="text-gray-600 text-base">Age: <Text className="text-black font-medium text-base">{profile?.age || '26'}</Text></Text>
+              <Text className="text-gray-600 text-base">Call: <Text className="text-black font-medium text-base">{profile?.phone_no_call || profileData.phoneCall}</Text></Text>
+              <Text className="text-gray-600 text-base">Text: <Text className="text-black font-medium text-base">{profile?.phone_no_text || profileData.phoneText}</Text></Text>
+              <Text className="text-gray-600 text-base">Experience: <Text className="text-black font-medium text-base">{profile?.years_of_experience ? `${profile.years_of_experience} year${profile.years_of_experience !== 1 ? 's' : ''}` : 'Not specified'}</Text></Text>
+              <Text className="text-gray-600 text-base">Since: <Text className="text-black font-medium text-base">{profile?.member_since || 'March 2025'}</Text></Text>
               {profile?.address && (
-                <Text className="text-gray-600 text-sm">Location: <Text className="text-black font-medium">{profile.address.city}, {profile.address.state}</Text></Text>
+                <Text className="text-gray-600 text-base">Location: <Text className="text-black font-medium text-base">{profile.address.city}, {profile.address.state}</Text></Text>
               )}
               {profile?.is_certified !== null && (
-                <Text className="text-gray-600 text-sm">Certified: <Text className={`font-medium ${profile?.is_certified ? 'text-green-600' : 'text-gray-500'}`}>{profile?.is_certified ? 'Yes' : 'No'}</Text></Text>
+                <Text className="text-gray-600 text-base">Certified: <Text className={`font-medium text-base ${profile?.is_certified ? 'text-green-600' : 'text-gray-500'}`}>{profile?.is_certified ? 'Yes' : 'No'}</Text></Text>
               )}
             </View>
           </View>
@@ -220,7 +471,7 @@ export function ProfileScreen() {
           {profile?.about_me && (
             <View className="mb-6">
               <Text className="text-base font-bold text-black mb-3">About Me</Text>
-              <Text className="text-gray-700 text-sm leading-5">{profile.about_me}</Text>
+              <Text className="text-gray-700 text-base leading-6">{profile.about_me}</Text>
             </View>
           )}
 
@@ -237,7 +488,7 @@ export function ProfileScreen() {
               </View>
               {profile.other_skills && (
                 <View className="mt-2">
-                  <Text className="text-gray-600 text-sm">Other: <Text className="text-black font-medium">{profile.other_skills}</Text></Text>
+                  <Text className="text-gray-600 text-base">Other: <Text className="text-black font-medium text-base">{profile.other_skills}</Text></Text>
                 </View>
               )}
             </View>
@@ -266,7 +517,7 @@ export function ProfileScreen() {
             <View className="mb-4">
               <CarouselButton
                 title="Add Payment Method"
-                onPress={() => {}}
+                onPress={() => navigation.navigate('PaymentMethodScreen' as never)}
               />
             </View>
           )}
@@ -334,6 +585,51 @@ export function ProfileScreen() {
         onClose={() => setShowExportModal(false)}
         onExport={handleExportPDF}
         isExporting={isExporting}
+      />
+
+      {/* Download Progress Modal */}
+      <Modal
+        visible={isDownloading}
+        transparent={true}
+        animationType="fade"
+      >
+        <View className="flex-1 bg-black bg-opacity-50 justify-center items-center">
+          <View className="bg-white rounded-2xl p-8 mx-8 items-center shadow-lg">
+            <ActivityIndicator size="large" color="#44A27B" />
+            <Text className="text-lg font-semibold text-gray-800 mt-4 mb-2">
+              Downloading PDF
+            </Text>
+            <Text className="text-sm text-gray-600 text-center">
+              {downloadProgress}
+            </Text>
+            <View className="w-full bg-gray-200 rounded-full h-2 mt-4">
+              <View 
+                className="bg-[#44A27B] h-2 rounded-full transition-all duration-300"
+                style={{ 
+                  width: downloadProgress === 'Generating PDF...' ? '20%' :
+                        downloadProgress === 'Connecting to server...' ? '40%' :
+                        downloadProgress === 'Processing PDF...' ? '60%' :
+                        downloadProgress === 'Converting PDF...' ? '70%' :
+                        downloadProgress === 'Preparing download...' ? '80%' :
+                        downloadProgress === 'Saving to device...' ? '90%' :
+                        downloadProgress === 'Opening PDF viewer...' ? '95%' :
+                        downloadProgress === 'Download complete!' ? '100%' : '10%'
+                }}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* PDF Viewer Modal */}
+      <PDFViewerModal
+        visible={showPDFViewer}
+        onClose={() => {
+          setShowPDFViewer(false);
+          setPdfUri('');
+        }}
+        pdfUri={pdfUri}
+        fileName={`Profile_${profile?.first_name || 'User'}_${new Date().toISOString().split('T')[0]}.pdf`}
       />
     </ImageBackground>
   );
