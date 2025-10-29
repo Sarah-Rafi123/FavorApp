@@ -12,7 +12,7 @@ import MapView, { Marker, Circle } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { ProfileModal } from '../../components/overlays';
 import FilterSvg from '../../assets/icons/Filter';
-import BellSvg from '../../assets/icons/Bell';
+import { NotificationBell } from '../../components/notifications/NotificationBell';
 import useFilterStore from '../../store/useFilterStore';
 
 interface HomeMapScreenProps {
@@ -189,12 +189,7 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
               </View>
             )}
           </TouchableOpacity>
-          <TouchableOpacity
-            className="items-center justify-center"
-            onPress={onNotifications}
-          >
-            <BellSvg />
-          </TouchableOpacity>
+          <NotificationBell onPress={onNotifications} />
         </View>
       </View>
 

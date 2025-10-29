@@ -18,7 +18,7 @@ import CreateFavorSvg from '../../assets/icons/ProvideFavor';
 import PersonwithHeartSvg from '../../assets/icons/PersonwithHeart';
 import { TimerSvg } from '../../assets/icons/Timer';
 import FilterSvg from '../../assets/icons/Filter';
-import BellSvg from '../../assets/icons/Bell';
+import { NotificationBell } from '../../components/notifications/NotificationBell';
 import CancelSvg from '../../assets/icons/Cancel';
 import UserSvg from '../../assets/icons/User';
 import { useMyFavors, useFavorApplicants } from '../../services/queries/FavorQueries';
@@ -792,12 +792,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
             >
               <FilterSvg />
             </TouchableOpacity> */}
-            <TouchableOpacity 
-              className="items-center justify-center"
-              onPress={() => navigation?.navigate('NotificationsScreen')}
-            >
-              <BellSvg />
-            </TouchableOpacity>
+            <NotificationBell />
           </View>
         </View>
 

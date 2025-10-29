@@ -20,7 +20,7 @@ import { TimerSvg } from '../../assets/icons/Timer';
 import DollarSvg from '../../assets/icons/Dollar';
 import UserSvg from '../../assets/icons/User';
 import FilterSvg from '../../assets/icons/Filter';
-import BellSvg from '../../assets/icons/Bell';
+import { NotificationBell } from '../../components/notifications/NotificationBell';
 import CancelSvg from '../../assets/icons/Cancel';
 import { useMyFavors, useFavorSubjects, useBrowseFavors, useFavors } from '../../services/queries/FavorQueries';
 import { useApplyToFavor, useCancelRequest } from '../../services/mutations/FavorMutations';
@@ -736,12 +736,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
                 </View>
               )}
             </TouchableOpacity>
-            <TouchableOpacity 
-              className="w-10 h-10 rounded-full items-center justify-center"
-              onPress={() => navigation?.navigate('NotificationsScreen')}
-            >
-              <BellSvg />
-            </TouchableOpacity>
+            <NotificationBell />
           </View>
         </View>
 

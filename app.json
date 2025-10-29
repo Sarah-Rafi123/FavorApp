@@ -49,6 +49,15 @@
       "expo-font",
       "expo-location",
       [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#71DFB1",
+          "sounds": [],
+          "mode": "development"
+        }
+      ],
+      [
         "@stripe/stripe-react-native",
         {
           "merchantIdentifier": "merchant.com.favorappllc.mobile",

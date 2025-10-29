@@ -12,7 +12,7 @@ import Svg, { Path } from 'react-native-svg';
 import useAuthStore from '../../store/useAuthStore';
 import { LogoutModal } from '../../components/overlays';
 import FilterSvg from '../../assets/icons/Filter';
-import BellSvg from '../../assets/icons/Bell';
+import { NotificationBell } from '../../components/notifications/NotificationBell';
 import GetCertifiedSvg from '../../assets/icons/GetCertified';
 import PaymentSvg from '../../assets/icons/Payment';
 import ChangePasswordSvg from '../../assets/icons/ChangePassword';
@@ -108,12 +108,7 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
             >
               <FilterSvg />
             </TouchableOpacity> */}
-            <TouchableOpacity
-              className="items-center justify-center"
-              onPress={() => navigation?.navigate('NotificationsScreen')}
-            >
-              <BellSvg />
-            </TouchableOpacity>
+            <NotificationBell />
           </View>
         </View>
       </View>

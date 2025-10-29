@@ -17,7 +17,7 @@ import { Favor } from '../../services/apis/FavorApis';
 import { useApplyToFavor } from '../../services/mutations/FavorMutations';
 import { StripeConnectManager } from '../../services/StripeConnectManager';
 import FilterSvg from '../../assets/icons/Filter';
-import BellSvg from '../../assets/icons/Bell';
+import { NotificationBell } from '../../components/notifications/NotificationBell';
 import DollarSvg from '../../assets/icons/Dollar';
 import UserSvg from '../../assets/icons/User';
 import useFilterStore from '../../store/useFilterStore';
@@ -362,12 +362,7 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications }: HomeLis
                 </View>
               )}
             </TouchableOpacity>
-            <TouchableOpacity
-              className="items-center justify-center"
-              onPress={onNotifications}
-            >
-              <BellSvg />
-            </TouchableOpacity>
+            <NotificationBell onPress={onNotifications} />
           </View>
         </View>
 

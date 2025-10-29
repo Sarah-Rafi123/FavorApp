@@ -2,10 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { AuthStack } from './stacks';
 import useAuthStore from '../store/useAuthStore';
-import useThemeStore from '../store/useThemeStore';
 import { StatusBar, View } from 'react-native';
 import { SplashScreen as CustomSplashScreen, CarouselScreen } from '../screens';
 import { MainTabs } from './tabs/MainTabs';
+import { NotificationPopupRenderer } from '../context/NotificationContext';
 
 /**
  * Application Navigation Flow
@@ -27,7 +27,6 @@ import { MainTabs } from './tabs/MainTabs';
 // Expo splash screen removed - using custom splash only
 
 export default function Navigator() {
-  const theme = useThemeStore((state) => state.theme);
   const user = useAuthStore((state) => state.user);
   const accessToken = useAuthStore((state) => state.accessToken);
   const initializeAuth = useAuthStore((state) => state.initializeAuth);
@@ -109,6 +108,7 @@ export default function Navigator() {
         <View className="flex-1">
           <MainTabs />
         </View>
+        <NotificationPopupRenderer />
       </NavigationContainer>
     );
   }
@@ -133,6 +133,7 @@ export default function Navigator() {
     <NavigationContainer>
       <StatusBar barStyle={'light-content'} backgroundColor="transparent" translucent />
       <AuthStack />
+      <NotificationPopupRenderer />
     </NavigationContainer>
   );
 }

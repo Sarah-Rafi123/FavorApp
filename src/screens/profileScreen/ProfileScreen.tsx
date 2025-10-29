@@ -11,7 +11,8 @@ import * as FileSystem from 'expo-file-system';
 import { PDFViewerModal } from '../../components/overlays/PDFViewerModal';
 import EditSvg from '../../assets/icons/Edit';
 import FilterSvg from '../../assets/icons/Filter';
-import BellSvg from '../../assets/icons/Bell';
+import { NotificationBell } from '../../components/notifications/NotificationBell';
+import { usePushNotification } from '../../services/notifications/usePushNotificationDev';
 
 interface ProfileData {
   firstName: string;
@@ -34,6 +35,7 @@ export function ProfileScreen() {
   const [pdfUri, setPdfUri] = useState('');
   const { data: profileResponse, isLoading, error } = useProfileQuery();
   const { data: balanceResponse, isLoading: isBalanceLoading, error: balanceError, refetch: refetchBalance } = useStripeBalanceQuery();
+  const { scheduleTestNotificationWithType } = usePushNotification();
   
   const [profileData, setProfileData] = useState<ProfileData>({
     firstName: 'Kathryn',
@@ -406,12 +408,7 @@ export function ProfileScreen() {
             >
               <FilterSvg />
             </TouchableOpacity>
-            <TouchableOpacity 
-              className="w-10 h-10  rounded-full items-center justify-center"
-              onPress={() => navigation.navigate('NotificationsScreen' as never)}
-            >
-              <BellSvg />
-            </TouchableOpacity>
+            <NotificationBell />
           </View>
         </View>
       </View>
@@ -509,15 +506,23 @@ export function ProfileScreen() {
           <View className="mb-6">
             <View className="flex-row justify-between items-center mb-3">
               <Text className="text-base font-bold text-black">Fund Details</Text>
-              <TouchableOpacity 
-                onPress={() => refetchBalance()}
-                disabled={isBalanceLoading}
-                className="px-3 py-1 bg-[#44A27B] rounded-full"
-              >
-                <Text className="text-white text-xs font-medium">
-                  {isBalanceLoading ? 'Loading...' : 'Refresh'}
-                </Text>
-              </TouchableOpacity>
+              <View className="flex-row gap-2">
+                <TouchableOpacity 
+                  onPress={() => scheduleTestNotificationWithType('favor_request', 'New Favor Request', 'John Doe wants help with moving furniture')}
+                  className="px-3 py-1 bg-blue-500 rounded-full"
+                >
+                  <Text className="text-white text-xs font-medium">Test</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={() => refetchBalance()}
+                  disabled={isBalanceLoading}
+                  className="px-3 py-1 bg-[#44A27B] rounded-full"
+                >
+                  <Text className="text-white text-xs font-medium">
+                    {isBalanceLoading ? 'Loading...' : 'Refresh'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
             {balanceError ? (
               <View className="space-y-2">

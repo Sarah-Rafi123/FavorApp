@@ -4,6 +4,8 @@ import { toastConfig } from './src/configs';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SetupIntentProvider } from './src/components/auth/SetupIntentProvider';
 import { StripeProvider } from '@stripe/stripe-react-native';
+import { NotificationProvider } from './src/context/NotificationContext';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import './global.css';
 
 // Polyfill for crypto.getRandomValues() required by react-native-google-places-autocomplete
@@ -36,13 +38,17 @@ export default function App() {
   });
 
   return (
-    <StripeProvider publishableKey={stripePublishableKey}>
-      <QueryClientProvider client={queryClient}>
-        <SetupIntentProvider>
-          <Navigator />
-          <Toast config={toastConfig} />
-        </SetupIntentProvider>
-      </QueryClientProvider>
-    </StripeProvider>
+    <SafeAreaProvider>
+      <StripeProvider publishableKey={stripePublishableKey}>
+        <QueryClientProvider client={queryClient}>
+          <NotificationProvider>
+            <SetupIntentProvider>
+              <Navigator />
+              <Toast config={toastConfig} />
+            </SetupIntentProvider>
+          </NotificationProvider>
+        </QueryClientProvider>
+      </StripeProvider>
+    </SafeAreaProvider>
   );
 }
