@@ -8,6 +8,8 @@ import { useProfileQuery, useStripeBalanceQuery } from '../../services/queries/P
 import { exportProfilePDF, ExportProfileParams, ExportProfileJSONResponse } from '../../services/apis/ProfileApis';
 import Toast from 'react-native-toast-message';
 import * as FileSystem from 'expo-file-system';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 import { PDFViewerModal } from '../../components/overlays/PDFViewerModal';
 import EditSvg from '../../assets/icons/Edit';
 import FilterSvg from '../../assets/icons/Filter';
@@ -313,38 +315,44 @@ export function ProfileScreen() {
       
       setDownloadProgress('Creating PDF file...');
       
-      // For now, let's save the HTML content as a file so users can view it
-      // In a real app, you would use expo-print to convert HTML to PDF
+      // Use expo-print to convert HTML to PDF
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const fileName = `Profile_${exportData.data.user.first_name || 'User'}_${startDate}_${endDate}_${timestamp}.html`;
-      const filePath = `${FileSystem.documentDirectory}${fileName}`;
+      const fileName = `Profile_${exportData.data.user.first_name || 'User'}_${startDate}_${endDate}_${timestamp}.pdf`;
       
-      setDownloadProgress('Saving file...');
+      setDownloadProgress('Converting to PDF...');
       
-      await FileSystem.writeAsStringAsync(filePath, htmlContent, {
-        encoding: FileSystem.EncodingType.UTF8,
+      const { uri } = await Print.printToFileAsync({
+        html: htmlContent,
+        base64: false,
       });
       
-      console.log('✅ HTML file saved to:', filePath);
-      setDownloadProgress('File ready!');
+      console.log('✅ PDF generated at:', uri);
+      setDownloadProgress('Preparing PDF viewer...');
+      
+      // Move the PDF to a permanent location
+      const permanentUri = `${FileSystem.documentDirectory}${fileName}`;
+      await FileSystem.moveAsync({
+        from: uri,
+        to: permanentUri,
+      });
+      
+      console.log('✅ PDF saved to:', permanentUri);
+      setDownloadProgress('Opening PDF viewer...');
+      
+      // Show the PDF in the viewer
+      setPdfUri(permanentUri);
+      setShowPDFViewer(true);
       
       // Show success toast
       Toast.show({
         type: 'success',
-        text1: 'Export Complete! 📄',
-        text2: 'Your profile export has been saved as HTML',
+        text1: 'PDF Generated! 📄',
+        text2: 'Your profile has been exported as PDF',
         visibilityTime: 4000,
       });
 
-      // Close the modal on success
+      // Close the export modal
       setShowExportModal(false);
-      
-      // Show alert with file path
-      Alert.alert(
-        'Export Successful',
-        `Your profile has been exported and saved to:\n${fileName}\n\nYou can find it in your device's Documents folder.`,
-        [{ text: 'OK' }]
-      );
       
     } catch (error: any) {
       console.error('❌ PDF export failed:', error);
@@ -361,7 +369,6 @@ export function ProfileScreen() {
       Alert.alert(
         'Export Failed',
         error.message || 'Failed to export profile. Please try again.',
-
         [{ text: 'OK' }]
       );
     } finally {

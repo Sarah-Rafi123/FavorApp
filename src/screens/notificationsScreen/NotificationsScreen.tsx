@@ -131,8 +131,7 @@ export function NotificationsScreen() {
           }`} numberOfLines={2}>
             {item.description}
           </Text>
-          
-          <Text className="text-xs text-gray-500">{item.time_ago}</Text>
+                <Text className="text-xs text-gray-500">{item.time_ago}</Text>
         </View>
         
         {/* Unread indicator */}

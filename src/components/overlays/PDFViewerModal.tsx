@@ -58,7 +58,7 @@ export function PDFViewerModal({ visible, onClose, pdfUri, fileName }: PDFViewer
                 onPress={handleOpenExternal}
                 className="px-3 py-2 bg-[#44A27B] rounded-lg"
               >
-                <Text className="text-white text-sm font-medium">Open</Text>
+                <Text className="text-white text-sm font-medium">Share</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={onClose}
@@ -78,14 +78,14 @@ export function PDFViewerModal({ visible, onClose, pdfUri, fileName }: PDFViewer
               PDF Generated Successfully!
             </Text>
             <Text className="text-gray-600 text-center mb-6 leading-6">
-              Your profile PDF has been saved to your device. Tap "Open" to view it in your preferred PDF viewer app.
+              Your profile PDF has been saved to your device. Tap "Share" to view it in your preferred PDF viewer app or share it with others.
             </Text>
             <TouchableOpacity
               onPress={handleOpenExternal}
               className="bg-[#44A27B] px-8 py-4 rounded-xl mb-4"
             >
               <Text className="text-white font-semibold text-lg">
-                Open PDF
+                Share PDF
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
