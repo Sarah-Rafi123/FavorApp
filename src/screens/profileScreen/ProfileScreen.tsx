@@ -4,7 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { CarouselButton } from '../../components/buttons';
 import { UpdateProfileModal } from '../../components/overlays/UpdateProfileModal';
 import { ExportPDFModal } from '../../components/overlays/ExportPDFModal';
-import { useProfileQuery } from '../../services/queries/ProfileQueries';
+import { useProfileQuery, useStripeBalanceQuery } from '../../services/queries/ProfileQueries';
 import { exportProfilePDF, ExportProfileParams, ExportProfileJSONResponse } from '../../services/apis/ProfileApis';
 import Toast from 'react-native-toast-message';
 import * as FileSystem from 'expo-file-system';
@@ -33,6 +33,7 @@ export function ProfileScreen() {
   const [showPDFViewer, setShowPDFViewer] = useState(false);
   const [pdfUri, setPdfUri] = useState('');
   const { data: profileResponse, isLoading, error } = useProfileQuery();
+  const { data: balanceResponse, isLoading: isBalanceLoading, error: balanceError, refetch: refetchBalance } = useStripeBalanceQuery();
   
   const [profileData, setProfileData] = useState<ProfileData>({
     firstName: 'Kathryn',
@@ -43,8 +44,8 @@ export function ProfileScreen() {
     phoneText: '(209) 555-0104',
   });
   
-  const profile = profileResponse?.data
-  ?.profile;
+  const profile = profileResponse?.data?.profile;
+  const balance = balanceResponse?.data;
 
   const handleUpdateProfile = (newProfileData: ProfileData) => {
     setProfileData(newProfileData);
@@ -506,11 +507,40 @@ export function ProfileScreen() {
 
           {/* Fund Details */}
           <View className="mb-6">
-            <Text className="text-base font-bold text-black mb-3">Fund Details</Text>
-            <View className="space-y-2">
-              <Text className="text-gray-600 text-sm">Available: <Text className="text-black font-bold">$0.00</Text></Text>
-              <Text className="text-gray-600 text-sm">Pending: <Text className="text-black font-bold">$0.00</Text></Text>
+            <View className="flex-row justify-between items-center mb-3">
+              <Text className="text-base font-bold text-black">Fund Details</Text>
+              <TouchableOpacity 
+                onPress={() => refetchBalance()}
+                disabled={isBalanceLoading}
+                className="px-3 py-1 bg-[#44A27B] rounded-full"
+              >
+                <Text className="text-white text-xs font-medium">
+                  {isBalanceLoading ? 'Loading...' : 'Refresh'}
+                </Text>
+              </TouchableOpacity>
             </View>
+            {balanceError ? (
+              <View className="space-y-2">
+                <Text className="text-red-500 text-sm">Failed to load balance</Text>
+                <Text className="text-gray-600 text-sm">Available: <Text className="text-black font-bold">$0.00</Text></Text>
+                <Text className="text-gray-600 text-sm">Pending: <Text className="text-black font-bold">$0.00</Text></Text>
+              </View>
+            ) : balance?.has_account ? (
+              <View className="space-y-2">
+                <Text className="text-gray-600 text-sm">Available: <Text className="text-green-600 font-bold">${(balance.available || 0).toFixed(2)}</Text></Text>
+                <Text className="text-gray-600 text-sm">Pending: <Text className="text-orange-600 font-bold">${(balance.pending || 0).toFixed(2)}</Text></Text>
+                <Text className="text-gray-600 text-xs mt-1">Total: <Text className="text-black font-bold">${((balance.available || 0) + (balance.pending || 0)).toFixed(2)} {balance.currency?.toUpperCase()}</Text></Text>
+                <Text className="text-gray-500 text-xs mt-2">
+                  Available funds can be withdrawn. Pending funds will be available in 2-7 days.
+                </Text>
+              </View>
+            ) : (
+              <View className="space-y-2">
+                <Text className="text-gray-600 text-sm">Available: <Text className="text-black font-bold">$0.00</Text></Text>
+                <Text className="text-gray-600 text-sm">Pending: <Text className="text-black font-bold">$0.00</Text></Text>
+                <Text className="text-gray-500 text-xs mt-1">Set up payment account to start earning</Text>
+              </View>
+            )}
           </View>
 
           {/* Add Payment Method Button */}

@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { FavorDetailsModal } from '../../components/overlays';
+import { FavorDetailsModal, StripeConnectWebView } from '../../components/overlays';
 import { useFavors, useBrowseFavors } from '../../services/queries/FavorQueries';
 import { Favor } from '../../services/apis/FavorApis';
 import { useApplyToFavor } from '../../services/mutations/FavorMutations';
@@ -35,6 +35,9 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications }: HomeLis
   const [currentPage, setCurrentPage] = useState(1);
   const [allFavors, setAllFavors] = useState<Favor[]>([]);
   const [hasMorePages, setHasMorePages] = useState(true);
+  const [showStripeWebView, setShowStripeWebView] = useState(false);
+  const [stripeOnboardingUrl, setStripeOnboardingUrl] = useState<string>('');
+  const [pendingFavorAction, setPendingFavorAction] = useState<(() => void) | null>(null);
   
   // Stripe Connect Manager
   const stripeConnectManager = StripeConnectManager.getInstance();
@@ -139,6 +142,45 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications }: HomeLis
     setShowFavorDetailsModal(true);
   };
 
+  const handleStripeSetupRequired = async (onSetupComplete: () => void) => {
+    try {
+      console.log('🚀 Starting Stripe Connect WebView setup...');
+      
+      // Get the onboarding URL
+      const stripeManager = StripeConnectManager.getInstance();
+      const url = await stripeManager.setupPaymentAccount();
+      
+      // Store the completion action
+      setPendingFavorAction(() => onSetupComplete);
+      
+      // Show WebView
+      setStripeOnboardingUrl(url);
+      setShowStripeWebView(true);
+      
+    } catch (error) {
+      console.error('❌ Failed to start Stripe setup:', error);
+    }
+  };
+
+  const handleStripeWebViewSuccess = async () => {
+    // Close WebView first
+    setShowStripeWebView(false);
+    setStripeOnboardingUrl('');
+    
+    // Check account status and execute pending action
+    const stripeManager = StripeConnectManager.getInstance();
+    await stripeManager.checkAccountStatusAfterSetup(pendingFavorAction || undefined);
+    
+    // Clear pending action
+    setPendingFavorAction(null);
+  };
+
+  const handleStripeWebViewClose = () => {
+    setShowStripeWebView(false);
+    setStripeOnboardingUrl('');
+    setPendingFavorAction(null);
+  };
+
   const handleProvideFavor = async (favor: Favor) => {
     console.log('🎯 Provide favor clicked for:', favor.user.full_name);
     console.log('💰 Favor tip amount:', favor.tip);
@@ -147,27 +189,42 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications }: HomeLis
       // Check if this is a paid favor and validate Stripe Connect status
       const tipAmount = typeof favor.tip === 'string' ? parseFloat(favor.tip) : (favor.tip || 0);
       
-      // Create callback that will apply to favor after payment setup is complete
-      const onSetupComplete = async () => {
-        console.log('🎉 Payment setup complete, now applying to favor automatically');
-        try {
-          await applyToFavorMutation.mutateAsync(favor.id);
-          console.log('✅ Auto-application after payment setup successful');
-        } catch (error: any) {
-          console.error('❌ Auto-application after payment setup failed:', error.message);
-          // The mutation's onError callback will handle the toast
-        }
-      };
+      if (tipAmount === 0) {
+        // Free favor - no payment setup needed, proceed directly
+        console.log('✅ Free favor, no payment setup required');
+        
+        Alert.alert(
+          'Apply to Favor',
+          `Apply to provide favor for ${favor.user.full_name}? This is a volunteer favor.`,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { 
+              text: 'Apply',
+              onPress: async () => {
+                try {
+                  console.log('📝 Applying to free favor:', favor.id);
+                  await applyToFavorMutation.mutateAsync(favor.id);
+                  console.log('✅ Application submitted successfully');
+                } catch (error: any) {
+                  console.error('❌ Application failed:', error.message);
+                }
+              }
+            }
+          ]
+        );
+        return;
+      }
+
+      // For paid favors, check if user can receive payments
+      const canReceivePayments = await stripeConnectManager.canApplyToPaidFavor();
       
-      const canProceed = await stripeConnectManager.validateBeforeApplying(tipAmount, onSetupComplete);
-      
-      if (canProceed) {
-        console.log('✅ User can apply to this favor');
+      if (canReceivePayments) {
+        console.log('✅ User can apply to this paid favor');
         
         // Show confirmation dialog and apply to favor
         Alert.alert(
           'Apply to Favor',
-          `Apply to provide favor for ${favor.user.full_name}?${tipAmount > 0 ? ` You'll receive $${tipAmount.toFixed(2)}.` : ' This is a volunteer favor.'}`,
+          `Apply to provide favor for ${favor.user.full_name}? You'll receive $${tipAmount.toFixed(2)}.`,
           [
             { text: 'Cancel', style: 'cancel' },
             { 
@@ -175,15 +232,9 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications }: HomeLis
               onPress: async () => {
                 try {
                   console.log('📝 Applying to favor:', favor.id);
-                  
-                  // Call the Apply to Favor API
                   await applyToFavorMutation.mutateAsync(favor.id);
-                  
-                  // Success is handled by the mutation's onSuccess callback
                   console.log('✅ Application submitted successfully');
-                  
                 } catch (error: any) {
-                  // Error is handled by the mutation's onError callback
                   console.error('❌ Application failed:', error.message);
                 }
               }
@@ -191,9 +242,31 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications }: HomeLis
           ]
         );
       } else {
-        console.log('⚠️ User cannot apply - payment account setup required');
-        // stripeConnectManager.validateBeforeApplying already shows the setup dialog
-        // If user proceeds with setup, the onSetupComplete callback will automatically apply to the favor
+        console.log('⚠️ Payment account setup required for paid favor');
+        
+        // Create callback that will apply to favor after payment setup is complete
+        const onSetupComplete = async () => {
+          console.log('🎉 Payment setup complete, now applying to favor automatically');
+          try {
+            await applyToFavorMutation.mutateAsync(favor.id);
+            console.log('✅ Auto-application after payment setup successful');
+          } catch (error: any) {
+            console.error('❌ Auto-application after payment setup failed:', error.message);
+          }
+        };
+        
+        // Show setup required dialog and trigger WebView setup
+        Alert.alert(
+          'Payment Account Required',
+          'Set up your payment account to apply to paid favors',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { 
+              text: 'Set Up Now', 
+              onPress: () => handleStripeSetupRequired(onSetupComplete)
+            }
+          ]
+        );
       }
     } catch (error) {
       console.error('❌ Error handling provide favor:', error);
@@ -390,6 +463,14 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications }: HomeLis
           setSelectedFavorId(null);
         }}
         favorId={selectedFavorId}
+      />
+
+      {/* Stripe Connect WebView */}
+      <StripeConnectWebView
+        visible={showStripeWebView}
+        onClose={handleStripeWebViewClose}
+        onSuccess={handleStripeWebViewSuccess}
+        onboardingUrl={stripeOnboardingUrl}
       />
     </ImageBackground>
   );

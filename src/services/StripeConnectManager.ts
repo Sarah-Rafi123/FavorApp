@@ -23,9 +23,40 @@ export class StripeConnectManager {
   }
 
   /**
-   * Complete flow: Setup payment account for providers
+   * Complete flow: Setup payment account for providers using WebView
    */
-  async setupPaymentAccount(onSetupComplete?: () => void): Promise<void> {
+  async setupPaymentAccount(): Promise<string> {
+    try {
+      console.log('🚀 Starting Stripe Connect setup flow...');
+      
+      // Step 1: Call setup API - let backend handle URLs for test environment
+      // This avoids URL validation issues in Stripe test mode
+      const setupResponse = await StripeConnectApis.setup();
+      console.log('✅ Setup API response:', setupResponse);
+      
+      // Step 2: Validate onboarding URL
+      if (!setupResponse.data.onboarding_url) {
+        throw new Error('No onboarding URL received from server');
+      }
+      
+      // Return the onboarding URL to be used in WebView
+      return setupResponse.data.onboarding_url;
+      
+    } catch (error: any) {
+      console.error('❌ Setup payment account failed:', error);
+      Alert.alert(
+        'Setup Failed',
+        error.message || 'Failed to setup payment account. Please try again.',
+        [{ text: 'OK' }]
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Legacy method: Setup payment account using external browser (deprecated)
+   */
+  async setupPaymentAccountBrowser(onSetupComplete?: () => void): Promise<void> {
     try {
       console.log('🚀 Starting Stripe Connect setup flow...');
       
@@ -129,6 +160,10 @@ export class StripeConnectManager {
   async checkAccountStatusAfterSetup(onSetupComplete?: () => void): Promise<void> {
     try {
       console.log('🔍 Checking account status after setup...');
+      
+      // Add a small delay to allow Stripe processing
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
       const status = await this.getAccountStatus();
       
       console.log('📊 Account Status:', {
@@ -159,33 +194,51 @@ export class StripeConnectManager {
           'Setup In Progress ⏳',
           'Your account is being processed. This can take a few minutes. Please try again shortly.',
           [
-            { text: 'OK' },
+            { text: 'OK', onPress: onSetupComplete },
             { 
               text: 'Check Again', 
-              onPress: () => this.checkAccountStatusAfterSetup()
+              onPress: () => this.checkAccountStatusAfterSetup(onSetupComplete)
             }
           ]
         );
       } else {
         Alert.alert(
-          'Setup Needed',
-          'Please complete your payment account setup to receive payments.',
+          'Setup Incomplete',
+          'It looks like the setup wasn\'t completed. You can try again anytime.',
           [
-            { text: 'Cancel', style: 'cancel' },
+            { text: 'OK', onPress: onSetupComplete },
             { 
-              text: 'Setup Now', 
-              onPress: () => this.setupPaymentAccount()
+              text: 'Try Again', 
+              onPress: () => this.setupPaymentAccountBrowser()
             }
           ]
         );
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error checking account status:', error);
-      Alert.alert(
-        'Check Failed',
-        'Unable to check account status. Please try again.',
-        [{ text: 'OK' }]
-      );
+      
+      // If it's an auth error, still call the completion callback
+      if (error.message?.includes('Unauthorized') || error.message?.includes('Authentication')) {
+        console.log('🔐 Authentication error detected, but continuing with callback');
+        Alert.alert(
+          'Authentication Issue',
+          'There was an authentication issue, but your setup may have completed. Please check your payment status in settings.',
+          [{ 
+            text: 'OK', 
+            onPress: () => {
+              if (onSetupComplete) {
+                onSetupComplete();
+              }
+            }
+          }]
+        );
+      } else {
+        Alert.alert(
+          'Check Failed',
+          'Unable to check account status. Please try again.',
+          [{ text: 'OK' }]
+        );
+      }
     }
   }
 
@@ -208,7 +261,7 @@ export class StripeConnectManager {
           { text: 'Cancel', style: 'cancel' },
           { 
             text: 'Set Up Now', 
-            onPress: () => this.setupPaymentAccount(onSetupComplete)
+            onPress: () => this.setupPaymentAccountBrowser(onSetupComplete)
           }
         ]
       );

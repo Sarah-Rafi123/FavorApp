@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { getProfile, getPublicUserProfile, getFavorProviderProfile, getUserReviews, UserReviewsParams } from "../apis/ProfileApis";
+import { StripeConnectApis } from "../apis/StripeConnectApis";
 
 export const useProfileQuery = () => {
   return useQuery({
@@ -41,5 +42,17 @@ export const useUserReviewsQuery = (
     enabled: !!userId && (options?.enabled !== false),
     staleTime: 1000 * 60 * 3, // 3 minutes (reviews change more frequently)
     gcTime: 1000 * 60 * 15, // 15 minutes
+  });
+};
+
+export const useStripeBalanceQuery = (options?: { enabled?: boolean }) => {
+  return useQuery({
+    queryKey: ['stripeBalance'],
+    queryFn: StripeConnectApis.getBalance,
+    enabled: options?.enabled !== false,
+    staleTime: 1000 * 60 * 2, // 2 minutes (balance changes frequently)
+    gcTime: 1000 * 60 * 10, // 10 minutes
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 };

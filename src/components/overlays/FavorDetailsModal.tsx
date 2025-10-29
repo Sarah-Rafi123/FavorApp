@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import { useFavor } from '../../services/queries/FavorQueries';
 import { useApplyToFavor } from '../../services/mutations/FavorMutations';
 import { usePublicUserProfileQuery } from '../../services/queries/ProfileQueries';
 import { StripeConnectManager } from '../../services/StripeConnectManager';
+import { StripeConnectWebView } from './StripeConnectWebView';
 
 interface FavorDetailsModalProps {
   visible: boolean;
@@ -50,6 +51,10 @@ const BlurredText = ({ children }: { children: string }) => (
 );
 
 export function FavorDetailsModal({ visible, onClose, favorId }: FavorDetailsModalProps) {
+  const [showStripeWebView, setShowStripeWebView] = useState(false);
+  const [stripeOnboardingUrl, setStripeOnboardingUrl] = useState<string>('');
+  const [pendingFavorAction, setPendingFavorAction] = useState<(() => void) | null>(null);
+
   const { data: favorData, isLoading, error } = useFavor(favorId || 0, {
     enabled: !!favorId && visible,
   });
@@ -93,6 +98,45 @@ export function FavorDetailsModal({ visible, onClose, favorId }: FavorDetailsMod
     });
   };
 
+  const handleStripeSetupRequired = async (onSetupComplete: () => void) => {
+    try {
+      console.log('🚀 Starting Stripe Connect WebView setup from modal...');
+      
+      // Get the onboarding URL
+      const stripeManager = StripeConnectManager.getInstance();
+      const url = await stripeManager.setupPaymentAccount();
+      
+      // Store the completion action
+      setPendingFavorAction(() => onSetupComplete);
+      
+      // Show WebView
+      setStripeOnboardingUrl(url);
+      setShowStripeWebView(true);
+      
+    } catch (error) {
+      console.error('❌ Failed to start Stripe setup from modal:', error);
+    }
+  };
+
+  const handleStripeWebViewSuccess = async () => {
+    // Close WebView first
+    setShowStripeWebView(false);
+    setStripeOnboardingUrl('');
+    
+    // Check account status and execute pending action
+    const stripeManager = StripeConnectManager.getInstance();
+    await stripeManager.checkAccountStatusAfterSetup(pendingFavorAction || undefined);
+    
+    // Clear pending action
+    setPendingFavorAction(null);
+  };
+
+  const handleStripeWebViewClose = () => {
+    setShowStripeWebView(false);
+    setStripeOnboardingUrl('');
+    setPendingFavorAction(null);
+  };
+
   // Handle applying to favor - same logic as HomeListScreen
   const handleApplyToFavor = async () => {
     if (!favor) return;
@@ -104,28 +148,43 @@ export function FavorDetailsModal({ visible, onClose, favorId }: FavorDetailsMod
       // Check if this is a paid favor and validate Stripe Connect status
       const tipAmount = typeof favor.tip === 'string' ? parseFloat(favor.tip) : (favor.tip || 0);
       
-      // Create callback that will apply to favor after payment setup is complete
-      const onSetupComplete = async () => {
-        console.log('🎉 Payment setup complete, now applying to favor automatically');
-        try {
-          await applyToFavorMutation.mutateAsync(favor.id);
-          console.log('✅ Auto-application after payment setup successful');
-          onClose(); // Close modal after successful application
-        } catch (error: any) {
-          console.error('❌ Auto-application after payment setup failed:', error.message);
-          // The mutation's onError callback will handle the toast
-        }
-      };
+      if (tipAmount === 0) {
+        // Free favor - no payment setup needed, proceed directly
+        console.log('✅ Free favor, no payment setup required');
+        
+        Alert.alert(
+          'Apply to Favor',
+          `Apply to provide favor for ${favor.user.full_name}? This is a volunteer favor.`,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { 
+              text: 'Apply',
+              onPress: async () => {
+                try {
+                  console.log('📝 Applying to free favor from modal:', favor.id);
+                  await applyToFavorMutation.mutateAsync(favor.id);
+                  console.log('✅ Application submitted successfully from modal');
+                  onClose(); // Close modal after successful application
+                } catch (error: any) {
+                  console.error('❌ Application failed from modal:', error.message);
+                }
+              }
+            }
+          ]
+        );
+        return;
+      }
+
+      // For paid favors, check if user can receive payments
+      const canReceivePayments = await stripeConnectManager.canApplyToPaidFavor();
       
-      const canProceed = await stripeConnectManager.validateBeforeApplying(tipAmount, onSetupComplete);
-      
-      if (canProceed) {
-        console.log('✅ User can apply to this favor');
+      if (canReceivePayments) {
+        console.log('✅ User can apply to this paid favor from modal');
         
         // Show confirmation dialog and apply to favor
         Alert.alert(
           'Apply to Favor',
-          `Apply to provide favor for ${favor.user.full_name}?${tipAmount > 0 ? ` You'll receive $${tipAmount.toFixed(2)}.` : ' This is a volunteer favor.'}`,
+          `Apply to provide favor for ${favor.user.full_name}? You'll receive $${tipAmount.toFixed(2)}.`,
           [
             { text: 'Cancel', style: 'cancel' },
             { 
@@ -133,16 +192,10 @@ export function FavorDetailsModal({ visible, onClose, favorId }: FavorDetailsMod
               onPress: async () => {
                 try {
                   console.log('📝 Applying to favor from modal:', favor.id);
-                  
-                  // Call the Apply to Favor API
                   await applyToFavorMutation.mutateAsync(favor.id);
-                  
-                  // Success is handled by the mutation's onSuccess callback
                   console.log('✅ Application submitted successfully from modal');
                   onClose(); // Close modal after successful application
-                  
                 } catch (error: any) {
-                  // Error is handled by the mutation's onError callback
                   console.error('❌ Application failed from modal:', error.message);
                 }
               }
@@ -150,9 +203,32 @@ export function FavorDetailsModal({ visible, onClose, favorId }: FavorDetailsMod
           ]
         );
       } else {
-        console.log('⚠️ User cannot apply - payment account setup required');
-        // stripeConnectManager.validateBeforeApplying already shows the setup dialog
-        // If user proceeds with setup, the onSetupComplete callback will automatically apply to the favor
+        console.log('⚠️ Payment account setup required for paid favor from modal');
+        
+        // Create callback that will apply to favor after payment setup is complete
+        const onSetupComplete = async () => {
+          console.log('🎉 Payment setup complete, now applying to favor automatically from modal');
+          try {
+            await applyToFavorMutation.mutateAsync(favor.id);
+            console.log('✅ Auto-application after payment setup successful from modal');
+            onClose(); // Close modal after successful application
+          } catch (error: any) {
+            console.error('❌ Auto-application after payment setup failed from modal:', error.message);
+          }
+        };
+        
+        // Show setup required dialog and trigger WebView setup
+        Alert.alert(
+          'Payment Account Required',
+          'Set up your payment account to apply to paid favors',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { 
+              text: 'Set Up Now', 
+              onPress: () => handleStripeSetupRequired(onSetupComplete)
+            }
+          ]
+        );
       }
     } catch (error) {
       console.error('❌ Error handling apply to favor from modal:', error);
@@ -389,6 +465,14 @@ export function FavorDetailsModal({ visible, onClose, favorId }: FavorDetailsMod
           )}
         </View>
       </View>
+
+      {/* Stripe Connect WebView */}
+      <StripeConnectWebView
+        visible={showStripeWebView}
+        onClose={handleStripeWebViewClose}
+        onSuccess={handleStripeWebViewSuccess}
+        onboardingUrl={stripeOnboardingUrl}
+      />
     </Modal>
   );
 }

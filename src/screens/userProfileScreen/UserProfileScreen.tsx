@@ -123,7 +123,7 @@ export function UserProfileScreen({ navigation, route }: UserProfileScreenProps)
               <BackSvg />
             </TouchableOpacity>
             <Text className="text-2xl font-bold text-black">User Profile</Text>
-          </View>
+          </View>ct
         </View>
         <View className="flex-1 justify-center items-center px-6">
           <Text className="text-xl font-bold text-gray-800 mb-4 text-center">
