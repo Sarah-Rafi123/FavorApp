@@ -15,7 +15,8 @@ import {
 import Svg, { Path } from 'react-native-svg';
 import BackSvg from '../../assets/icons/Back';
 import CancelSvg from '../../assets/icons/Cancel';
-import { useFavor } from '../../services/queries/FavorQueries';
+import UserSvg from '../../assets/icons/User';
+import { useFavor, useFavorReviews } from '../../services/queries/FavorQueries';
 import { usePublicUserProfileQuery, useFavorProviderProfileQuery } from '../../services/queries/ProfileQueries';
 import { useDeleteFavor, useReassignFavor, useCompleteFavor, useCancelAndRepost, useCreateReview } from '../../services/mutations/FavorMutations';
 import { Favor } from '../../services/apis/FavorApis';
@@ -65,6 +66,11 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
     enabled: !!favorId
   });
 
+  // Fetch favor reviews
+  const { data: reviewsResponse, isLoading: reviewsLoading } = useFavorReviews(favorId, {
+    enabled: !!favorId
+  });
+
   // Fetch provider profile data when there's an accepted response
   const { data: providerProfileResponse, isLoading: providerProfileLoading } = useFavorProviderProfileQuery(
     favorResponse?.data.favor?.accepted_response ? favorId : null,
@@ -87,6 +93,16 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
   const favor = favorResponse?.data.favor;
   const userProfile = userProfileResponse?.data.user;
   const providerProfile = providerProfileResponse?.data.user;
+
+  // Function to get user initials from full name
+  const getUserInitials = (fullName: string) => {
+    if (!fullName) return 'U';
+    const names = fullName.trim().split(' ');
+    if (names.length === 1) {
+      return names[0].charAt(0).toUpperCase();
+    }
+    return (names[0].charAt(0) + names[names.length - 1].charAt(0)).toUpperCase();
+  };
 
   const handleGoBack = () => {
     navigation?.goBack();
@@ -205,7 +221,15 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
   };
 
   const handleViewProfile = () => {
-    setShowUserProfileModal(true);
+    if (favor?.accepted_response?.user?.id) {
+      navigation?.navigate('UserProfileScreen', { 
+        userId: favor.accepted_response.user.id 
+      });
+    } else if (favor?.user?.id) {
+      navigation?.navigate('UserProfileScreen', { 
+        userId: favor.user.id 
+      });
+    }
   };
 
   const handleSubmitReview = async () => {
@@ -335,14 +359,18 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
         <View className="mx-4 mb-6 bg-white rounded-3xl p-6 border-4 border-[#71DFB1]">
           {/* Favor Image */}
           <View className="items-center mb-6">
-            <View className="w-32 h-24 bg-gray-200 rounded-2xl overflow-hidden">
-              <Image
-                source={{ 
-                  uri: favor.image_url || 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400&h=400&fit=crop' 
-                }}
-                className="w-full h-full"
-                resizeMode="cover"
-              />
+            <View className="w-32 h-24 rounded-2xl overflow-hidden items-center justify-center">
+              {favor.image_url ? (
+                <Image
+                  source={{ uri: favor.image_url }}
+                  className="w-full h-full"
+                  resizeMode="cover"
+                />
+              ) : (
+                <View className="w-full h-full bg-[#44A27B] items-center justify-center">
+                  <UserSvg focused={false} />
+                </View>
+              )}
             </View>
           </View>
 
@@ -380,6 +408,86 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
           </View>
         </View>
 
+        {/* Show requester information when viewing from ProvideFavorScreen */}
+        {!isRequestMode && favor.user && (
+          <View className="mx-4 mb-6">
+            <Text className="text-lg font-semibold text-black mb-4">
+              You helped
+            </Text>
+            
+            <View className="flex-row items-center bg-white border rounded-2xl border-gray-300 p-4 border-1 mb-4">
+              <View className="relative">
+                <View className="w-16 h-16 rounded-full overflow-hidden items-center justify-center">
+                  {userProfile?.image_url ? (
+                    <Image
+                      source={{ uri: userProfile.image_url }}
+                      className="w-full h-full"
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View className="w-full h-full bg-[#44A27B] items-center justify-center">
+                      <Text className="text-white text-lg font-bold">
+                        {getUserInitials(favor.user.full_name)}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                {userProfile?.is_certified && (
+                  <View className="absolute -top-1 -right-1">
+                    <VerifiedIcon />
+                  </View>
+                )}
+              </View>
+
+              <View className="ml-4 flex-1">
+                <Text className="text-lg font-semibold text-black">
+                  {favor.user.full_name}
+                </Text>
+                <View className="flex-row items-center">
+                  <Text className="text-gray-600 text-sm">⭐ 4.5 | </Text>
+                  <Text className="text-gray-600 text-sm">0 Reviews</Text>
+                </View>
+                {userProfile?.years_of_experience && (
+                  <Text className="text-gray-600 text-sm">{userProfile.years_of_experience} years experience</Text>
+                )}
+                <TouchableOpacity onPress={() => navigation?.navigate('UserProfileScreen', { userId: favor.user.id })}>
+                  <Text className="text-[#44A27B] text-sm font-medium">View Profile</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Contact Buttons */}
+            <View className="flex-row mb-4">
+              <TouchableOpacity 
+                className="flex-1 bg-transparent border border-black rounded-xl mr-2 py-3 px-2"
+                onPress={() => handleCallNumber(userProfile?.phone_no_call || '917-582-3220')}
+              >
+                <Text className="text-center text-gray-800 font-medium text-sm">
+                  Call: {userProfile?.phone_no_call || '917-582-3220'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                className="flex-1 bg-transparent border border-black rounded-xl ml-2 py-3 px-2"
+                onPress={() => handleTextNumber(userProfile?.phone_no_text || '908-245-4242')}
+              >
+                <Text className="text-center text-gray-800 font-medium text-sm">
+                  Text: {userProfile?.phone_no_text || '908-245-4242'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Submit Review Button for provider mode */}
+            {favor.status !== 'completed' && (
+              <TouchableOpacity 
+                className="bg-[#44A27B] rounded-xl py-3 mb-4"
+                onPress={handleSubmitReview}
+              >
+                <Text className="text-white text-center font-medium text-base">Submit Review</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+
         {/* Show accepted response details if available */}
         {favor.accepted_response && (
           <View className="mx-4 mb-6">
@@ -389,14 +497,20 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
             
             <View className="flex-row items-center bg-white border rounded-2xl border-gray-300 p-4 border-1 mb-4">
               <View className="relative">
-                <View className="w-16 h-16 bg-gray-200 rounded-full overflow-hidden">
-                  <Image
-                    source={{ 
-                      uri: providerProfile?.image_url || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face' 
-                    }}
-                    className="w-full h-full"
-                    resizeMode="cover"
-                  />
+                <View className="w-16 h-16 rounded-full overflow-hidden items-center justify-center">
+                  {providerProfile?.image_url ? (
+                    <Image
+                      source={{ uri: providerProfile.image_url }}
+                      className="w-full h-full"
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View className="w-full h-full bg-[#44A27B] items-center justify-center">
+                      <Text className="text-white text-lg font-bold">
+                        {getUserInitials(favor.accepted_response.user.full_name)}
+                      </Text>
+                    </View>
+                  )}
                 </View>
                 {providerProfile?.is_certified && (
                   <View className="absolute -top-1 -right-1">
@@ -442,41 +556,96 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
               </TouchableOpacity>
             </View>
 
-            {/* Action buttons based on context */}
-            {isRequestMode ? (
-              /* Buttons for request mode (CreateFavorScreen) */
-              <View className="flex-row space-x-2">
-                <TouchableOpacity 
-                  className="flex-1 bg-transparent border border-black rounded-xl py-3 mr-2"
-                  onPress={handleCancelAndRepost}
-                >
-                  <Text className="text-center text-gray-800 font-medium text-sm">Cancel & Repost</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  className="bg-[#44A27B] rounded-xl py-3 px-4 mr-2"
-                  onPress={handleSubmitReview}
-                >
-                  <Text className="text-white text-center font-medium text-sm">Mark as Completed</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  className="bg-transparent border border-black rounded-xl py-3 px-4"
-                  onPress={() => {
-                    // Cancel functionality
-                    console.log('Cancel');
-                  }}
-                >
-                  <Text className="text-center text-gray-800 font-medium text-sm">Cancel</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              /* Button for provider mode (ProvideFavorScreen) */
-              <TouchableOpacity 
-                className="bg-[#44A27B] rounded-xl py-3 mb-4"
-                onPress={handleSubmitReview}
-              >
-                <Text className="text-white text-center font-medium text-base">Mark as Completed</Text>
-              </TouchableOpacity>
+            {/* Action buttons based on context - only show if favor is not completed */}
+            {favor.status !== 'completed' && (
+              <>
+                {isRequestMode ? (
+                  /* Buttons for request mode (CreateFavorScreen) */
+                  <View className="flex-row space-x-2">
+                    <TouchableOpacity 
+                      className="flex-1 bg-transparent border border-black rounded-xl py-3 mr-2"
+                      onPress={handleCancelAndRepost}
+                    >
+                      <Text className="text-center text-gray-800 font-medium text-sm">Cancel & Repost</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      className="bg-[#44A27B] rounded-xl py-3 px-4 mr-2"
+                      onPress={handleSubmitReview}
+                    >
+                      <Text className="text-white text-center font-medium text-sm">Mark as Completed</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      className="bg-transparent border border-black rounded-xl py-3 px-4"
+                      onPress={() => {
+                        // Cancel functionality
+                        console.log('Cancel');
+                      }}
+                    >
+                      <Text className="text-center text-gray-800 font-medium text-sm">Cancel</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  /* Button for provider mode (ProvideFavorScreen) */
+                  <TouchableOpacity 
+                    className="bg-[#44A27B] rounded-xl py-3 mb-4"
+                    onPress={handleSubmitReview}
+                  >
+                    <Text className="text-white text-center font-medium text-base">Mark as Completed</Text>
+                  </TouchableOpacity>
+                )}
+              </>
             )}
+          </View>
+        )}
+
+        {/* Reviews Section */}
+        {reviewsResponse?.data?.reviews && reviewsResponse.data.reviews.length > 0 && (
+          <View className="mx-4 mb-6">
+            <Text className="text-lg font-semibold text-black mb-4">
+              Reviews ({reviewsResponse.data.reviews.length})
+            </Text>
+            
+            {reviewsResponse.data.reviews.map((review, index) => (
+              <View key={index} className="bg-white rounded-2xl p-4 mb-3 border border-gray-200">
+                {/* Reviewer Info */}
+                <View className="flex-row items-center mb-3">
+                  <View className="w-10 h-10 bg-gray-200 rounded-full overflow-hidden">
+                    <Image
+                      source={{ 
+                        uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face' 
+                      }}
+                      className="w-full h-full"
+                      resizeMode="cover"
+                    />
+                  </View>
+                  <View className="ml-3 flex-1">
+                    <Text className="text-base font-semibold text-gray-800">
+                      {review.given_by?.full_name || 'Anonymous'}
+                    </Text>
+                    <View className="flex-row items-center">
+                      {/* Star Rating */}
+                      <View className="flex-row mr-2">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Text key={star} className="text-yellow-400 text-sm">
+                            {review.rating >= star ? '★' : '☆'}
+                          </Text>
+                        ))}
+                      </View>
+                      <Text className="text-gray-500 text-sm">
+                        {new Date(review.created_at).toLocaleDateString()}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+                
+                {/* Review Text */}
+                {review.description && (
+                  <Text className="text-gray-700 text-base leading-5 mb-2">
+                    {review.description}
+                  </Text>
+                )}
+              </View>
+            ))}
           </View>
         )}
       </ScrollView>
@@ -489,7 +658,7 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
         onRequestClose={handleCancelModalClose}
       >
         <View className="flex-1 bg-black/50 justify-center items-center px-6">
-          <View className="bg-white rounded-3xl p-6 max-w-sm w-full border-4 border-blue-400 relative">
+          <View className="bg-[#F7FBF5] rounded-3xl p-6 max-w-sm w-full border-4 border-[#71DFB1] relative">
             {/* Close Button */}
             <TouchableOpacity 
               className="absolute top-4 right-4 w-8 h-8 bg-black rounded-full items-center justify-center"
@@ -515,16 +684,16 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
             {/* Buttons */}
             <View className="flex-row space-x-4">
               <TouchableOpacity 
-                className="flex-1 bg-green-500 rounded-full py-4"
+                className="flex-1 bg-[#44A27B] rounded-full py-4"
                 onPress={handleCancelModalClose}
               >
                 <Text className="text-white text-center font-semibold text-lg">No</Text>
               </TouchableOpacity>
               <TouchableOpacity 
-                className="flex-1 border-2 border-green-500 rounded-full py-4"
+                className="flex-1 border-2 border-[#44A27B] rounded-full py-4"
                 onPress={handleConfirmCancel}
               >
-                <Text className="text-green-500 text-center font-semibold text-lg">Yes</Text>
+                <Text className="text-[#44A27B] text-center font-semibold text-lg">Yes</Text>
               </TouchableOpacity>
             </View>
           </View>

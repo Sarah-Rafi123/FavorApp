@@ -179,6 +179,17 @@ export const useFavorMutation = <TData = any, TVariables = any>(
       // Invalidate favor-related queries
       queryClient.invalidateQueries({ queryKey: ['favors'] });
       
+      // If favorId can be extracted from variables, invalidate specific favor queries
+      const favorId = (variables && typeof variables === 'object' && 'favorId' in variables) 
+        ? (variables as any).favorId 
+        : null;
+      
+      if (favorId) {
+        queryClient.invalidateQueries({ queryKey: ['favor', favorId] });
+        queryClient.invalidateQueries({ queryKey: ['favor', favorId, 'applicants'] });
+        queryClient.invalidateQueries({ queryKey: ['favor-provider-profile', favorId] });
+      }
+      
       if (options?.showToast !== false) {
         Toast.show({
           type: 'success',

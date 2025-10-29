@@ -11,7 +11,7 @@
     "ios": {
       "icon": "./assets/AppLogo.png",
       "supportsTablet": true,
-      "bundleIdentifier": "com.favor.app",
+      "bundleIdentifier": "com.favorappllc.mobile",
       "config": {
         "googleMapsApiKey": "AIzaSyDt1zyVSt1snXRBteLuH9ngKmE8ABve268"
       },
@@ -27,7 +27,7 @@
         "backgroundColor": "#71DFB1",
         "monochromeImage": "./assets/AppLogo.png"
       },
-      "package": "com.favor.app",
+      "package": "com.favorappllc.mobile",
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyDt1zyVSt1snXRBteLuH9ngKmE8ABve268"
@@ -51,7 +51,7 @@
       [
         "@stripe/stripe-react-native",
         {
-          "merchantIdentifier": "merchant.com.favor.app",
+          "merchantIdentifier": "merchant.com.favorappllc.mobile",
           "publishableKey": "pk_test_51Q7dmgB0ebyuNLiRFS67rDTvorE6TiCaf5cXjofD1MUKOUtoT7xDl8LKMkbEhthWmzZtDc5cbwotic3Fv0KjosJ600I9SOjcpj"
         }
       ]

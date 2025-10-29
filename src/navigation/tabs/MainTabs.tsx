@@ -2,7 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
-import { HomeScreen, ProvideFavorScreen, ProfileScreen, SettingsScreen, FilterScreen, AskFavorScreen, FavorDetailsScreen } from '../../screens';
+import { HomeScreen, ProvideFavorScreen, ProfileScreen, SettingsScreen, FilterScreen, AskFavorScreen, FavorDetailsScreen, UserProfileScreen, ProvideFavorDetailsScreen } from '../../screens';
 import { NotificationsScreen } from '../../screens/notificationsScreen/NotificationsScreen';
 import { CreateFavorScreen } from '../../screens/createFavorScreen/CreateFavorScreen';
 import { GetCertifiedScreen } from '../../screens/getCertifiedScreen/GetCertifiedScreen';
@@ -68,6 +68,14 @@ function ProvideFavorStack() {
         name="FavorDetailsScreen" 
         component={FavorDetailsScreen}
       />
+      <Stack.Screen 
+        name="ProvideFavorDetailsScreen" 
+        component={ProvideFavorDetailsScreen}
+      />
+      <Stack.Screen 
+        name="UserProfileScreen" 
+        component={UserProfileScreen}
+      />
     </Stack.Navigator>
   );
 }
@@ -87,6 +95,10 @@ function CreateFavorStack() {
       <Stack.Screen 
         name="FavorDetailsScreen" 
         component={FavorDetailsScreen}
+      />
+      <Stack.Screen 
+        name="UserProfileScreen" 
+        component={UserProfileScreen}
       />
     </Stack.Navigator>
   );

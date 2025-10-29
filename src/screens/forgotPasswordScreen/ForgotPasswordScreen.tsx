@@ -118,7 +118,10 @@ export function ForgotPasswordScreen({ onBackToLogin, onContinue }: ForgotPasswo
 
             {/* Email Input */}
             <View className="mb-8">
-              <View className="mb-6 relative">
+              <View className="mb-6">
+                <Text className="text-sm font-medium text-gray-700 mb-2">
+                  Email
+                </Text>
                 <TextInput
                  style={{ 
                     lineHeight: 18,
@@ -134,9 +137,6 @@ export function ForgotPasswordScreen({ onBackToLogin, onContinue }: ForgotPasswo
                   keyboardType="email-address"
                   autoCapitalize="none"
                 />
-                <Text className="absolute -top-2 left-3 px-1 text-sm font-medium text-gray-700">
-                  Email
-                </Text>
                 {error ? (
                   <Text className="text-red-500 text-sm mt-1">{error}</Text>
                 ) : null}

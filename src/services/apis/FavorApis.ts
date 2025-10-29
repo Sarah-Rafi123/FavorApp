@@ -167,6 +167,18 @@ export interface CreateUserReviewResponse {
   message: string;
 }
 
+export interface FavorReviewsResponse {
+  success: boolean;
+  data: {
+    favor: {
+      id: number;
+      title: string;
+      status: string;
+    };
+    reviews: Review[];
+  };
+}
+
 export interface GetFavorApplicantsResponse {
   success: boolean;
   data: {
@@ -793,6 +805,37 @@ export const FavorApis = {
         throw new Error(error.response.data.message);
       } else {
         throw new Error('Failed to submit review. Please try again.');
+      }
+    }
+  },
+
+  // 20. List Favor Reviews
+  getFavorReviews: async (favorId: number): Promise<FavorReviewsResponse> => {
+    try {
+      console.log('🚀 Making Get Favor Reviews API call to: /favors/' + favorId + '/reviews');
+      
+      const response = await axiosInstance.get(`/favors/${favorId}/reviews`);
+      
+      console.log('🎉 Get Favor Reviews API Success!');
+      console.log('📊 Response Status:', response.status);
+      console.log('📄 Full API Response:', JSON.stringify(response.data, null, 2));
+      
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Get Favor Reviews API Error!');
+      console.error('📄 Full API Error:', error);
+      console.error('📊 Error Response Status:', error.response?.status);
+      console.error('📄 Error Response Data:', JSON.stringify(error.response?.data, null, 2));
+      
+      // Handle specific error scenarios based on status codes
+      if (error.response?.status === 404) {
+        throw new Error('Favor not found.');
+      } else if (error.response?.status === 401) {
+        throw new Error('Authentication required. Please log in again.');
+      } else if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      } else {
+        throw new Error('Failed to fetch favor reviews. Please try again.');
       }
     }
   },

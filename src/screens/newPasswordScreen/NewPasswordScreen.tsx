@@ -6,11 +6,15 @@ import {
   TextInput,
   TouchableOpacity,
   StatusBar,
+  KeyboardAvoidingView,
+  ScrollView,
+  Platform,
 } from 'react-native';
 import { CarouselButton } from '../../components/buttons';
 import { LockIcon } from '../../assets/icons';
 import { SuccessModal } from '../../components/overlays/SuccessModal';
 import { useResetPasswordMutation } from '../../services/mutations/AuthMutations';
+import EyeSvg from '../../assets/icons/Eye';
 import Toast from 'react-native-toast-message';
 
 interface NewPasswordScreenProps {
@@ -31,52 +35,68 @@ export function NewPasswordScreen({ onPasswordReset, email, resetToken }: NewPas
   });
   const resetPasswordMutation = useResetPasswordMutation();
 
-  // Comprehensive password validation
+  // Password validation - matches AuthScreen.tsx pattern
   const validatePassword = (password: string) => {
-    const errors = [];
-    
-    // Check length requirements
-    if (password.length < 8) {
-      errors.push('minimum 8 characters');
-    }
-    if (password.length > 50) {
-      errors.push('maximum 50 characters');
-    }
-    
-    // Check character requirements
     const hasLowercase = /[a-z]/.test(password);
     const hasUppercase = /[A-Z]/.test(password);
     const hasDigit = /\d/.test(password);
-    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(password);
+    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
     
-    if (!hasLowercase) {
-      errors.push('one lowercase letter');
-    }
-    if (!hasUppercase) {
-      errors.push('one uppercase letter');
-    }
-    if (!hasDigit) {
-      errors.push('one digit');
-    }
-    if (!hasSpecialChar) {
-      errors.push('one special character');
+    return hasLowercase && hasUppercase && hasDigit && hasSpecialChar;
+  };
+
+  // Real-time form validation
+  const updateFormData = (field: string, value: string) => {
+    if (field === 'password') {
+      setPassword(value);
+      
+      // Real-time validation
+      const newErrors = { ...errors };
+      
+      if (!value) {
+        newErrors.password = 'Password is required';
+      } else if (value.length < 8) {
+        newErrors.password = 'Password must be at least 8 characters';
+      } else if (!validatePassword(value)) {
+        newErrors.password = 'Password must include at least one lowercase, one uppercase, one digit, and one special character';
+      } else {
+        newErrors.password = '';
+      }
+      
+      setErrors(newErrors);
     }
     
-    if (errors.length > 0) {
-      return `Password must include at least ${errors.join(', ')}`;
+    if (field === 'confirmPassword') {
+      setConfirmPassword(value);
+      
+      // Real-time password match validation
+      const newErrors = { ...errors };
+      
+      if (!value) {
+        newErrors.confirmPassword = 'Please confirm your password';
+      } else if (password !== value) {
+        newErrors.confirmPassword = 'Passwords do not match';
+      } else {
+        newErrors.confirmPassword = '';
+      }
+      
+      setErrors(newErrors);
     }
-    
-    return '';
   };
 
   const handleSubmit = async () => {
     const newErrors = { password: '', confirmPassword: '' };
     let isValid = true;
 
-    // Password validation
-    const passwordError = validatePassword(password);
-    if (passwordError) {
-      newErrors.password = passwordError;
+    // Password validation - matches AuthScreen.tsx pattern
+    if (!password) {
+      newErrors.password = 'Password is required';
+      isValid = false;
+    } else if (password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters';
+      isValid = false;
+    } else if (!validatePassword(password)) {
+      newErrors.password = 'Password must include at least one lowercase, one uppercase, one digit, and one special character';
       isValid = false;
     }
 
@@ -147,7 +167,7 @@ export function NewPasswordScreen({ onPasswordReset, email, resetToken }: NewPas
     return password && 
            confirmPassword && 
            password === confirmPassword && 
-           !validatePassword(password) && 
+           validatePassword(password) && 
            !resetPasswordMutation.isPending && 
            resetToken;
   };
@@ -159,7 +179,18 @@ export function NewPasswordScreen({ onPasswordReset, email, resetToken }: NewPas
       resizeMode="cover"
     >
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
-      <View className="flex-1 px-6 pt-20">
+      <KeyboardAvoidingView 
+        className="flex-1"
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <ScrollView 
+          className="flex-1"
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: 50 }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View className="flex-1 px-6 pt-20">
         
         {/* Lock Icon */}
         <View className="items-center mb-8 mt-16">
@@ -182,87 +213,101 @@ export function NewPasswordScreen({ onPasswordReset, email, resetToken }: NewPas
         <View className="flex-1">
           
           {/* Password Field */}
-          <View className="mb-6 relative">
-            <TextInput
-             style={{ 
-                    lineHeight: 20,
-                  }}
-              className="px-4 py-4 rounded-xl border border-gray-200 pr-12 text-base bg-transparent"
-              placeholder="••••••••••"
-              placeholderTextColor="#9CA3AF"
-              value={password}
-              onChangeText={(text) => {
-                setPassword(text);
-                // Real-time validation
-                const passwordError = validatePassword(text);
-                setErrors(prev => ({ ...prev, password: passwordError }));
-              }}
-              secureTextEntry={!showPassword}
-            />
-            <Text className="absolute -top-3 left-3 px-1 text-sm font-medium text-gray-700">
+          <View className="mb-2">
+            <Text className="text-sm font-medium text-gray-700 mb-2">
               New Password *
             </Text>
-            <Text className="text-xs text-gray-500 mt-1">
-              Must include: 8-50 characters, lowercase, uppercase, digit, special character
-            </Text>
-            <TouchableOpacity
-              className="absolute right-3 top-4"
-              onPress={() => setShowPassword(!showPassword)}
-            >
-              <Text className="text-gray-500">👁</Text>
-            </TouchableOpacity>
-            {errors.password ? (
-              <Text className="text-red-500 text-sm mt-1">{errors.password}</Text>
-            ) : null}
+            <View className="relative">
+              <TextInput
+                className={`px-4 py-3 rounded-xl border pr-12 text-base bg-transparent ${
+                  errors.password ? 'border-red-500' : 'border-gray-200'
+                }`}
+                style={{ 
+                  backgroundColor: 'transparent',
+                  fontSize: 16,
+                  lineHeight: 22,
+                  height: 56
+                }}
+                placeholder="Enter your password"
+                placeholderTextColor="#9CA3AF"
+                value={password}
+                onChangeText={(text) => updateFormData('password', text)}
+                secureTextEntry={!showPassword}
+              />
+              <TouchableOpacity
+                className="absolute right-3"
+                style={{
+                  top: 56 / 2 - 12, // Center of 56px height minus half icon height
+                  height: 24,
+                  width: 24,
+                  justifyContent: 'center',
+                  alignItems: 'center'
+                }}
+                onPress={() => setShowPassword(!showPassword)}
+              >
+                <EyeSvg isVisible={showPassword} />
+              </TouchableOpacity>
+              {/* Error message */}
+              {errors.password ? (
+                <Text className="text-red-500 text-sm mt-1">{errors.password}</Text>
+              ) : null}
+            </View>
           </View>
 
           {/* Confirm Password Field */}
-          <View className="mb-8 relative">
-            <TextInput
-             style={{ 
-                    lineHeight: 20,
-                  }}
-              className="px-4 py-4 rounded-xl border border-gray-200 pr-12 text-base bg-transparent"
-              placeholder="••••••••••"
-              placeholderTextColor="#9CA3AF"
-              value={confirmPassword}
-              onChangeText={(text) => {
-                setConfirmPassword(text);
-                // Real-time password match validation
-                let confirmError = '';
-                if (text && text !== password) {
-                  confirmError = 'Passwords do not match';
-                }
-                setErrors(prev => ({ ...prev, confirmPassword: confirmError }));
-              }}
-              secureTextEntry={!showConfirmPassword}
-            />
-            <Text className="absolute -top-3 left-3 px-1 text-sm font-medium text-gray-700">
+          <View className="mb-2">
+            <Text className="text-sm font-medium text-gray-700 mb-2">
               Confirm Password *
             </Text>
-            <TouchableOpacity
-              className="absolute right-3 top-4"
-              onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-            >
-              <Text className="text-gray-500">👁</Text>
-            </TouchableOpacity>
-            {errors.confirmPassword ? (
-              <Text className="text-red-500 text-sm mt-1">{errors.confirmPassword}</Text>
-            ) : null}
+            <View className="relative">
+              <TextInput
+                className={`px-4 py-3 rounded-xl border pr-12 text-base bg-transparent ${
+                  errors.confirmPassword ? 'border-red-500' : 'border-gray-200'
+                }`}
+                style={{ 
+                  backgroundColor: 'transparent',
+                  fontSize: 16,
+                  lineHeight: 22,
+                  height: 56
+                }}
+                placeholder="Confirm your password"
+                placeholderTextColor="#9CA3AF"
+                value={confirmPassword}
+                onChangeText={(text) => updateFormData('confirmPassword', text)}
+                secureTextEntry={!showConfirmPassword}
+              />
+              <TouchableOpacity
+                className="absolute right-3"
+                style={{
+                  top: 56 / 2 - 12, // Center of 56px height minus half icon height
+                  height: 24,
+                  width: 24,
+                  justifyContent: 'center',
+                  alignItems: 'center'
+                }}
+                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+              >
+                <EyeSvg isVisible={showConfirmPassword} />
+              </TouchableOpacity>
+              {/* Error message */}
+              {errors.confirmPassword ? (
+                <Text className="text-red-500 text-sm mt-1">{errors.confirmPassword}</Text>
+              ) : null}
+            </View>
           </View>
 
           {/* Submit Button */}
-          <View className="mb-8">
+          <View className="mb-6 mt-8">
             <CarouselButton
               title={resetPasswordMutation.isPending ? "Resetting..." : "Submit"}
               onPress={handleSubmit}
               disabled={!isFormValid()}
             />
           </View>
-
         </View>
-
-      </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       <SuccessModal
         visible={showSuccessModal}

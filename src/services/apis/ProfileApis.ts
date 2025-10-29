@@ -1,5 +1,6 @@
 import { axiosInstance } from '../axiosConfig';
 import { ProfileResponse } from '../../types';
+import { Review } from './FavorApis';
 
 // Update Profile Types
 export interface UpdateProfileData {
@@ -152,6 +153,38 @@ export interface ProviderProfileResponse {
     viewer_relationship: 'public' | 'connected';
   };
   message: string;
+}
+
+// User Reviews Types
+export interface UserReviewsParams {
+  page?: number;
+  per_page?: number;
+}
+
+export interface UserReviewsResponse {
+  success: boolean;
+  data: {
+    user: {
+      id: number;
+      first_name: string;
+      last_name: string;
+      full_name: string;
+      is_certified: boolean;
+    };
+    reviews: Review[];
+    statistics: {
+      total_reviews: number;
+      average_rating: number;
+    };
+    meta: {
+      current_page: number;
+      per_page: number;
+      total_pages: number;
+      total_count: number;
+      next_page: number | null;
+      prev_page: number | null;
+    };
+  };
 }
 
 // Export Profile Types
@@ -521,6 +554,47 @@ export const exportProfileJSON = async (params?: ExportProfileParams): Promise<E
       throw new Error(error.response.data.message);
     } else { 
       throw new Error('Failed to export profile. Please check your connection and try again.');
+    }
+  }
+};
+
+export const getUserReviews = async (
+  userId: number, 
+  params: UserReviewsParams = {}
+): Promise<UserReviewsResponse> => {
+  try {
+    console.log(`🚀 Making Get User Reviews API call to: /users/${userId}/reviews`);
+    console.log('📤 Request Params:', JSON.stringify(params, null, 2));
+    
+    // Build query parameters
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append('page', params.page.toString());
+    if (params.per_page) queryParams.append('per_page', params.per_page.toString());
+    
+    const url = `/users/${userId}/reviews${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    
+    const response = await axiosInstance.get(url);
+    
+    console.log('🎉 Get User Reviews API Success!');
+    console.log('📊 Response Status:', response.status);
+    console.log('📄 Full API Response:', JSON.stringify(response.data, null, 2));
+    
+    return response.data;
+  } catch (error: any) {
+    console.error('❌ Get User Reviews API Error!');
+    console.error('📄 Full API Error:', error);
+    console.error('📊 Error Response Status:', error.response?.status);
+    console.error('📄 Error Response Data:', JSON.stringify(error.response?.data, null, 2));
+    
+    // Handle specific error scenarios based on status codes
+    if (error.response?.status === 404) {
+      throw new Error('User not found');
+    } else if (error.response?.status === 401) {
+      throw new Error('Authentication required');
+    } else if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    } else {
+      throw new Error('Failed to load user reviews. Please check your connection and try again.');
     }
   }
 };

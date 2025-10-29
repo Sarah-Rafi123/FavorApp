@@ -358,6 +358,7 @@ export function ProfileScreen() {
       Alert.alert(
         'Export Failed',
         error.message || 'Failed to export profile. Please try again.',
+
         [{ text: 'OK' }]
       );
     } finally {

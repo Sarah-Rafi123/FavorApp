@@ -11,14 +11,17 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  Modal,
 } from 'react-native';
 import { CarouselButton } from '../../components/buttons';
 import ProvideFavorSvg from '../../assets/icons/ProvideFavor';
 import PersonwithHeartSvg from '../../assets/icons/PersonwithHeart';
 import { TimerSvg } from '../../assets/icons/Timer';
 import DollarSvg from '../../assets/icons/Dollar';
+import UserSvg from '../../assets/icons/User';
 import FilterSvg from '../../assets/icons/Filter';
 import BellSvg from '../../assets/icons/Bell';
+import CancelSvg from '../../assets/icons/Cancel';
 import { useMyFavors, useFavorSubjects, useBrowseFavors, useFavors } from '../../services/queries/FavorQueries';
 import { useApplyToFavor, useCancelRequest } from '../../services/mutations/FavorMutations';
 import { StripeConnectManager } from '../../services/StripeConnectManager';
@@ -41,6 +44,8 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
   const [showCategoryFilter, setShowCategoryFilter] = useState(false);
   const [selectedFavorId, setSelectedFavorId] = useState<number | null>(null);
   const [showFavorDetailsModal, setShowFavorDetailsModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [favorToCancel, setFavorToCancel] = useState<Favor | null>(null);
   
   // Pagination state (same as HomeListScreen)
   const [currentPage, setCurrentPage] = useState(1);
@@ -429,32 +434,36 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
   const handleCancelFavor = async (favor: Favor) => {
     console.log('Cancel favor request for:', favor.user.full_name);
     
-    // Show confirmation alert before canceling request
-    Alert.alert(
-      'Cancel Request',
-      `Are you sure you want to cancel your request to provide favor for ${favor.user.full_name}?`,
-      [
-        { text: 'No', style: 'cancel' },
-        { 
-          text: 'Yes, Cancel',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              console.log('🗑️ Canceling favor request:', favor.id);
-              await cancelRequestMutation.mutateAsync(favor.id);
-              
-              // Immediately refresh the Active tab data after successful cancellation
-              console.log('✅ Favor request cancelled successfully, refreshing Active tab data...');
-              await Promise.all([refetchActiveMyFavors(), refetchInProgressMyFavors()]);
-              
-            } catch (error: any) {
-              console.error('❌ Cancel request failed:', error.message);
-              // Error handling is done by the mutation's onError callback
-            }
-          }
-        }
-      ]
-    );
+    // Show custom confirmation modal
+    setFavorToCancel(favor);
+    setShowCancelModal(true);
+  };
+
+  const handleConfirmCancel = async () => {
+    if (!favorToCancel) return;
+
+    try {
+      console.log('🗑️ Canceling favor request:', favorToCancel.id);
+      await cancelRequestMutation.mutateAsync(favorToCancel.id);
+      
+      // Close modal and reset state
+      setShowCancelModal(false);
+      setFavorToCancel(null);
+      
+      // Immediately refresh the Active tab data after successful cancellation
+      console.log('✅ Favor request cancelled successfully, refreshing Active tab data...');
+      await Promise.all([refetchActiveMyFavors(), refetchInProgressMyFavors()]);
+      
+    } catch (error: any) {
+      console.error('❌ Cancel request failed:', error.message);
+      // Error handling is done by the mutation's onError callback
+      // Keep modal open on error so user can try again
+    }
+  };
+
+  const handleCancelModalClose = () => {
+    setShowCancelModal(false);
+    setFavorToCancel(null);
   };
 
   const handleFavorCardPress = (favor: Favor) => {
@@ -463,8 +472,8 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
       setSelectedFavorId(favor.id);
       setShowFavorDetailsModal(true);
     } else {
-      // For other tabs, navigate to details screen
-      navigation?.navigate('FavorDetailsScreen', { favorId: favor.id });
+      // For other tabs, navigate to ProvideFavorDetailsScreen
+      navigation?.navigate('ProvideFavorDetailsScreen', { favorId: favor.id });
     }
   };
 
@@ -489,13 +498,13 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
               ) : (
                 <View className="w-28 h-28 rounded-2xl mr-4 bg-gray-200 items-center justify-center border border-gray-300">
                   <View className="items-center">
-                    <Text className="text-4xl text-gray-400 mb-1">📋</Text>
+                    <UserSvg focused={false} />
                   </View>
                 </View>
               )}
               <View className="flex-1 justify-start">
                 <View className="flex-row items-center mb-1">
-                  {!favor.favor_pay && (
+                  {!favor.favor_pay && parseFloat((favor.tip || 0).toString()) > 0 && (
                     <View className="mr-2">
                       <DollarSvg />
                     </View>
@@ -544,7 +553,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
           {/* Header with user name and priority */}
           <View className="flex-row items-center justify-between mb-3">
             <View className="flex-row items-center">
-              {!favor.favor_pay && (
+              {!favor.favor_pay && parseFloat((favor.tip || 0).toString()) > 0 && (
                 <View className="mr-2">
                   <DollarSvg />
                 </View>
@@ -570,7 +579,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
             ) : (
               <View className="w-28 h-28 rounded-2xl mr-4 bg-gray-200 items-center justify-center border border-gray-300">
                 <View className="items-center">
-                  <Text className="text-4xl text-gray-400 mb-1">📋</Text>
+                  <UserSvg focused={false} />
                 </View>
               </View>
             )}
@@ -878,6 +887,56 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
         }}
         favorId={selectedFavorId}
       />
+
+      {/* Cancel Confirmation Modal */}
+      <Modal
+        visible={showCancelModal}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCancelModalClose}
+      >
+        <View className="flex-1 bg-black/50 justify-center items-center px-6">
+          <View className="bg-[#F7FBF5] rounded-3xl p-6 max-w-sm w-full border-4 border-[#71DFB1] relative">
+            {/* Close Button */}
+            <TouchableOpacity 
+              className="absolute top-4 right-4 w-8 h-8 bg-black rounded-full items-center justify-center"
+              onPress={handleCancelModalClose}
+            >
+              <Text className="text-white font-bold text-lg">×</Text>
+            </TouchableOpacity>
+
+            {/* Cancel Icon */}
+            <View className="items-center mb-6 mt-4">
+              <View className="w-20 h-20 items-center justify-center">
+                <View style={{ transform: [{ scale: 0.8 }] }}>
+                  <CancelSvg />
+                </View>
+              </View>
+            </View>
+
+            {/* Modal Text */}
+            <Text className="text-gray-700 text-lg text-center mb-8 leading-6">
+              Are you sure you want to cancel this Favor request to help {favorToCancel?.user.full_name}?
+            </Text>
+
+            {/* Buttons */}
+            <View className="flex-row space-x-4">
+              <TouchableOpacity 
+                className="flex-1 bg-[#44A27B] rounded-full py-4"
+                onPress={handleCancelModalClose}
+              >
+                <Text className="text-white text-center font-semibold text-lg">No</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                className="flex-1 border-2 border-[#44A27B] rounded-full py-4"
+                onPress={handleConfirmCancel}
+              >
+                <Text className="text-[#44A27B] text-center font-semibold text-lg">Yes</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
     </ImageBackground>
   );

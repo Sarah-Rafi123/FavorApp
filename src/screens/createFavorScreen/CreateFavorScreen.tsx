@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,8 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  Dimensions,
+  Modal,
 } from 'react-native';
 import { CarouselButton } from '../../components/buttons';
 import CreateFavorSvg from '../../assets/icons/ProvideFavor';
@@ -17,8 +19,10 @@ import PersonwithHeartSvg from '../../assets/icons/PersonwithHeart';
 import { TimerSvg } from '../../assets/icons/Timer';
 import FilterSvg from '../../assets/icons/Filter';
 import BellSvg from '../../assets/icons/Bell';
+import CancelSvg from '../../assets/icons/Cancel';
+import UserSvg from '../../assets/icons/User';
 import { useMyFavors, useFavorApplicants } from '../../services/queries/FavorQueries';
-import { useDeleteFavor, useAcceptApplicant } from '../../services/mutations/FavorMutations';
+import { useDeleteFavor, useAcceptApplicant, useReassignFavor } from '../../services/mutations/FavorMutations';
 import { Favor, FavorApplicant } from '../../services/apis/FavorApis';
 import useAuthStore from '../../store/useAuthStore';
 
@@ -31,6 +35,8 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(1);
   const per_page = 10;
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [favorToCancel, setFavorToCancel] = useState<Favor | null>(null);
 
   // Get auth store state
   const { user, accessToken } = useAuthStore();
@@ -45,6 +51,9 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
       handleRefresh();
     }
   });
+  
+  // Reassign favor mutation
+  const reassignFavorMutation = useReassignFavor();
 
   // API calls for different tabs
   // All tab: active favors (shows requests)
@@ -189,35 +198,39 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
   const handleCancelFavor = async (favor: Favor) => {
     console.log('Cancel favor:', favor.user.full_name);
     
-    // Show confirmation alert before canceling favor
-    Alert.alert(
-      'Cancel Favor',
-      `Are you sure you want to cancel this favor request? This action cannot be undone.`,
-      [
-        { text: 'No', style: 'cancel' },
-        { 
-          text: 'Yes, Cancel',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              console.log('🗑️ Canceling favor:', favor.id);
-              await deleteFavorMutation.mutateAsync({ 
-                favorId: favor.id, 
-                type: 'active' 
-              });
-              
-              // Immediately refresh the current data after successful deletion
-              console.log('✅ Favor cancelled successfully, refreshing data...');
-              await handleRefresh();
-              
-            } catch (error: any) {
-              console.error('❌ Cancel favor failed:', error.message);
-              // Error handling is done by the mutation's onError callback
-            }
-          }
-        }
-      ]
-    );
+    // Show custom confirmation modal
+    setFavorToCancel(favor);
+    setShowCancelModal(true);
+  };
+
+  const handleConfirmCancel = async () => {
+    if (!favorToCancel) return;
+
+    try {
+      console.log('🗑️ Canceling favor:', favorToCancel.id);
+      await deleteFavorMutation.mutateAsync({ 
+        favorId: favorToCancel.id, 
+        type: 'active' 
+      });
+      
+      // Close modal and reset state
+      setShowCancelModal(false);
+      setFavorToCancel(null);
+      
+      // Immediately refresh the current data after successful deletion
+      console.log('✅ Favor cancelled successfully, refreshing data...');
+      await handleRefresh();
+      
+    } catch (error: any) {
+      console.error('❌ Cancel favor failed:', error.message);
+      // Error handling is done by the mutation's onError callback
+      // Keep modal open on error so user can try again
+    }
+  };
+
+  const handleCancelModalClose = () => {
+    setShowCancelModal(false);
+    setFavorToCancel(null);
   };
 
 
@@ -286,6 +299,161 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
     );
   };
 
+  // Component for showing a single favor with multiple applicants in a carousel
+  const ActiveRequestCardWithCarousel = ({ favor, applicants, navigation }: { favor: Favor; applicants: FavorApplicant[]; navigation: any }) => {
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const scrollViewRef = useRef<ScrollView>(null);
+    const screenWidth = Dimensions.get('window').width;
+    const cardWidth = screenWidth - 32; // Account for margins
+
+    const handleScroll = (event: any) => {
+      const contentOffset = event.nativeEvent.contentOffset.x;
+      const index = Math.round(contentOffset / cardWidth);
+      setCurrentIndex(index);
+    };
+
+    const scrollToIndex = (index: number) => {
+      scrollViewRef.current?.scrollTo({ x: index * cardWidth, animated: true });
+      setCurrentIndex(index);
+    };
+
+    return (
+      <View className="bg-white rounded-2xl p-4 mb-4 mx-4 border-2 border-[#44A27B] shadow-sm">
+        {/* Header with favor details */}
+        <TouchableOpacity 
+          onPress={() => navigation?.navigate('FavorDetailsScreen', { favorId: favor.id, source: 'CreateFavorScreen' })}
+          activeOpacity={0.7}
+        >
+          <View className="flex-row mb-4">
+            {/* Favor image on the left */}
+            {favor.image_url ? (
+              <Image
+                source={{ uri: favor.image_url }}
+                className="w-20 h-20 rounded-xl mr-4"
+                style={{ backgroundColor: '#f3f4f6' }}
+                resizeMode="cover"
+              />
+            ) : (
+              <View className="w-20 h-20 rounded-xl mr-4 items-center justify-center border border-gray-300" style={{ backgroundColor: '#F4F5DE' }}>
+                <UserSvg focused={false} width={40} height={40} />
+              </View>
+            )}
+            
+            {/* Favor details on the right */}
+            <View className="flex-1">
+              <Text className="text-[#D12E34] text-sm font-medium mb-1 capitalize">{favor.priority}</Text>
+              <Text className="text-sm text-gray-600 mb-1">
+                {favor.favor_subject.name} | {favor.time_to_complete || '1 Hour'} | {new Date(favor.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </Text>
+              
+              {/* User who posted the favor */}
+              <View className="flex-row items-center mb-1">
+                <View className="w-6 h-6 rounded-full mr-2 bg-[#44A27B] items-center justify-center">
+                  <Text className="text-white text-xs font-bold">
+                    {favor.user?.first_name?.[0]?.toUpperCase() || favor.user?.full_name?.[0]?.toUpperCase() || 'U'}
+                  </Text>
+                </View>
+                <Text className="text-sm text-gray-600">
+                  {favor.user?.full_name || 'Unknown'} | {favor.city}, {favor.state}
+                </Text>
+              </View>
+              
+              <Text className="text-gray-700 text-sm leading-4" numberOfLines={2}>
+                {favor.description}
+              </Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+
+        {/* Request counter */}
+        <View className="mb-4">
+          <Text className="text-gray-800 font-semibold text-base">
+            Request ({applicants.length})
+          </Text>
+        </View>
+
+        {/* Horizontal scrollable user details cards */}
+        <ScrollView
+          ref={scrollViewRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onMomentumScrollEnd={handleScroll}
+          style={{ marginHorizontal: -16 }} // Offset the parent padding
+        >
+          {applicants.map((applicant, index) => (
+            <View key={`${favor.id}-${applicant.id}`} style={{ width: cardWidth, paddingHorizontal: 16 }}>
+              <View className="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm">
+                <View className="flex-row items-center">
+                  {/* Large square profile image */}
+                  <View className="w-16 h-16 rounded-xl mr-4 items-center justify-center" style={{ backgroundColor: '#F4F5DE' }}>
+                    <UserSvg focused={false} width={32} height={32} />
+                  </View>
+                  
+                  <View className="flex-1">
+                    <Text className="text-gray-800 font-bold text-xl mb-1">
+                      {applicant.user.full_name || `${applicant.user.first_name} ${applicant.user.last_name}`}
+                    </Text>
+                    <View className="flex-row items-center mb-2">
+                      <Text className="text-gray-600 text-sm mr-2">⭐ {applicant.user.rating || 0}</Text>
+                      <Text className="text-gray-600 text-sm">| 0 Reviews</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => navigation?.navigate('UserProfileScreen', { userId: applicant.user.id })}>
+                      <Text className="text-[#44A27B] text-base font-medium border-b border-[#44A27B]">View Profile</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                
+                {/* Accept/Reassign button */}
+                <TouchableOpacity 
+                  className="bg-[#44A27B] rounded-full py-4 mt-4"
+                  onPress={() => {
+                    if (favor.accepted_response && favor.status === 'in_progress') {
+                      // Favor already has accepted provider, call reassign API
+                      reassignFavorMutation.mutate({
+                        favorId: favor.id,
+                        newProviderId: applicant.user.id
+                      });
+                    } else {
+                      // No accepted provider yet, call accept API
+                      acceptApplicantMutation.mutate({
+                        favorId: favor.id,
+                        applicantId: applicant.user.id
+                      });
+                    }
+                  }}
+                  disabled={acceptApplicantMutation.isPending || reassignFavorMutation.isPending}
+                >
+                  <Text className="text-white font-bold text-lg text-center">
+                    {(acceptApplicantMutation.isPending || reassignFavorMutation.isPending) 
+                      ? (favor.accepted_response && favor.status === 'in_progress' ? 'Reassigning...' : 'Accepting...') 
+                      : (favor.accepted_response && favor.status === 'in_progress' ? 'Reassign' : 'Accept')
+                    }
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
+        </ScrollView>
+
+        {/* Pagination dots */}
+        {applicants.length > 1 && (
+          <View className="flex-row justify-center mt-4 space-x-2">
+            {applicants.map((_, index) => (
+              <TouchableOpacity
+                key={index}
+                onPress={() => scrollToIndex(index)}
+                className={`w-2 h-2 rounded-full mx-1 ${
+                  index === currentIndex ? 'bg-[#44A27B]' : 'bg-gray-300'
+                }`}
+              />
+            ))}
+          </View>
+        )}
+      </View>
+    );
+  };
+
   // Component for Active tab request cards that match the image style - shows favor details with applicant info and Accept button
   const ActiveRequestCard = ({ favor, applicant, navigation }: { favor: Favor; applicant: FavorApplicant; navigation: any }) => {
     return (
@@ -305,8 +473,8 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
                 resizeMode="cover"
               />
             ) : (
-              <View className="w-20 h-20 rounded-xl mr-4 bg-gray-200 items-center justify-center border border-gray-300">
-                <Text className="text-3xl text-gray-400">📋</Text>
+              <View className="w-20 h-20 rounded-xl mr-4 items-center justify-center border border-gray-300" style={{ backgroundColor: '#F4F5DE' }}>
+                <UserSvg focused={false} width={40} height={40} />
               </View>
             )}
             
@@ -316,9 +484,19 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
               <Text className="text-sm text-gray-600 mb-1">
                 {favor.favor_subject.name} | {favor.time_to_complete || '1 Hour'} | {new Date(favor.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
               </Text>
-              <Text className="text-sm text-gray-600 mb-1">
-                {favor.user?.full_name || 'Unknown'} | {favor.city}, {favor.state}
-              </Text>
+              
+              {/* User who posted the favor */}
+              <View className="flex-row items-center mb-1">
+                <View className="w-6 h-6 rounded-full mr-2 bg-[#44A27B] items-center justify-center">
+                  <Text className="text-white text-xs font-bold">
+                    {favor.user?.first_name?.[0]?.toUpperCase() || favor.user?.full_name?.[0]?.toUpperCase() || 'U'}
+                  </Text>
+                </View>
+                <Text className="text-sm text-gray-600">
+                  {favor.user?.full_name || 'Unknown'} | {favor.city}, {favor.state}
+                </Text>
+              </View>
+              
               <Text className="text-gray-700 text-sm leading-4" numberOfLines={2}>
                 {favor.description}
               </Text>
@@ -333,43 +511,53 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
           </Text>
         </View>
 
-        {/* Applicant info like in the image */}
-        <View className="flex-row items-center justify-between">
-          <View className="flex-row items-center flex-1">
-            {/* Applicant profile image */}
-            <View className="w-12 h-12 rounded-xl mr-3 bg-[#44A27B] items-center justify-center">
-              <Text className="text-white text-sm font-bold">
-                {applicant.user.first_name?.[0]?.toUpperCase() || 'U'}
-                {applicant.user.last_name?.[0]?.toUpperCase() || ''}
-              </Text>
+        {/* User details card with border like in the image */}
+        <View className="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm">
+          <View className="flex-row items-center">
+            {/* Large square profile image without A icon */}
+            <View className="w-16 h-16 rounded-xl mr-4 items-center justify-center" style={{ backgroundColor: '#F4F5DE' }}>
+              <UserSvg focused={false} width={32} height={32} />
             </View>
+            
             <View className="flex-1">
-              <Text className="text-gray-800 font-medium text-base">
+              <Text className="text-gray-800 font-bold text-xl mb-1">
                 {applicant.user.full_name || `${applicant.user.first_name} ${applicant.user.last_name}`}
               </Text>
-              <View className="flex-row items-center">
+              <View className="flex-row items-center mb-2">
                 <Text className="text-gray-600 text-sm mr-2">⭐ {applicant.user.rating || 0}</Text>
                 <Text className="text-gray-600 text-sm">| 0 Reviews</Text>
               </View>
-              <TouchableOpacity>
-                <Text className="text-[#44A27B] text-sm">View Profile</Text>
+              <TouchableOpacity onPress={() => navigation?.navigate('UserProfileScreen', { userId: applicant.user.id })}>
+                <Text className="text-[#44A27B] text-base font-medium border-b border-[#44A27B]">View Profile</Text>
               </TouchableOpacity>
             </View>
           </View>
           
-          {/* Accept button like in the image */}
+          {/* Accept/Reassign button with full width */}
           <TouchableOpacity 
-            className="bg-[#44A27B] rounded-full px-6 py-2"
+            className="bg-[#44A27B] rounded-full py-4 mt-4"
             onPress={() => {
-              acceptApplicantMutation.mutate({
-                favorId: favor.id,
-                applicantId: applicant.user.id
-              });
+              if (favor.accepted_response && favor.status === 'in_progress') {
+                // Favor already has accepted provider, call reassign API
+                reassignFavorMutation.mutate({
+                  favorId: favor.id,
+                  newProviderId: applicant.user.id
+                });
+              } else {
+                // No accepted provider yet, call accept API
+                acceptApplicantMutation.mutate({
+                  favorId: favor.id,
+                  applicantId: applicant.user.id
+                });
+              }
             }}
-            disabled={acceptApplicantMutation.isPending}
+            disabled={acceptApplicantMutation.isPending || reassignFavorMutation.isPending}
           >
-            <Text className="text-white font-medium text-sm">
-              {acceptApplicantMutation.isPending ? 'Accepting...' : 'Accept'}
+            <Text className="text-white font-bold text-lg text-center">
+              {(acceptApplicantMutation.isPending || reassignFavorMutation.isPending) 
+                ? (favor.accepted_response && favor.status === 'in_progress' ? 'Reassigning...' : 'Accepting...') 
+                : (favor.accepted_response && favor.status === 'in_progress' ? 'Reassign' : 'Accept')
+              }
             </Text>
           </TouchableOpacity>
         </View>
@@ -386,13 +574,18 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
       >
         <View className="bg-white rounded-2xl p-4 mb-4 mx-4 border-2 border-gray-300">
           <View className="flex-row mb-4">
-            <Image
-              source={{ 
-                uri: favor.image_url || 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400&h=400&fit=crop'
-              }}
-              className="w-16 h-16 rounded-xl mr-4"
-              style={{ backgroundColor: '#f3f4f6' }}
-            />
+            {favor.image_url ? (
+              <Image
+                source={{ uri: favor.image_url }}
+                className="w-16 h-16 rounded-xl mr-4"
+                style={{ backgroundColor: '#f3f4f6' }}
+                resizeMode="cover"
+              />
+            ) : (
+              <View className="w-16 h-16 rounded-xl mr-4 items-center justify-center border border-gray-300" style={{ backgroundColor: '#F4F5DE' }}>
+                <UserSvg focused={false} width={32} height={32} />
+              </View>
+            )}
             <View className="flex-1">
               <Text className="text-[#D12E34] text-sm font-medium mb-1 capitalize">{favor.priority}</Text>
               <Text className="text-sm text-gray-600 mb-1">
@@ -431,18 +624,14 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
   const FavorWithApplicants = ({ favor, navigation }: { favor: Favor; navigation: any }) => {
     const { data: applicantsData, isLoading, error } = useFavorApplicants(favor.id);
     
-    // If there are applicants, show individual request cards
+    // If there are applicants, show carousel with all applicants
     if (applicantsData?.data?.applicants && applicantsData.data.applicants.length > 0) {
       return (
-        <>
-          {applicantsData.data.applicants.map((applicant) => (
-            <IndividualRequestCard 
-              key={`${favor.id}-${applicant.id}`} 
-              favor={favor} 
-              applicant={applicant} 
-            />
-          ))}
-        </>
+        <ActiveRequestCardWithCarousel 
+          favor={favor} 
+          applicants={applicantsData.data.applicants} 
+          navigation={navigation}
+        />
       );
     }
     
@@ -454,19 +643,14 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
   const ActiveFavorWithApplicants = ({ favor, navigation }: { favor: Favor; navigation: any }) => {
     const { data: applicantsData, isLoading, error } = useFavorApplicants(favor.id);
     
-    // If there are applicants, show individual request cards like in the image
+    // If there are applicants, show carousel with all applicants
     if (applicantsData?.data?.applicants && applicantsData.data.applicants.length > 0) {
       return (
-        <>
-          {applicantsData.data.applicants.map((applicant) => (
-            <ActiveRequestCard 
-              key={`${favor.id}-${applicant.id}`} 
-              favor={favor} 
-              applicant={applicant} 
-              navigation={navigation}
-            />
-          ))}
-        </>
+        <ActiveRequestCardWithCarousel 
+          favor={favor} 
+          applicants={applicantsData.data.applicants} 
+          navigation={navigation}
+        />
       );
     }
     
@@ -488,13 +672,18 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
           activeOpacity={0.7}
         >
           <View className="flex-row mb-3">
-            <Image
-              source={{ 
-                uri: favor.image_url || 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400&h=400&fit=crop'
-              }}
-              className="w-16 h-16 rounded-xl mr-4"
-              style={{ backgroundColor: '#f3f4f6' }}
-            />
+            {favor.image_url ? (
+              <Image
+                source={{ uri: favor.image_url }}
+                className="w-16 h-16 rounded-xl mr-4"
+                style={{ backgroundColor: '#f3f4f6' }}
+                resizeMode="cover"
+              />
+            ) : (
+              <View className="w-16 h-16 rounded-xl mr-4 items-center justify-center border border-gray-300" style={{ backgroundColor: '#F4F5DE' }}>
+                <UserSvg focused={false} width={32} height={32} />
+              </View>
+            )}
             <View className="flex-1">
               <Text className="text-[#D12E34] text-sm font-medium mb-1 capitalize">{favor.priority}</Text>
               <Text className="text-sm text-gray-600 mb-1">
@@ -535,13 +724,18 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
     >
       <View className="bg-white rounded-2xl p-4 mb-4 mx-4 border-2 border-gray-200">
         <View className="flex-row">
-          <Image
-            source={{ 
-              uri: favor.image_url || 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400&h=400&fit=crop'
-            }}
-            className="w-16 h-16 rounded-xl mr-4"
-            style={{ backgroundColor: '#f3f4f6' }}
-          />
+          {favor.image_url ? (
+            <Image
+              source={{ uri: favor.image_url }}
+              className="w-16 h-16 rounded-xl mr-4"
+              style={{ backgroundColor: '#f3f4f6' }}
+              resizeMode="cover"
+            />
+          ) : (
+            <View className="w-16 h-16 rounded-xl mr-4 items-center justify-center border border-gray-300" style={{ backgroundColor: '#F4F5DE' }}>
+              <UserSvg focused={false} width={32} height={32} />
+            </View>
+          )}
           <View className="flex-1">
             <Text className="text-[#D12E34] text-sm font-medium mb-1 capitalize">{favor.priority}</Text>
             <Text className="text-sm text-gray-600 mb-1">
@@ -592,12 +786,12 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
         <View className="flex-row justify-between items-center mb-6">
           <Text className="text-2xl font-bold text-black">Create Favor</Text>
           <View className="flex-row gap-x-2">
-            <TouchableOpacity 
+            {/* <TouchableOpacity 
               className="items-center justify-center"
               onPress={() => navigation?.navigate('FilterScreen')}
             >
               <FilterSvg />
-            </TouchableOpacity>
+            </TouchableOpacity> */}
             <TouchableOpacity 
               className="items-center justify-center"
               onPress={() => navigation?.navigate('NotificationsScreen')}
@@ -716,6 +910,56 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
           </View>
         </View>
       )}
+
+      {/* Cancel Confirmation Modal */}
+      <Modal
+        visible={showCancelModal}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCancelModalClose}
+      >
+        <View className="flex-1 bg-black/50 justify-center items-center px-6">
+          <View className="bg-[#F7FBF5] rounded-3xl p-6 max-w-sm w-full border-4 border-[#71DFB1] relative">
+            {/* Close Button */}
+            <TouchableOpacity 
+              className="absolute top-4 right-4 w-8 h-8 bg-black rounded-full items-center justify-center"
+              onPress={handleCancelModalClose}
+            >
+              <Text className="text-white font-bold text-lg">×</Text>
+            </TouchableOpacity>
+
+            {/* Cancel Icon */}
+            <View className="items-center mb-6 mt-4">
+              <View className="w-20 h-20 items-center justify-center">
+                <View style={{ transform: [{ scale: 0.8 }] }}>
+                  <CancelSvg />
+                </View>
+              </View>
+            </View>
+
+            {/* Modal Text */}
+            <Text className="text-gray-700 text-lg text-center mb-8 leading-6">
+              Are you sure you want to cancel this favor request? This action cannot be undone.
+            </Text>
+
+            {/* Buttons */}
+            <View className="flex-row space-x-4">
+              <TouchableOpacity 
+                className="flex-1 bg-[#44A27B] rounded-full py-4"
+                onPress={handleCancelModalClose}
+              >
+                <Text className="text-white text-center font-semibold text-lg">No</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                className="flex-1 border-2 border-[#44A27B] rounded-full py-4"
+                onPress={handleConfirmCancel}
+              >
+                <Text className="text-[#44A27B] text-center font-semibold text-lg">Yes</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ImageBackground>
   );
 }

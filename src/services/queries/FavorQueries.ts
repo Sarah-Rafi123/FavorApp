@@ -4,6 +4,7 @@ import {
   ListFavorsResponse,
   GetFavorResponse,
   GetFavorApplicantsResponse,
+  FavorReviewsResponse,
   BrowseFavorsParams,
   MyFavorsParams
 } from '../apis/FavorApis';
@@ -184,6 +185,25 @@ export const useFavorSubjects = (
     queryFn: () => FavorSubjectApis.listFavorSubjects(),
     staleTime: 60 * 60 * 1000, // Consider data fresh for 1 hour (categories don't change often)
     gcTime: 2 * 60 * 60 * 1000, // Keep in cache for 2 hours
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    ...options,
+  });
+};
+
+/**
+ * Hook for fetching favor reviews
+ */
+export const useFavorReviews = (
+  favorId: number | null,
+  options?: Partial<UseQueryOptions<FavorReviewsResponse, Error>>
+) => {
+  return useQuery<FavorReviewsResponse, Error>({
+    queryKey: ['favor', favorId, 'reviews'],
+    queryFn: () => FavorApis.getFavorReviews(favorId!),
+    enabled: !!favorId,
+    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     ...options,

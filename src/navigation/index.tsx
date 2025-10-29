@@ -55,7 +55,7 @@ export default function Navigator() {
   // Determine if splash and carousel should be shown based on auth state
   useEffect(() => {
     if (appIsReady) {
-      // If user is already logged in, skip splash and carousel
+      // If user is already logged in, skip splash and carousel immediately
       if (user && accessToken) {
         console.log('✅ User logged in - skipping splash and carousel');
         setShouldShowSplashCarousel(false);
@@ -74,6 +74,16 @@ export default function Navigator() {
     }
   }, [appIsReady, user, accessToken]);
 
+  // Immediate response to auth state changes - highest priority
+  useEffect(() => {
+    if (user && accessToken) {
+      console.log('🚀 User authenticated - immediate splash/carousel bypass');
+      setShouldShowSplashCarousel(false);
+      setShowCustomSplash(false);
+      setCarouselCompleted(true);
+    }
+  }, [user, accessToken]);
+
   // Debug auth state
   useEffect(() => {
     console.log('🔍 Navigation Auth State:');
@@ -91,6 +101,18 @@ export default function Navigator() {
     }
   }, []);
 
+  // Priority check: If user is authenticated, skip splash/carousel entirely
+  if (appIsReady && user && accessToken) {
+    return (
+      <NavigationContainer>
+        <StatusBar barStyle={'dark-content'} backgroundColor="transparent" translucent />
+        <View className="flex-1">
+          <MainTabs />
+        </View>
+      </NavigationContainer>
+    );
+  }
+
   // Show custom splash screen for 2 seconds after expo splash (only for non-logged-in users)
   if (!appIsReady || (shouldShowSplashCarousel && showCustomSplash)) {
     return <CustomSplashScreen />;
@@ -106,23 +128,11 @@ export default function Navigator() {
     );
   }
 
+  // If we reach here, user is not authenticated, show auth flow
   return (
     <NavigationContainer>
-      {
-        user && accessToken ? (
-          <>
-            <StatusBar barStyle={'dark-content'} backgroundColor="transparent" translucent />
-            <View className="flex-1">
-              <MainTabs />
-            </View>
-          </>
-        ) : (
-          <>
-            <StatusBar barStyle={'light-content'} backgroundColor="transparent" translucent />
-            <AuthStack />
-          </>
-        )
-      }
+      <StatusBar barStyle={'light-content'} backgroundColor="transparent" translucent />
+      <AuthStack />
     </NavigationContainer>
   );
 }

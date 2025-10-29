@@ -19,6 +19,7 @@ import { StripeConnectManager } from '../../services/StripeConnectManager';
 import FilterSvg from '../../assets/icons/Filter';
 import BellSvg from '../../assets/icons/Bell';
 import DollarSvg from '../../assets/icons/Dollar';
+import UserSvg from '../../assets/icons/User';
 import useFilterStore from '../../store/useFilterStore';
 
 interface HomeListScreenProps {
@@ -220,13 +221,13 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications }: HomeLis
           ) : (
             <View className="w-28 h-28 rounded-2xl mr-4 bg-gray-200 items-center justify-center border border-gray-300">
               <View className="items-center">
-                <Text className="text-4xl text-gray-400 mb-1">📋</Text>
+                <UserSvg focused={false} />
               </View>
             </View>
           )}
           <View className="flex-1 justify-start">
             <View className="flex-row items-center mb-1">
-              {!favor.favor_pay && (
+              {!favor.favor_pay && parseFloat((favor.tip || 0).toString()) > 0 && (
                 <View className="mr-2">
                   <DollarSvg />
                 </View>

@@ -102,12 +102,12 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
         <View className="flex-row justify-between items-center">
           <Text className="text-2xl font-bold text-black">Settings</Text>
           <View className="flex-row gap-x-3">
-            <TouchableOpacity
+            {/* <TouchableOpacity
               className="items-center justify-center"
               onPress={() => navigation?.navigate('FilterScreen')}
             >
               <FilterSvg />
-            </TouchableOpacity>
+            </TouchableOpacity> */}
             <TouchableOpacity
               className="items-center justify-center"
               onPress={() => navigation?.navigate('NotificationsScreen')}
