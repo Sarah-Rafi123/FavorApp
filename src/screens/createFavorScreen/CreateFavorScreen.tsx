@@ -348,11 +348,6 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
               
               {/* User who posted the favor */}
               <View className="flex-row items-center mb-1">
-                <View className="w-6 h-6 rounded-full mr-2 bg-[#44A27B] items-center justify-center">
-                  <Text className="text-white text-xs font-bold">
-                    {favor.user?.first_name?.[0]?.toUpperCase() || favor.user?.full_name?.[0]?.toUpperCase() || 'U'}
-                  </Text>
-                </View>
                 <Text className="text-sm text-gray-600">
                   {favor.user?.full_name || 'Unknown'} | {favor.city}, {favor.state}
                 </Text>
@@ -386,9 +381,21 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
               <View className="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm">
                 <View className="flex-row items-center">
                   {/* Large square profile image */}
-                  <View className="w-16 h-16 rounded-xl mr-4 items-center justify-center" style={{ backgroundColor: '#F4F5DE' }}>
-                    <UserSvg focused={false} width={32} height={32} />
-                  </View>
+                  {applicant.user.image_url ? (
+                    <Image
+                      source={{ uri: applicant.user.image_url }}
+                      className="w-16 h-16 rounded-xl mr-4"
+                      style={{ backgroundColor: '#f3f4f6' }}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View className="w-16 h-16 rounded-xl mr-4 items-center justify-center bg-[#44A27B]">
+                      <Text className="text-white text-lg font-bold">
+                        {applicant.user.first_name?.[0]?.toUpperCase() || 'U'}
+                        {applicant.user.last_name?.[0]?.toUpperCase() || ''}
+                      </Text>
+                    </View>
+                  )}
                   
                   <View className="flex-1">
                     <Text className="text-gray-800 font-bold text-xl mb-1">
@@ -399,7 +406,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
                       <Text className="text-gray-600 text-sm">| 0 Reviews</Text>
                     </View>
                     <TouchableOpacity onPress={() => navigation?.navigate('UserProfileScreen', { userId: applicant.user.id })}>
-                      <Text className="text-[#44A27B] text-base font-medium border-b border-[#44A27B]">View Profile</Text>
+                      <Text className="text-[#44A27B] text-base font-medium">View Profile</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -487,11 +494,6 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
               
               {/* User who posted the favor */}
               <View className="flex-row items-center mb-1">
-                <View className="w-6 h-6 rounded-full mr-2 bg-[#44A27B] items-center justify-center">
-                  <Text className="text-white text-xs font-bold">
-                    {favor.user?.first_name?.[0]?.toUpperCase() || favor.user?.full_name?.[0]?.toUpperCase() || 'U'}
-                  </Text>
-                </View>
                 <Text className="text-sm text-gray-600">
                   {favor.user?.full_name || 'Unknown'} | {favor.city}, {favor.state}
                 </Text>
@@ -514,10 +516,22 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
         {/* User details card with border like in the image */}
         <View className="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm">
           <View className="flex-row items-center">
-            {/* Large square profile image without A icon */}
-            <View className="w-16 h-16 rounded-xl mr-4 items-center justify-center" style={{ backgroundColor: '#F4F5DE' }}>
-              <UserSvg focused={false} width={32} height={32} />
-            </View>
+            {/* Large square profile image */}
+            {applicant.user.image_url ? (
+              <Image
+                source={{ uri: applicant.user.image_url }}
+                className="w-16 h-16 rounded-xl mr-4"
+                style={{ backgroundColor: '#f3f4f6' }}
+                resizeMode="cover"
+              />
+            ) : (
+              <View className="w-16 h-16 rounded-xl mr-4 items-center justify-center bg-[#44A27B]">
+                <Text className="text-white text-lg font-bold">
+                  {applicant.user.first_name?.[0]?.toUpperCase() || 'U'}
+                  {applicant.user.last_name?.[0]?.toUpperCase() || ''}
+                </Text>
+              </View>
+            )}
             
             <View className="flex-1">
               <Text className="text-gray-800 font-bold text-xl mb-1">
@@ -528,7 +542,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
                 <Text className="text-gray-600 text-sm">| 0 Reviews</Text>
               </View>
               <TouchableOpacity onPress={() => navigation?.navigate('UserProfileScreen', { userId: applicant.user.id })}>
-                <Text className="text-[#44A27B] text-base font-medium border-b border-[#44A27B]">View Profile</Text>
+                <Text className="text-[#44A27B] text-base font-medium">View Profile</Text>
               </TouchableOpacity>
             </View>
           </View>

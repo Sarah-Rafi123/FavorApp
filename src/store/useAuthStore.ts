@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User } from '../types';
 import { getCurrentUser } from '../services/apis/AuthApis';
+import { authErrorHandler } from '../services/authErrorHandler';
+import Toast from 'react-native-toast-message';
 
 /**
  * Authentication store manages the user's authentication state.
@@ -33,10 +35,12 @@ interface AuthStore {
   } | null;
   setUser: (user: User) => void;
   setTokens: (accessToken: string, refreshToken?: string) => Promise<void>;
+  setUserAndTokens: (user: User, accessToken: string, refreshToken?: string) => Promise<void>;
   removeUser: () => Promise<void>;
   setRegistrationData: (data: { email: string; password: string; termsAccepted: boolean }) => void;
   clearRegistrationData: () => void;
   initializeAuth: () => Promise<void>;
+  handleAuthError: () => Promise<void>;
 }
 
 const useAuthStore = create<AuthStore>((set, get) => ({
@@ -66,6 +70,35 @@ const useAuthStore = create<AuthStore>((set, get) => ({
       console.log('🔍 Verification - stored token exists:', !!storedToken);
     } catch (error) {
       console.error('❌ Failed to store tokens:', error);
+    }
+  },
+
+  setUserAndTokens: async (user: User, accessToken: string, refreshToken?: string) => {
+    try {
+      console.log('🔑 setUserAndTokens called with:', { 
+        user: user.firstName, 
+        accessToken: !!accessToken, 
+        refreshToken: !!refreshToken 
+      });
+      
+      // Store tokens in AsyncStorage first
+      await AsyncStorage.setItem('auth_token', accessToken);
+      console.log('✅ Access token stored in AsyncStorage');
+      
+      if (refreshToken) {
+        await AsyncStorage.setItem('refresh_token', refreshToken);
+        console.log('✅ Refresh token stored in AsyncStorage');
+      }
+      
+      // Set both user and tokens atomically in a single state update
+      set({ user, accessToken, refreshToken });
+      console.log('✅ User and tokens set atomically in auth store');
+      
+      // Verify storage worked
+      const storedToken = await AsyncStorage.getItem('auth_token');
+      console.log('🔍 Verification - stored token exists:', !!storedToken);
+    } catch (error) {
+      console.error('❌ Failed to store user and tokens:', error);
     }
   },
   
@@ -133,6 +166,37 @@ const useAuthStore = create<AuthStore>((set, get) => ({
   
   setRegistrationData: (data) => set({ registrationData: data }),
   clearRegistrationData: () => set({ registrationData: null }),
+  
+  handleAuthError: async () => {
+    console.log('🚨 Handling authentication error - logging out user');
+    try {
+      // Clear all auth data from AsyncStorage
+      await AsyncStorage.removeItem('auth_token');
+      await AsyncStorage.removeItem('refresh_token');
+      
+      // Clear auth state
+      set({ user: null, accessToken: null, refreshToken: null, registrationData: null });
+      
+      // Show user notification
+      Toast.show({
+        type: 'error',
+        text1: 'Session Expired',
+        text2: 'Please log in again to continue',
+        visibilityTime: 4000,
+      });
+      
+      console.log('✅ User logged out successfully due to authentication error');
+    } catch (error) {
+      console.error('❌ Failed to clear auth data during error handling:', error);
+    }
+  },
 }));
+
+// Set up global authentication error handler
+authErrorHandler.onAuthError((error) => {
+  console.log('🚨 Global auth error handler triggered:', error.message);
+  const { handleAuthError } = useAuthStore.getState();
+  handleAuthError();
+});
 
 export default useAuthStore;

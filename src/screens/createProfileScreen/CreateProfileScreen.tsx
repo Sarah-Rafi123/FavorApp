@@ -25,9 +25,10 @@ import Toast from 'react-native-toast-message';
 interface CreateProfileScreenProps {
   onProfileComplete: () => void;
   onNavigateToOtp?: (email: string) => void;
+  onBack?: () => void;
 }
 
-export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: CreateProfileScreenProps) {
+export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack }: CreateProfileScreenProps) {
   const registrationData = useAuthStore((state) => state.registrationData);
   const clearRegistrationData = useAuthStore((state) => state.clearRegistrationData);
   const setUser = useAuthStore((state) => state.setUser);
@@ -133,12 +134,24 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
   const updateFormData = (field: string, value: string | boolean | string[] | Date) => {
     // Field-specific validations and character limits
     if (typeof value === 'string') {
-      // First and Last Name: no numbers, max 30 characters
+      // First and Last Name: no numbers, 3-50 characters
       if ((field === 'firstName' || field === 'lastName')) {
         const hasNumbers = /\d/.test(value);
-        if (hasNumbers || value.length > 30) {
+        if (hasNumbers || value.length > 50) {
           return;
         }
+        
+        // Real-time validation for name fields
+        const trimmedValue = value.trim();
+        let newError = '';
+        if (trimmedValue.length > 0 && trimmedValue.length < 3) {
+          newError = `${field === 'firstName' ? 'First' : 'Last'} name must be at least 3 characters long`;
+        }
+        
+        setErrors(prev => ({
+          ...prev,
+          [field]: newError
+        }));
       }
       
       // Phone fields: format as (XXX) XXX-XXXX
@@ -247,10 +260,22 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
     if (!formData.firstName.trim()) {
       newErrors.firstName = 'First name is required';
       isValid = false;
+    } else if (formData.firstName.trim().length < 3) {
+      newErrors.firstName = 'First name must be at least 3 characters long';
+      isValid = false;
+    } else if (formData.firstName.trim().length > 50) {
+      newErrors.firstName = 'First name must be less than 50 characters';
+      isValid = false;
     }
 
     if (!formData.lastName.trim()) {
       newErrors.lastName = 'Last name is required';
+      isValid = false;
+    } else if (formData.lastName.trim().length < 3) {
+      newErrors.lastName = 'Last name must be at least 3 characters long';
+      isValid = false;
+    } else if (formData.lastName.trim().length > 50) {
+      newErrors.lastName = 'Last name must be less than 50 characters';
       isValid = false;
     }
 
@@ -437,6 +462,54 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
     return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
   };
 
+  const handleBackPress = () => {
+    // Clear all form data
+    setFormData({
+      firstName: '',
+      lastName: '',
+      dateOfBirth: new Date(),
+      fullAddress: '',
+      phoneCall: '',
+      phoneText: '',
+      yearsOfExperience: '',
+      aboutMe: '',
+      heardAboutUs: '',
+      skills: [],
+      otherSkills: '',
+      ageConsent: false,
+    });
+    
+    // Clear all errors
+    setErrors({
+      firstName: '',
+      lastName: '',
+      dateOfBirth: '',
+      fullAddress: '',
+      phoneCall: '',
+      phoneText: '',
+      yearsOfExperience: '',
+      aboutMe: '',
+      otherSkills: '',
+      ageConsent: '',
+    });
+    
+    // Clear extracted address data
+    setExtractedCity('');
+    setExtractedState('');
+    
+    // Clear country selections
+    setSelectedCountryCall(countryData[0]);
+    setSelectedCountryText(countryData[0]);
+    
+    // Clear registration data from auth store
+    clearRegistrationData();
+    
+    // Navigate back
+    if (onBack) {
+      onBack();
+    }
+  };
+
   return (
     <ImageBackground 
       source={require('../../../assets/Wallpaper.png')} 
@@ -456,6 +529,19 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
           showsVerticalScrollIndicator={false}
         >
           <View className="flex-1 px-6 pt-16">
+            {/* Back Button */}
+            {onBack && (
+              <View className="mb-4">
+                <TouchableOpacity 
+                  onPress={handleBackPress}
+                  className="flex-row items-center"
+                >
+                  <Text className="text-lg mr-1">←</Text>
+                  <Text className="text-base text-gray-600">Back</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
             {/* Title */}
             <View className="items-center mb-8">
               <Text className="text-3xl font-bold text-gray-800 mb-2 text-center">
@@ -485,9 +571,16 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
                   value={formData.firstName}
                   onChangeText={(text) => updateFormData('firstName', text)}
                 />
-                {errors.firstName ? (
-                  <Text className="text-red-500 text-sm mt-1">{errors.firstName}</Text>
-                ) : null}
+                <View className="flex-row justify-between mt-1">
+                  <View className="flex-1">
+                    {errors.firstName ? (
+                      <Text className="text-red-500 text-sm">{errors.firstName}</Text>
+                    ) : null}
+                  </View>
+                  <Text className={`text-xs ${formData.firstName.length < 3 || formData.firstName.length > 50 ? 'text-red-500' : 'text-gray-500'}`}>
+                    {formData.firstName.length}/50 
+                  </Text>
+                </View>
               </View>
 
               {/* Last Name */}
@@ -506,9 +599,16 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp }: Crea
                   value={formData.lastName}
                   onChangeText={(text) => updateFormData('lastName', text)}
                 />
-                {errors.lastName ? (
-                  <Text className="text-red-500 text-sm mt-1">{errors.lastName}</Text>
-                ) : null}
+                <View className="flex-row justify-between mt-1">
+                  <View className="flex-1">
+                    {errors.lastName ? (
+                      <Text className="text-red-500 text-sm">{errors.lastName}</Text>
+                    ) : null}
+                  </View>
+                  <Text className={`text-xs ${formData.lastName.length < 3 || formData.lastName.length > 50 ? 'text-red-500' : 'text-gray-500'}`}>
+                    {formData.lastName.length}/50 
+                  </Text>
+                </View>
               </View>
 
 

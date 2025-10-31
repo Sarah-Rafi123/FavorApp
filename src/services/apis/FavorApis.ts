@@ -13,6 +13,7 @@ export interface FavorUser {
   skills?: string[];
   member_since?: string;
   rating?: number;
+  image_url?: string | null;
 }
 
 export interface FavorSubject {

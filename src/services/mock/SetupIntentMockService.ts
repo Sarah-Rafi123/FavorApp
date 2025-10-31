@@ -2,15 +2,23 @@ import { SetupIntentResponse } from '../apis/SetupIntentApis';
 
 export class SetupIntentMockService {
   private static generateClientSecret(): string {
-    return `seti_${Math.random().toString(36).substr(2, 9)}_secret_${Math.random().toString(36).substr(2, 16)}`;
+    // Generate more realistic Stripe client secret format
+    const setupIntentId = Math.random().toString(36).substring(2, 11);
+    const secretPart = Math.random().toString(36).substring(2, 25);
+    return `seti_1${setupIntentId}_secret_${secretPart}`;
   }
 
   private static generateSetupIntentId(): string {
-    return `seti_${Math.random().toString(36).substr(2, 16)}`;
+    // Generate a more realistic Stripe SetupIntent ID format
+    // Real Stripe IDs are longer and use specific character patterns
+    const randomPart1 = Math.random().toString(36).substring(2, 10);
+    const randomPart2 = Math.random().toString(36).substring(2, 10);
+    const randomPart3 = Math.random().toString(36).substring(2, 10);
+    return `seti_1${randomPart1}${randomPart2}${randomPart3}`;
   }
 
   private static generateCustomerId(): string {
-    return `cus_${Math.random().toString(36).substr(2, 16)}`;
+    return `cus_${Math.random().toString(36).substring(2, 18)}`;
   }
 
   static async createSetupIntent(): Promise<SetupIntentResponse> {

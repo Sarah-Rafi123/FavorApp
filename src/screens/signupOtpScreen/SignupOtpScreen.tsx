@@ -19,9 +19,10 @@ interface SignupOtpScreenProps {
   onVerifySuccess: () => void;
   onBackToLogin: () => void;
   email: string;
+  onClearDataAndNavigateToAuth?: () => void;
 }
 
-export function SignupOtpScreen({ onBack, onVerifySuccess, onBackToLogin, email }: SignupOtpScreenProps) {
+export function SignupOtpScreen({ onBack, onVerifySuccess, onBackToLogin, email, onClearDataAndNavigateToAuth }: SignupOtpScreenProps) {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [timer, setTimer] = useState(300); // 5 minutes = 300 seconds
   const [canResend, setCanResend] = useState(false);
@@ -192,6 +193,25 @@ export function SignupOtpScreen({ onBack, onVerifySuccess, onBackToLogin, email 
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const handleBackWithDataClear = () => {
+    // Clear OTP state
+    setOtp(['', '', '', '', '', '']);
+    setTimer(300);
+    setCanResend(false);
+    setShowSuccessModal(false);
+    setFocusedIndex(null);
+    
+    // Clear registration data from auth store
+    clearRegistrationData();
+    
+    // Navigate back to auth screen with data clearing
+    if (onClearDataAndNavigateToAuth) {
+      onClearDataAndNavigateToAuth();
+    } else {
+      onBack();
+    }
+  };
+
   return (
     <ImageBackground 
       source={require('../../assets/images/Wallpaper.png')} 
@@ -201,8 +221,19 @@ export function SignupOtpScreen({ onBack, onVerifySuccess, onBackToLogin, email 
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       <View className="flex-1 px-6 pt-20">
         
+        {/* Back Button */}
+        <View className="mb-4">
+          <TouchableOpacity 
+            onPress={handleBackWithDataClear}
+            className="flex-row items-center"
+          >
+            <Text className="text-lg mr-1">←</Text>
+            <Text className="text-base text-gray-600">Back</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Lock Icon */}
-        <View className="items-center mb-8 mt-16">
+        <View className="items-center mb-8 mt-8">
           <LockIcon />
         </View>
 

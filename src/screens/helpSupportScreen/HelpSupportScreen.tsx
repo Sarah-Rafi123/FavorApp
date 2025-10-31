@@ -36,10 +36,52 @@ export function HelpSupportScreen({ navigation }: HelpSupportScreenProps) {
   const updateFormData = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     
-    // Clear errors when user starts typing
-    if (errors[field as keyof typeof errors]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
+    // Real-time validation
+    const newErrors = { ...errors };
+    
+    if (field === 'fullName') {
+      const trimmedValue = value.trim();
+      if (trimmedValue.length > 0 && trimmedValue.length < 3) {
+        newErrors.fullName = 'Full name must be at least 3 characters long';
+      } else if (trimmedValue.length > 50) {
+        newErrors.fullName = 'Full name must be 50 characters or less';
+      } else {
+        newErrors.fullName = '';
+      }
     }
+    
+    if (field === 'subject') {
+      const trimmedValue = value.trim();
+      if (trimmedValue.length > 0 && trimmedValue.length < 3) {
+        newErrors.subject = 'Subject must be at least 3 characters long';
+      } else if (trimmedValue.length > 50) {
+        newErrors.subject = 'Subject must be 50 characters or less';
+      } else {
+        newErrors.subject = '';
+      }
+    }
+    
+    if (field === 'description') {
+      const trimmedValue = value.trim();
+      if (trimmedValue.length > 1000) {
+        newErrors.description = 'Description must be 1000 characters or less';
+      } else {
+        newErrors.description = '';
+      }
+    }
+    
+    if (field === 'email') {
+      const trimmedValue = value.trim();
+      if (trimmedValue.length > 0 && !validateEmail(trimmedValue)) {
+        newErrors.email = 'Please enter a valid email address';
+      } else if (trimmedValue.length > 50) {
+        newErrors.email = 'Email must be 50 characters or less';
+      } else {
+        newErrors.email = '';
+      }
+    }
+    
+    setErrors(newErrors);
   };
 
   const validateEmail = (email: string) => {
@@ -59,6 +101,8 @@ export function HelpSupportScreen({ navigation }: HelpSupportScreenProps) {
     // Validation
     if (!formData.fullName.trim()) {
       newErrors.fullName = 'Full name is required';
+    } else if (formData.fullName.trim().length < 3) {
+      newErrors.fullName = 'Full name must be at least 3 characters long';
     } else if (formData.fullName.trim().length > 50) {
       newErrors.fullName = 'Full name must be 50 characters or less';
     }
@@ -73,6 +117,8 @@ export function HelpSupportScreen({ navigation }: HelpSupportScreenProps) {
 
     if (!formData.subject.trim()) {
       newErrors.subject = 'Subject is required';
+    } else if (formData.subject.trim().length < 3) {
+      newErrors.subject = 'Subject must be at least 3 characters long';
     } else if (formData.subject.trim().length > 50) {
       newErrors.subject = 'Subject must be 50 characters or less';
     }
@@ -81,8 +127,8 @@ export function HelpSupportScreen({ navigation }: HelpSupportScreenProps) {
       newErrors.description = 'Description is required';
     } else if (formData.description.trim().length < 20) {
       newErrors.description = 'Description must be at least 20 characters';
-    } else if (formData.description.trim().length > 200) {
-      newErrors.description = 'Description must be 200 characters or less';
+    } else if (formData.description.trim().length > 1000) {
+      newErrors.description = 'Description must be 1000 characters or less';
     }
 
     setErrors(newErrors);
@@ -170,9 +216,16 @@ export function HelpSupportScreen({ navigation }: HelpSupportScreenProps) {
               autoCapitalize="words"
               maxLength={50}
             />
-            {errors.fullName ? (
-              <Text className="text-red-500 text-sm mt-1">{errors.fullName}</Text>
-            ) : null}
+            <View className="flex-row justify-between mt-1">
+              <View className="flex-1">
+                {errors.fullName ? (
+                  <Text className="text-red-500 text-sm">{errors.fullName}</Text>
+                ) : null}
+              </View>
+              <Text className={`text-xs ${formData.fullName.length < 3 || formData.fullName.length > 50 ? 'text-red-500' : 'text-gray-500'}`}>
+                {formData.fullName.length}/50 (min 3)
+              </Text>
+            </View>
           </View>
 
           {/* Email */}
@@ -224,9 +277,16 @@ export function HelpSupportScreen({ navigation }: HelpSupportScreenProps) {
               onChangeText={(text) => updateFormData('subject', text)}
               maxLength={50}
             />
-            {errors.subject ? (
-              <Text className="text-red-500 text-sm mt-1">{errors.subject}</Text>
-            ) : null}
+            <View className="flex-row justify-between mt-1">
+              <View className="flex-1">
+                {errors.subject ? (
+                  <Text className="text-red-500 text-sm">{errors.subject}</Text>
+                ) : null}
+              </View>
+              <Text className={`text-xs ${formData.subject.length < 3 || formData.subject.length > 50 ? 'text-red-500' : 'text-gray-500'}`}>
+                {formData.subject.length}/50 (min 3)
+              </Text>
+            </View>
           </View>
 
           {/* Description */}
@@ -244,21 +304,28 @@ export function HelpSupportScreen({ navigation }: HelpSupportScreenProps) {
                 lineHeight: 22,
                 minHeight: 120
               }}
-              placeholder="Detailed description of your issue or question (min 20, max 200 characters)"
+              placeholder="Detailed description of your issue or question (min 20, max 1000 characters)"
               placeholderTextColor="#9CA3AF"
               value={formData.description}
               onChangeText={(text) => updateFormData('description', text)}
               multiline
               textAlignVertical="top"
-              maxLength={200}
+              maxLength={1000}
             />
-            {errors.description ? (
-              <Text className="text-red-500 text-sm mt-1">{errors.description}</Text>
-            ) : null}
+            <View className="flex-row justify-between mt-1">
+              <View className="flex-1">
+                {errors.description ? (
+                  <Text className="text-red-500 text-sm">{errors.description}</Text>
+                ) : null}
+              </View>
+              <Text className={`text-xs ${formData.description.length > 1000 ? 'text-red-500' : 'text-gray-500'}`}>
+                {formData.description.length}/1000 characters
+              </Text>
+            </View>
           </View>
 
           {/* Validation Errors */}
-          {Object.values(errors).some(error => error !== '') && (
+          {/* {Object.values(errors).some(error => error !== '') && (
             <View className="mb-4">
               {errors.fullName && (
                 <Text className="text-red-500 text-sm mb-1">• {errors.fullName}</Text>
@@ -273,9 +340,7 @@ export function HelpSupportScreen({ navigation }: HelpSupportScreenProps) {
                 <Text className="text-red-500 text-sm mb-1">• {errors.description}</Text>
               )}
             </View>
-          )}
-
-          {/* Submit Button */}
+          )} */}
           <TouchableOpacity 
             className={`rounded-full py-4 ${
               submitSupportRequestMutation.isPending 

@@ -1,7 +1,17 @@
 import { axiosInstance } from '../axiosConfig';
 import { SetupIntentMockService } from '../mock/SetupIntentMockService';
 
-const USE_MOCK_SERVICE = process.env.EXPO_PUBLIC_USE_MOCK_PAYMENTS === 'true' || !process.env.EXPO_PUBLIC_API_BASE_URL;
+// Only use mock service if explicitly enabled AND no API URL is available
+// This prevents iOS Stripe SDK validation issues
+const USE_MOCK_SERVICE = process.env.EXPO_PUBLIC_USE_MOCK_PAYMENTS === 'true' && !process.env.EXPO_PUBLIC_API_BASE_URL;
+
+// Debug environment variables
+console.log('🔍 SetupIntent Environment Debug:', {
+  EXPO_PUBLIC_USE_MOCK_PAYMENTS: process.env.EXPO_PUBLIC_USE_MOCK_PAYMENTS,
+  EXPO_PUBLIC_API_BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL,
+  USE_MOCK_SERVICE,
+  reason: USE_MOCK_SERVICE ? 'Mock explicitly enabled and no API URL' : 'Using real API calls'
+});
 
 export interface SetupIntentResponse {
   success: boolean;
@@ -29,7 +39,8 @@ export const SetupIntentApis = {
    */
   createSetupIntent: async (forceNew?: boolean): Promise<SetupIntentResponse> => {
     if (USE_MOCK_SERVICE) {
-      console.log('Using mock service for Setup Intent creation');
+      console.log('⚠️ Using mock service for Setup Intent creation');
+      console.log('🚨 Mock service may cause issues with iOS Stripe SDK validation');
       return SetupIntentMockService.createSetupIntent();
     }
 

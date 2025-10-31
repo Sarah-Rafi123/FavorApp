@@ -1,6 +1,6 @@
 {
-  "name": "tsa-rn",
-  "version": "1.0.0",
+  "name": "favorapp",
+  "version": "1.0.2",
   "main": "index.ts",
   "scripts": {
     "start": "expo start --dev-client",

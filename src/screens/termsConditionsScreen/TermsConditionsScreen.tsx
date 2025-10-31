@@ -40,7 +40,7 @@ export function TermsConditionsScreen({ navigation }: TermsConditionsScreenProps
       <ScrollView 
         className="flex-1"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: 120 }}
       >
         <View className="px-6 pt-6">
           <Text className="text-xl font-bold text-gray-800 mb-2">FavorApp Terms of Use Agreement</Text>

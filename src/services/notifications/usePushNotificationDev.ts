@@ -4,6 +4,7 @@ import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { Alert } from 'react-native';
 import { useRegisterDeviceMutation, useUnregisterDeviceMutation } from '../queries/NotificationQueries';
+import useAuthStore from '../../store/useAuthStore';
 
 // Configure how notifications are handled
 Notifications.setNotificationHandler({
@@ -55,6 +56,11 @@ export const usePushNotification = () => {
 
   const registerDeviceMutation = useRegisterDeviceMutation();
   const unregisterDeviceMutation = useUnregisterDeviceMutation();
+  
+  // Get authentication state
+  const user = useAuthStore((state) => state.user);
+  const accessToken = useAuthStore((state) => state.accessToken);
+  const isAuthenticated = !!(user && accessToken);
 
   // Get device name for registration
   const getDeviceName = async (): Promise<string> => {
@@ -94,16 +100,20 @@ export const usePushNotification = () => {
       const mockToken = `ExponentPushToken[dev-${Math.random().toString(36).substring(2, 11)}]`;
       console.log('📱 Development Push Token:', mockToken);
 
-      // Try to register device with backend (optional for development)
-      try {
-        const deviceName = await getDeviceName();
-        await registerDeviceMutation.mutateAsync({
-          expo_push_token: mockToken,
-          device_name: deviceName,
-        });
-        console.log('✅ Device registered with backend');
-      } catch (backendError) {
-        console.warn('⚠️ Backend registration failed, continuing with local notifications');
+      // Try to register device with backend (only if authenticated)
+      if (isAuthenticated) {
+        try {
+          const deviceName = await getDeviceName();
+          await registerDeviceMutation.mutateAsync({
+            expo_push_token: mockToken,
+            device_name: deviceName,
+          });
+          console.log('✅ Device registered with backend');
+        } catch (backendError) {
+          console.warn('⚠️ Backend registration failed, continuing with local notifications');
+        }
+      } else {
+        console.log('🚫 Skipping backend registration - user not authenticated');
       }
 
       setState(prev => ({ 
@@ -212,10 +222,22 @@ export const usePushNotification = () => {
     };
   }, []);
 
-  // Auto-register on mount
+  // Auto-register when user is authenticated
   useEffect(() => {
-    registerForPushNotifications();
-  }, []);
+    if (isAuthenticated) {
+      console.log('🔐 User authenticated - registering for push notifications');
+      if (state.expoPushToken && !state.isRegistered) {
+        // Device already has token but not registered with backend
+        console.log('📱 Device has token but not registered - registering with backend');
+        registerDeviceWithBackend();
+      } else {
+        // Full registration process
+        registerForPushNotifications();
+      }
+    } else {
+      console.log('🚫 User not authenticated - skipping push notification registration');
+    }
+  }, [isAuthenticated]);
 
   // Set notification badge count
   const setBadgeCount = async (count: number) => {
@@ -281,6 +303,26 @@ export const usePushNotification = () => {
     }));
   };
 
+  // Register device with backend (for when user logs in after app start)
+  const registerDeviceWithBackend = async () => {
+    if (!state.expoPushToken || !isAuthenticated) {
+      console.log('🚫 Cannot register device - missing token or not authenticated');
+      return;
+    }
+
+    try {
+      const deviceName = await getDeviceName();
+      await registerDeviceMutation.mutateAsync({
+        expo_push_token: state.expoPushToken,
+        device_name: deviceName,
+      });
+      console.log('✅ Device registered with backend after login');
+      setState(prev => ({ ...prev, isRegistered: true }));
+    } catch (error) {
+      console.warn('⚠️ Backend registration failed after login');
+    }
+  };
+
   // Handle popup press (navigate to notification or specific screen)
   const handlePopupPress = (data?: any) => {
     dismissPopup();
@@ -298,6 +340,7 @@ export const usePushNotification = () => {
   return {
     ...state,
     registerForPushNotifications,
+    registerDeviceWithBackend,
     unregisterFromPushNotifications,
     setBadgeCount,
     clearAllNotifications,

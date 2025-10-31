@@ -1,5 +1,6 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { authErrorHandler } from './authErrorHandler';
 
 // Create axios instance with base configuration
 export const axiosInstance = axios.create({
@@ -61,12 +62,36 @@ axiosInstance.interceptors.response.use(
       originalRequest._retry = true;
       
       try {
+        console.log('🚨 401 Unauthorized error detected');
+        
         // Clear invalid token
         await AsyncStorage.removeItem('auth_token');
+        await AsyncStorage.removeItem('refresh_token');
         
-        // You might want to redirect to login screen here
-        // For now, just reject the promise
+        // Emit authentication error event for global handling
+        authErrorHandler.emitAuthError(error);
+        
         return Promise.reject(new Error('Authentication required'));
+      } catch (clearError) {
+        console.warn('Failed to clear auth token:', clearError);
+      }
+    }
+    
+    // Also handle authentication errors from error messages
+    if (error.response?.data?.message && 
+        (error.response.data.message.toLowerCase().includes('authentication required') ||
+         error.response.data.message.toLowerCase().includes('token') ||
+         error.response.data.message.toLowerCase().includes('unauthorized'))) {
+      
+      console.log('🚨 Authentication error detected in message:', error.response.data.message);
+      
+      try {
+        // Clear invalid token
+        await AsyncStorage.removeItem('auth_token');
+        await AsyncStorage.removeItem('refresh_token');
+        
+        // Emit authentication error event for global handling
+        authErrorHandler.emitAuthError(error);
       } catch (clearError) {
         console.warn('Failed to clear auth token:', clearError);
       }

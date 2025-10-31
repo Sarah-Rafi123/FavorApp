@@ -666,9 +666,9 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
               textAlignVertical="top"
               maxLength={200}
             />
-            <Text className={`text-sm mt-2 ${formData.description.length < 20 ? 'text-red-500' : formData.description.length >= 200 ? 'text-orange-500' : 'text-gray-500'}`}>
+            {/* <Text className={`text-sm mt-2 ${formData.description.length < 20 ? 'text-black' : formData.description.length >= 200 ? 'text-orange-500' : 'text-gray-500'}`}>
               {formData.description.length}/200 characters {formData.description.length < 20 ? '(minimum 20)' : ''}
-            </Text>
+            </Text> */}
             {errors.description ? (
               <Text className="text-red-500 text-sm mt-1">{errors.description}</Text>
             ) : null}

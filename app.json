@@ -2,7 +2,7 @@
   "expo": {
     "name": "FavorApp",
     "slug": "favorapp",
-    "version": "1.0.0",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/AppLogo.png",
     "userInterfaceStyle": "light",
@@ -24,10 +24,17 @@
       "icon": "./assets/AppLogo.png",
       "adaptiveIcon": {
         "foregroundImage": "./assets/AppLogo.png",
-        "backgroundColor": "#71DFB1",
+        "backgroundColor": "#FFFFFF",
         "monochromeImage": "./assets/AppLogo.png"
       },
       "package": "com.favorappllc.mobile",
+      "compileSdkVersion": 35,
+      "targetSdkVersion": 35,
+      "privacyManifest": {
+        "NSCameraUsageDescription": "This app needs access to camera to take photos for favor requests.",
+        "NSPhotoLibraryUsageDescription": "This app needs access to photo library to select images for favor requests."
+      },
+      "playStoreUrl": "https://play.google.com/store/apps/details?id=com.favorappllc.mobile",
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyDt1zyVSt1snXRBteLuH9ngKmE8ABve268"
@@ -68,6 +75,17 @@
     "extra": {
       "eas": {
         "projectId": "7ce5bc8d-1a94-401a-9641-3f0ee27fb437"
+      }
+    },
+    "submit": {
+      "ios": {
+        "appleId": "favorapp@yahoo.com",
+        "ascAppId": "6754607132",
+        "appleTeamId": "P6V734YP9P"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./google-service-account.json",
+        "track": "internal"
       }
     }
   }

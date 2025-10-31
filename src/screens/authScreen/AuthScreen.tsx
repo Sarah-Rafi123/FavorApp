@@ -23,9 +23,10 @@ interface AuthScreenProps {
   onForgotPassword?: () => void;
   onSignup?: (email: string) => void;
   onCreateProfile?: () => void;
+  clearDataOnMount?: boolean;
 }
 
-export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfile }: AuthScreenProps) {
+export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfile, clearDataOnMount }: AuthScreenProps) {
   const [activeTab, setActiveTab] = useState<'signin' | 'signup'>('signin');
   const [formData, setFormData] = useState({
     email: '',
@@ -49,14 +50,53 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
   const [showEmailDropdown, setShowEmailDropdown] = useState(false);
 
   const setUser = useAuthStore((state) => state.setUser);
-  const setTokens = useAuthStore((state) => state.setTokens);
+  const setUserAndTokens = useAuthStore((state) => state.setUserAndTokens);
   const setRegistrationData = useAuthStore((state) => state.setRegistrationData);
+  const clearRegistrationData = useAuthStore((state) => state.clearRegistrationData);
   const loginMutation = useLoginMutation();
 
   // Load saved credentials on component mount and auto-populate if available
   useEffect(() => {
     loadSavedCredentials();
   }, []);
+
+  // Clear all data when navigating back from other screens
+  useEffect(() => {
+    if (clearDataOnMount) {
+      // Clear form data
+      setFormData({
+        email: '',
+        password: '',
+        confirmPassword: '',
+        rememberMe: false,
+        agreeTerms: false,
+      });
+      
+      // Clear errors
+      setErrors({
+        email: '',
+        password: '',
+        confirmPassword: '',
+      });
+      
+      // Clear modal states
+      setShowPassword(false);
+      setShowConfirmPassword(false);
+      setShowTermsModal(false);
+      setShowPrivacyModal(false);
+      setShowCompleteAccountModal(false);
+      setShowInvalidCredentialsModal(false);
+      setShowEmailDropdown(false);
+      
+      // Clear registration data from auth store
+      clearRegistrationData();
+      
+      // Reset to signin tab
+      setActiveTab('signin');
+      
+      console.log('🧹 Cleared all AuthScreen data due to backward navigation');
+    }
+  }, [clearDataOnMount, clearRegistrationData]);
 
   // Auto-populate with most recent credentials when they're loaded (only on component mount)
   useEffect(() => {
@@ -207,23 +247,23 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
           console.log('🔍 Refresh token from response:', response.data?.refresh_token);
           console.log('🔍 User from response:', response.data?.user);
           
-          // Store tokens if available (API returns 'token' not 'access_token')
+          // Store tokens and user data atomically (API returns 'token' not 'access_token')
           if (response.data?.token) {
-            console.log('🔑 Storing tokens...');
-            await setTokens(response.data.token, response.data?.refresh_token);
-            console.log('✅ Tokens stored successfully');
+            console.log('🔑 Storing user and tokens atomically...');
+            await setUserAndTokens(
+              {
+                id: response.data?.user?.id?.toString() || '1',
+                firstName: response.data?.user?.first_name || 'User',
+                email: formData.email,
+              },
+              response.data.token,
+              response.data?.refresh_token
+            );
+            console.log('✅ User and tokens stored successfully');
             
             // Double check storage worked
             const verifyToken = await AsyncStorage.getItem('auth_token');
             console.log('🔍 Verification: Token in AsyncStorage:', !!verifyToken);
-            
-            // Set user data AFTER tokens are stored
-            setUser({
-              id: response.data?.user?.id?.toString() || '1',
-              firstName: response.data?.user?.first_name || 'User',
-              email: formData.email,
-            });
-            console.log('✅ User data set successfully');
           } else {
             console.warn('⚠️ No token in login response');
             console.warn('⚠️ Available response keys:', Object.keys(response.data || {}));
@@ -282,6 +322,9 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
       password: '',
       confirmPassword: '',
     });
+    // Reset password visibility to hidden state
+    setShowPassword(false);
+    setShowConfirmPassword(false);
   };
 
   const updateFormData = (field: string, value: string | boolean) => {

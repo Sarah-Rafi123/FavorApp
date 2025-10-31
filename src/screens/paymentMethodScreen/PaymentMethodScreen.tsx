@@ -133,8 +133,15 @@ export function PaymentMethodScreen({ navigation }: PaymentMethodScreenProps) {
       
       console.log('✅ Setup Intent created:', {
         setupIntentId: setup_intent_id,
-        hasClientSecret: !!client_secret
+        hasClientSecret: !!client_secret,
+        clientSecretFormat: client_secret.substring(0, 20) + '...'
       });
+      
+      // Validate client secret format for better error handling
+      if (!client_secret.startsWith('seti_')) {
+        console.error('❌ Invalid client secret format:', client_secret);
+        throw new Error('Invalid payment setup format. Please try again.');
+      }
       
       // Step 2: Initialize Payment Sheet
       const { error } = await initPaymentSheet({
@@ -146,7 +153,16 @@ export function PaymentMethodScreen({ navigation }: PaymentMethodScreenProps) {
 
       if (error) {
         console.error('❌ Payment Sheet initialization error:', error);
-        Alert.alert('Error', 'Failed to initialize payment sheet');
+        
+        // Provide more specific error messages based on error type
+        if (error.message?.includes('setupintent')) {
+          Alert.alert(
+            'Payment Setup Error', 
+            'There was an issue with the payment setup. This might be due to development mode limitations. Please try again or contact support if the issue persists.'
+          );
+        } else {
+          Alert.alert('Error', `Failed to initialize payment sheet: ${error.message}`);
+        }
         return null;
       }
       
@@ -155,7 +171,16 @@ export function PaymentMethodScreen({ navigation }: PaymentMethodScreenProps) {
       return setup_intent_id;
     } catch (error: any) {
       console.error('❌ Setup Intent creation error:', error);
-      Alert.alert('Error', 'Failed to setup payment sheet');
+      
+      // Provide more helpful error messages
+      if (error.message?.includes('setupintent')) {
+        Alert.alert(
+          'Development Mode Limitation', 
+          'This appears to be a development mode issue with Stripe. The payment system is working but may have limitations in the test environment. In production, this will work normally.'
+        );
+      } else {
+        Alert.alert('Error', 'Failed to setup payment sheet');
+      }
       return null;
     }
   };

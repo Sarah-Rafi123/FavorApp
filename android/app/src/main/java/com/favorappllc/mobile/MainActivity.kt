@@ -1,4 +1,4 @@
-package com.favor.app
+package com.favorappllc.mobile
 
 import android.os.Build
 import android.os.Bundle

@@ -6,6 +6,7 @@ import { usePushNotification } from '../services/notifications/usePushNotificati
 import { NotificationApis } from '../services/apis/NotificationApis';
 import { NotificationPopup } from '../components/notifications/NotificationPopup';
 import { useNavigation } from '@react-navigation/native';
+import useAuthStore from '../store/useAuthStore';
 
 interface NotificationContextType {
   unreadCount: number;
@@ -32,14 +33,19 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   const { setBadgeCount, scheduleTestNotificationWithType } = usePushNotification();
   const [previousUnreadCount, setPreviousUnreadCount] = useState<number>(0);
   
-  // Query for unread count with polling
+  // Get authentication state
+  const user = useAuthStore((state) => state.user);
+  const accessToken = useAuthStore((state) => state.accessToken);
+  const isAuthenticated = !!(user && accessToken);
+  
+  // Query for unread count with polling - only when authenticated
   const { 
     data: unreadData, 
     isLoading, 
     refetch: refetchUnreadCount 
   } = useUnreadCountQuery({
-    refetchInterval: 30000, // Poll every 30 seconds
-    enabled: true,
+    refetchInterval: isAuthenticated ? 30000 : undefined, // Poll every 30 seconds only when authenticated
+    enabled: isAuthenticated, // Only enable when user is authenticated
   });
 
   const unreadCount = unreadData?.data?.unread_count || 0;
@@ -49,9 +55,11 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     console.log('📊 NotificationContext - Unread count changed:', {
       previousCount: previousUnreadCount,
       currentCount: unreadCount,
-      isLoading
+      isLoading,
+      isAuthenticated,
+      hasToken: !!accessToken
     });
-  }, [unreadCount, previousUnreadCount, isLoading]);
+  }, [unreadCount, previousUnreadCount, isLoading, isAuthenticated, accessToken]);
 
   // Update app badge when unread count changes
   useEffect(() => {
@@ -60,8 +68,8 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
 
   // Detect new notifications and show popup
   useEffect(() => {
-    // Skip on first load or if count decreased (mark as read)
-    if (previousUnreadCount === 0 || unreadCount <= previousUnreadCount) {
+    // Skip if not authenticated or on first load or if count decreased (mark as read)
+    if (!isAuthenticated || previousUnreadCount === 0 || unreadCount <= previousUnreadCount) {
       setPreviousUnreadCount(unreadCount);
       return;
     }
@@ -98,8 +106,8 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   // Handle app state changes for polling optimization
   useEffect(() => {
     const handleAppStateChange = (nextAppState: AppStateStatus) => {
-      if (nextAppState === 'active') {
-        // App came to foreground - refetch immediately
+      if (nextAppState === 'active' && isAuthenticated) {
+        // App came to foreground - refetch immediately (only if authenticated)
         console.log('📱 App became active - refreshing notifications');
         refetchUnreadCount();
         
@@ -110,10 +118,12 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
 
     const subscription = AppState.addEventListener('change', handleAppStateChange);
     return () => subscription?.remove();
-  }, [refetchUnreadCount, queryClient]);
+  }, [refetchUnreadCount, queryClient, isAuthenticated]);
 
   // Auto-refresh when user performs notification actions
   useEffect(() => {
+    if (!isAuthenticated) return; // Don't set up interval if not authenticated
+    
     const interval = setInterval(() => {
       if (AppState.currentState === 'active') {
         refetchUnreadCount();
@@ -121,7 +131,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     }, 30000); // 30 seconds
 
     return () => clearInterval(interval);
-  }, [refetchUnreadCount]);
+  }, [refetchUnreadCount, isAuthenticated]);
 
   const value: NotificationContextType = {
     unreadCount,
