@@ -319,12 +319,12 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
     };
 
     return (
-      <View className="bg-white rounded-2xl p-4 mb-4 mx-4 border-2 border-[#44A27B] shadow-sm">
+      <View className="bg-[#F7FBF5] rounded-2xl p-4 mb-4 mx-4 shadow-sm border-2 border-b-4 border-b-[#44A27B] border-[#44A27B66]">
         {/* Edit Icon - Top Right */}
         <View className="absolute top-4 right-4 z-10">
           <TouchableOpacity 
             onPress={() => navigation?.navigate('EditFavorScreen', { favorId: favor.id })}
-            className="bg-white rounded-full p-2 shadow-sm border border-gray-200"
+            className="bg-transparent p-2 "
             activeOpacity={0.7}
           >
             <EditSvg />
@@ -346,7 +346,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
                 resizeMode="cover"
               />
             ) : (
-              <View className="w-20 h-20 bg-[#44A27B] rounded-xl mr-4 items-center justify-center border border-gray-300" >
+              <View className="w-16 h-16 bg-[#44A27B] rounded-xl mr-4 items-center justify-center border border-gray-300" >
                 <UserSvg focused={false} width={40} height={40} />
               </View>
             )}
@@ -476,7 +476,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
   // Component for Active tab request cards that match the image style - shows favor details with applicant info and Accept button
   const ActiveRequestCard = ({ favor, applicant, navigation }: { favor: Favor; applicant: FavorApplicant; navigation: any }) => {
     return (
-      <View className="bg-white rounded-2xl p-4 mb-4 mx-4 border-2 border-[#44A27B] shadow-sm">
+      <View className="bg-[#F7FBF5] rounded-2xl p-4 mb-4 mx-4 shadow-sm border-2 border-b-4 border-b-[#44A27B] border-[#44A27B66]">
         {/* Header with favor details like the image */}
         <TouchableOpacity 
           onPress={() => navigation?.navigate('FavorDetailsScreen', { favorId: favor.id, source: 'CreateFavorScreen' })}
@@ -598,7 +598,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
         onPress={() => navigation?.navigate('FavorDetailsScreen', { favorId: favor.id, source: 'CreateFavorScreen' })}
         activeOpacity={0.7}
       >
-        <View className="bg-white rounded-2xl p-4 mb-4 mx-4 border-2 border-gray-300">
+        <View className="bg-[#F7FBF5] rounded-2xl p-4 mb-4 mx-4 shadow-sm border-2 border-b-4 border-b-[#44A27B] border-[#44A27B66]">
           <View className="flex-row mb-4">
             {favor.image_url ? (
               <Image
@@ -692,12 +692,12 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
     
     // If no pending reviews, show regular active card
     return (
-      <View className="bg-white rounded-2xl p-4 mb-4 mx-4 border-2 border-[#44A27B]">
+      <View className="bg-[#F7FBF5] rounded-2xl p-4 mb-4 mx-4 shadow-sm border-2 border-b-4 border-b-[#44A27B] border-[#44A27B66]">
         {/* Edit Icon - Top Right */}
         <View className="absolute top-4 right-4 z-10">
           <TouchableOpacity 
             onPress={() => navigation?.navigate('EditFavorScreen', { favorId: favor.id })}
-            className="bg-white rounded-full p-2 shadow-sm border border-gray-200"
+            className="bg-transparent p-2"
             activeOpacity={0.7}
           >
             <EditSvg />
@@ -759,7 +759,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
       onPress={() => navigation?.navigate('FavorDetailsScreen', { favorId: favor.id, source: 'CreateFavorScreen' })}
       activeOpacity={0.7}
     >
-      <View className="bg-white rounded-2xl p-4 mb-4 mx-4 border-2 border-gray-200">
+      <View className="bg-[#F7FBF5] rounded-2xl p-4 mb-4 mx-4 shadow-sm border-2 border-b-4 border-b-[#44A27B] border-[#44A27B66]">
         <View className="flex-row">
           {favor.image_url ? (
             <Image

@@ -214,29 +214,43 @@ export function UserProfileScreen({ navigation, route }: UserProfileScreenProps)
               <View className="flex-row">
                 <Text className="text-gray-700 text-base w-32">Experience</Text>
                 <Text className="text-gray-700 text-base mr-2">:</Text>
-                <Text className="text-gray-800 text-base flex-1">{userProfile.years_of_experience} years</Text>
+                <View className="flex-1">
+                  <Text className="text-gray-800 text-base" numberOfLines={1} ellipsizeMode="tail">
+                    {userProfile.years_of_experience} years
+                  </Text>
+                </View>
               </View>
             )}
 
             <View className="flex-row">
               <Text className="text-gray-700 text-base w-32">Location</Text>
               <Text className="text-gray-700 text-base mr-2">:</Text>
-              <Text className="text-gray-800 text-base flex-1">
-                {userProfile.address?.city}, {userProfile.address?.state}
-              </Text>
+              <View className="flex-1">
+                <Text className="text-gray-800 text-base" numberOfLines={2} ellipsizeMode="tail">
+                  {userProfile.address?.city}, {userProfile.address?.state}
+                </Text>
+              </View>
             </View>
 
             <View className="flex-row">
               <Text className="text-gray-700 text-base w-32">Member Since</Text>
               <Text className="text-gray-700 text-base mr-2">:</Text>
-              <Text className="text-gray-800 text-base flex-1">{userProfile.member_since}</Text>
+              <View className="flex-1">
+                <Text className="text-gray-800 text-base" numberOfLines={1} ellipsizeMode="tail">
+                  {userProfile.member_since}
+                </Text>
+              </View>
             </View>
 
             {userProfile.age && (
               <View className="flex-row">
                 <Text className="text-gray-700 text-base w-32">Age</Text>
                 <Text className="text-gray-700 text-base mr-2">:</Text>
-                <Text className="text-gray-800 text-base flex-1">{userProfile.age} years</Text>
+                <View className="flex-1">
+                  <Text className="text-gray-800 text-base" numberOfLines={1} ellipsizeMode="tail">
+                    {userProfile.age} years
+                  </Text>
+                </View>
               </View>
             )}
 
@@ -244,7 +258,11 @@ export function UserProfileScreen({ navigation, route }: UserProfileScreenProps)
               <View className="flex-row items-start">
                 <Text className="text-gray-700 text-base w-32">About</Text>
                 <Text className="text-gray-700 text-base mr-2">:</Text>
-                <Text className="text-gray-800 text-base flex-1">{userProfile.about_me}</Text>
+                <View className="flex-1">
+                  <Text className="text-gray-800 text-base leading-5" style={{ flexWrap: 'wrap' }}>
+                    {userProfile.about_me}
+                  </Text>
+                </View>
               </View>
             )}
 
@@ -253,10 +271,12 @@ export function UserProfileScreen({ navigation, route }: UserProfileScreenProps)
                 <Text className="text-gray-700 text-base w-32">Skills</Text>
                 <Text className="text-gray-700 text-base mr-2">:</Text>
                 <View className="flex-1">
-                  <View className="flex-row flex-wrap">
+                  <View className="flex-row flex-wrap" style={{ gap: 4 }}>
                     {userProfile.skills.map((skill, index) => (
-                      <View key={index} className="bg-gray-100 rounded-full px-3 py-1 mr-2 mb-1">
-                        <Text className="text-gray-800 text-sm">{skill}</Text>
+                      <View key={index} className="bg-gray-100 rounded-full px-3 py-1 mb-2" style={{ marginRight: 4 }}>
+                        <Text className="text-gray-800 text-sm" numberOfLines={1} ellipsizeMode="tail">
+                          {skill}
+                        </Text>
                       </View>
                     ))}
                   </View>
