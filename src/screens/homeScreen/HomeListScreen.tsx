@@ -292,7 +292,7 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications }: HomeLis
               style={{ backgroundColor: '#f3f4f6' }}
             />
           ) : (
-            <View className="w-28 h-28 rounded-2xl mr-4 bg-gray-200 items-center justify-center border border-gray-300">
+            <View className="w-28 h-28 rounded-2xl mr-4 bg-[#44A27B] items-center justify-center border border-gray-300">
               <View className="items-center">
                 <UserSvg focused={false} />
               </View>

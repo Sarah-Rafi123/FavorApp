@@ -13,6 +13,7 @@ export * from "./provideFavorScreen";
 export * from "./profileScreen";
 export * from "./settingsScreen";
 export * from "./askFavorScreen";
+export * from "./editFavorScreen";
 export * from "./getCertifiedScreen";
 export * from "./paymentMethodScreen";
 export * from "./stripePaymentScreen";

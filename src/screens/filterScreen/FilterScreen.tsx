@@ -164,7 +164,7 @@ export function FilterScreen({ onBack, onApply, navigation }: FilterScreenProps)
       <ScrollView 
         className="flex-1"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingTop: 10, paddingBottom: 180 }}
+        contentContainerStyle={{ paddingTop: 10, paddingBottom: 220 }}
       >
         <FilterSection
           title="Priority"

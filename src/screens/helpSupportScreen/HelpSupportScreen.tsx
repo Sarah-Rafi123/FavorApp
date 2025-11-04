@@ -63,8 +63,8 @@ export function HelpSupportScreen({ navigation }: HelpSupportScreenProps) {
     
     if (field === 'description') {
       const trimmedValue = value.trim();
-      if (trimmedValue.length > 1000) {
-        newErrors.description = 'Description must be 1000 characters or less';
+      if (trimmedValue.length > 200) {
+        newErrors.description = 'Description must be 200 characters or less';
       } else {
         newErrors.description = '';
       }
@@ -127,8 +127,8 @@ export function HelpSupportScreen({ navigation }: HelpSupportScreenProps) {
       newErrors.description = 'Description is required';
     } else if (formData.description.trim().length < 20) {
       newErrors.description = 'Description must be at least 20 characters';
-    } else if (formData.description.trim().length > 1000) {
-      newErrors.description = 'Description must be 1000 characters or less';
+    } else if (formData.description.trim().length > 200) {
+      newErrors.description = 'Description must be 200 characters or less';
     }
 
     setErrors(newErrors);
@@ -190,7 +190,7 @@ export function HelpSupportScreen({ navigation }: HelpSupportScreenProps) {
       <ScrollView 
         className="flex-1"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: 120 }}
       >
         <View className="px-6 pt-6">
           
@@ -304,13 +304,13 @@ export function HelpSupportScreen({ navigation }: HelpSupportScreenProps) {
                 lineHeight: 22,
                 minHeight: 120
               }}
-              placeholder="Detailed description of your issue or question (min 20, max 1000 characters)"
+              placeholder="Detailed description of your issue or question (min 20, max 200 characters)"
               placeholderTextColor="#9CA3AF"
               value={formData.description}
               onChangeText={(text) => updateFormData('description', text)}
               multiline
               textAlignVertical="top"
-              maxLength={1000}
+              maxLength={200}
             />
             <View className="flex-row justify-between mt-1">
               <View className="flex-1">
@@ -318,8 +318,8 @@ export function HelpSupportScreen({ navigation }: HelpSupportScreenProps) {
                   <Text className="text-red-500 text-sm">{errors.description}</Text>
                 ) : null}
               </View>
-              <Text className={`text-xs ${formData.description.length > 1000 ? 'text-red-500' : 'text-gray-500'}`}>
-                {formData.description.length}/1000 characters
+              <Text className={`text-xs ${formData.description.length > 200 ? 'text-red-500' : 'text-gray-500'}`}>
+                {formData.description.length}/200 characters
               </Text>
             </View>
           </View>

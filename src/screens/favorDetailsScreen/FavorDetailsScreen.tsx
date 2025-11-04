@@ -412,7 +412,7 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
         {!isRequestMode && favor.user && (
           <View className="mx-4 mb-6">
             <Text className="text-lg font-semibold text-black mb-4">
-              You helped
+              You are helping
             </Text>
             
             <View className="flex-row items-center bg-white border rounded-2xl border-gray-300 p-4 border-1 mb-4">
@@ -444,11 +444,14 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
                   {favor.user.full_name}
                 </Text>
                 <View className="flex-row items-center">
-                  <Text className="text-gray-600 text-sm">⭐ 4.5 | </Text>
-                  <Text className="text-gray-600 text-sm">0 Reviews</Text>
+                  <Text className="text-gray-600 text-sm">⭐ {userProfile?.average_rating || '4.5'} | </Text>
+                  <Text className="text-gray-600 text-sm">{userProfile?.total_reviews || '0'} Reviews</Text>
                 </View>
                 {userProfile?.years_of_experience && (
                   <Text className="text-gray-600 text-sm">{userProfile.years_of_experience} years experience</Text>
+                )}
+                {userProfile?.has_contact_info && userProfile?.email && (
+                  <Text className="text-gray-600 text-sm">📧 {userProfile.email}</Text>
                 )}
                 <TouchableOpacity onPress={() => navigation?.navigate('UserProfileScreen', { userId: favor.user.id })}>
                   <Text className="text-[#44A27B] text-sm font-medium">View Profile</Text>
@@ -456,25 +459,38 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
               </View>
             </View>
 
-            {/* Contact Buttons */}
-            <View className="flex-row mb-4">
-              <TouchableOpacity 
-                className="flex-1 bg-transparent border border-black rounded-xl mr-2 py-3 px-2"
-                onPress={() => handleCallNumber(userProfile?.phone_no_call || '917-582-3220')}
-              >
-                <Text className="text-center text-gray-800 font-medium text-sm">
-                  Call: {userProfile?.phone_no_call || '917-582-3220'}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                className="flex-1 bg-transparent border border-black rounded-xl ml-2 py-3 px-2"
-                onPress={() => handleTextNumber(userProfile?.phone_no_text || '908-245-4242')}
-              >
-                <Text className="text-center text-gray-800 font-medium text-sm">
-                  Text: {userProfile?.phone_no_text || '908-245-4242'}
-                </Text>
-              </TouchableOpacity>
-            </View>
+            {/* Contact Buttons - Only show if contact info is available */}
+            {userProfile?.has_contact_info ? (
+              <View className="flex-row mb-4">
+                {userProfile.phone_no_call && (
+                  <TouchableOpacity 
+                    className="flex-1 bg-transparent border border-black rounded-xl mr-2 py-3 px-2"
+                    onPress={() => handleCallNumber(userProfile.phone_no_call)}
+                  >
+                    <Text className="text-center text-gray-800 font-medium text-sm">
+                      Call: {userProfile.phone_no_call}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                {userProfile.phone_no_text && (
+                  <TouchableOpacity 
+                    className="flex-1 bg-transparent border border-black rounded-xl ml-2 py-3 px-2"
+                    onPress={() => handleTextNumber(userProfile.phone_no_text)}
+                  >
+                    <Text className="text-center text-gray-800 font-medium text-sm">
+                      Text: {userProfile.phone_no_text}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ) : (
+              <View></View>
+              // <View className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-xl">
+              //   <Text className="text-center text-yellow-800 font-medium text-sm">
+              //     Contact information not available for this user
+              //   </Text>
+              // </View>
+            )}
 
             {/* Submit Review Button for provider mode */}
             {favor.status !== 'completed' && (
@@ -530,31 +546,47 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
                 {providerProfile?.years_of_experience && (
                   <Text className="text-gray-600 text-sm">{providerProfile.years_of_experience} years experience</Text>
                 )}
+                {providerProfile?.has_contact_info && providerProfile?.email && (
+                  <Text className="text-gray-600 text-sm">📧 {providerProfile.email}</Text>
+                )}
                 <TouchableOpacity onPress={handleViewProfile}>
                   <Text className="text-[#44A27B] text-sm font-medium">View Profile</Text>
                 </TouchableOpacity>
               </View>
             </View>
 
-            {/* Contact Buttons */}
-            <View className="flex-row mb-4">
-              <TouchableOpacity 
-                className="flex-1 bg-transparent border border-black rounded-xl mr-2 py-3 px-2"
-                onPress={() => handleCallNumber(providerProfile?.phone_no_call || '917-582-3220')}
-              >
-                <Text className="text-center text-gray-800 font-medium text-sm">
-                  Call: {providerProfile?.phone_no_call || '917-582-3220'}
+            {/* Contact Buttons - Only show if contact info is available */}
+            {providerProfile?.has_contact_info ? (
+              <View className="flex-row mb-4">
+                {providerProfile.phone_no_call && (
+                  <TouchableOpacity 
+                    className="flex-1 bg-transparent border border-black rounded-xl mr-2 py-3 px-2"
+                    onPress={() => handleCallNumber(providerProfile.phone_no_call)}
+                  >
+                    <Text className="text-center text-gray-800 font-medium text-sm">
+                      Call: {providerProfile.phone_no_call}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                {providerProfile.phone_no_text && (
+                  <TouchableOpacity 
+                    className="flex-1 bg-transparent border border-black rounded-xl ml-2 py-3 px-2"
+                    onPress={() => handleTextNumber(providerProfile.phone_no_text)}
+                  >
+                    <Text className="text-center text-gray-800 font-medium text-sm">
+                      Text: {providerProfile.phone_no_text}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ) : (
+              <View></View>
+              /* <View className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-xl">
+                <Text className="text-center text-yellow-800 font-medium text-sm">
+                  Contact information not available for this provider
                 </Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                className="flex-1 bg-transparent border border-black rounded-xl ml-2 py-3 px-2"
-                onPress={() => handleTextNumber(providerProfile?.phone_no_text || '908-245-4242')}
-              >
-                <Text className="text-center text-gray-800 font-medium text-sm">
-                  Text: {providerProfile?.phone_no_text || '908-245-4242'}
-                </Text>
-              </TouchableOpacity>
-            </View>
+              </View> */
+            )}
 
             {/* Action buttons based on context - only show if favor is not completed */}
             {favor.status !== 'completed' && (

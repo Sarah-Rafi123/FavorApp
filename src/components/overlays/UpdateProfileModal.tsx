@@ -545,7 +545,7 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
           onPress: () => handleImageAction(index, options),
           style: index === destructiveButtonIndex ? 'destructive' as 'destructive' : 'default' as 'default',
         })).concat([
-          { text: 'Cancel', style: 'cancel' as 'cancel' }
+          { text: 'Cancel', style: 'default', onPress: () => {} }
         ])
       );
     }
@@ -567,6 +567,9 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
 
   const launchCamera = async () => {
     try {
+      // Add a small delay to ensure any modals are closed
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       const image = await ImagePicker.openCamera({
         width: 800,
         height: 800,
@@ -592,6 +595,9 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
 
   const launchImageLibrary = async () => {
     try {
+      // Add a small delay to ensure any modals are closed
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       const image = await ImagePicker.openPicker({
         width: 800,
         height: 800,
@@ -646,6 +652,7 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
       transparent={true}
       animationType="fade"
       statusBarTranslucent={true}
+      onRequestClose={onClose}
     >
       <View className="flex-1 bg-black/50 justify-center items-center p-4">
         <View className="bg-[#FBFFF0] rounded-3xl w-full max-w-sm mx-4 border-4 border-[#71DFB1]">
@@ -968,9 +975,10 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
         transparent={true}
         animationType="fade"
         onRequestClose={() => setShowCalendar(false)}
+        statusBarTranslucent={true}
       >
-        <View className="flex-1 bg-black/50 justify-center items-center p-4">
-          <View className="bg-[#FBFFF0] rounded-3xl w-full max-w-sm border-4 border-[#71DFB1] p-6 shadow-lg">
+        <View className="flex-1 bg-black/50 justify-center items-center p-4" style={{ pointerEvents: 'auto' }}>
+          <View className="bg-[#FBFFF0] rounded-3xl w-full max-w-sm border-4 border-[#71DFB1] p-6 shadow-lg" style={{ pointerEvents: 'auto' }}>
             {/* Header */}
             <View className="flex-row justify-between items-center mb-6">
               <View className="flex-row items-center">
@@ -1096,16 +1104,19 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
           transparent={true}
           animationType="slide"
           onRequestClose={() => setShowYearPicker(false)}
+          statusBarTranslucent={true}
         >
           <TouchableOpacity 
             className="flex-1 bg-black/50 justify-center items-center p-4"
             activeOpacity={1}
             onPress={() => setShowYearPicker(false)}
+            style={{ pointerEvents: 'auto' }}
           >
             <TouchableOpacity 
               className="bg-[#FBFFF0] rounded-3xl w-full max-w-sm border-4 border-[#71DFB1] p-6 shadow-lg"
               activeOpacity={1}
               onPress={() => {}}
+              style={{ pointerEvents: 'auto' }}
             >
               <View className="flex-row justify-between items-center mb-4">
                 <Text className="text-lg font-bold text-black">Select Year</Text>
@@ -1155,13 +1166,15 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
         transparent
         animationType="fade"
         onRequestClose={() => setShowSkillsDropdown(false)}
+        statusBarTranslucent={true}
       >
         <TouchableOpacity 
           className="flex-1 bg-black/50 justify-center px-6"
           activeOpacity={1}
           onPress={() => setShowSkillsDropdown(false)}
+          style={{ pointerEvents: 'auto' }}
         >
-          <View className="bg-[#FBFFF0] rounded-3xl max-w-sm mx-auto w-full p-6 border-4 border-[#71DFB1]">
+          <View className="bg-[#FBFFF0] rounded-3xl max-w-sm mx-auto w-full p-6 border-4 border-[#71DFB1]" style={{ pointerEvents: 'auto' }}>
             <View className="mb-4 flex-row justify-between items-center">
               <Text className="text-xl font-semibold text-black">
                 Select Skills
@@ -1198,13 +1211,15 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
         transparent
         animationType="fade"
         onRequestClose={() => setShowCountryCallDropdown(false)}
+        statusBarTranslucent={true}
       >
         <TouchableOpacity 
           className="flex-1 bg-black/50 justify-center px-6"
           activeOpacity={1}
           onPress={() => setShowCountryCallDropdown(false)}
+          style={{ pointerEvents: 'auto' }}
         >
-          <View className="bg-[#FBFFF0] rounded-3xl max-w-sm mx-auto w-full max-h-96 border-4 border-[#71DFB1]">
+          <View className="bg-[#FBFFF0] rounded-3xl max-w-sm mx-auto w-full max-h-96 border-4 border-[#71DFB1]" style={{ pointerEvents: 'auto' }}>
             <View className="py-4 border-b border-gray-200">
               <Text className="text-lg font-semibold text-black text-center">
                 Select Country (Call)
@@ -1236,13 +1251,15 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
         transparent
         animationType="fade"
         onRequestClose={() => setShowCountryTextDropdown(false)}
+        statusBarTranslucent={true}
       >
         <TouchableOpacity 
           className="flex-1 bg-black/50 justify-center px-6"
           activeOpacity={1}
           onPress={() => setShowCountryTextDropdown(false)}
+          style={{ pointerEvents: 'auto' }}
         >
-          <View className="bg-[#FBFFF0] rounded-3xl max-w-sm mx-auto w-full max-h-96 border-4 border-[#71DFB1]">
+          <View className="bg-[#FBFFF0] rounded-3xl max-w-sm mx-auto w-full max-h-96 border-4 border-[#71DFB1]" style={{ pointerEvents: 'auto' }}>
             <View className="py-4 border-b border-gray-200">
               <Text className="text-lg font-semibold text-black text-center">
                 Select Country (Text)

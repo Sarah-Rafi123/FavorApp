@@ -194,12 +194,14 @@ export interface GetFavorApplicantsResponse {
 
 export interface CreateFavorRequest {
   description: string;
-  address: string;
+  address_attributes: {
+    full_address: string;
+    city: string;
+    state: string;
+  };
   priority: 'immediate' | 'delayed' | 'no_rush';
   favor_subject_id: number | 'other';
   favor_pay: '0' | '1'; // 0 = paid, 1 = free
-  city: string;
-  state: string;
   time_to_complete?: string;
   tip?: number;
   additional_tip?: number;
@@ -213,12 +215,14 @@ export interface CreateFavorFormData extends FormData {
 
 export interface UpdateFavorRequest {
   description?: string;
-  address?: string;
+  address_attributes?: {
+    full_address?: string;
+    city?: string;
+    state?: string;
+  };
   priority?: 'immediate' | 'delayed' | 'no_rush';
   favor_subject_id?: number | 'other';
   favor_pay?: '0' | '1';
-  city?: string;
-  state?: string;
   time_to_complete?: string;
   tip?: number;
   additional_tip?: number;

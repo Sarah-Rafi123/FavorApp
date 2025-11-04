@@ -74,25 +74,25 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
   
   // Browse favors with filters when filters are active (same params as HomeListScreen)
   const {
-    data: browseFavorsResponse,
+    data: browseFavorsData,
     isLoading: browseFavorsLoading,
     error: browseFavorsError,
     refetch: refetchBrowseFavors,
   } = useBrowseFavors(
     toBrowseParams(currentPage, 12),
-    { enabled: activeTab === 'All' && useFilteredData }
+    { enabled: useFilteredData }
   );
 
   // Fetch data using regular favors API with pagination (same as HomeListScreen)
   const {
-    data: allFavorsResponse,
-    isLoading: allFavorsLoading,
-    error: allFavorsError,
-    refetch: refetchAllFavors,
+    data: favorsData,
+    isLoading: favorsLoading,
+    error: favorsError,
+    refetch: refetchFavors,
   } = useFavors(
     currentPage, // page - now uses currentPage for pagination
     12, // per_page 
-    { enabled: activeTab === 'All' && !useFilteredData }
+    { enabled: !useFilteredData }
   );
 
   const {
@@ -160,16 +160,17 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
   );
 
   // Use the appropriate data source for "All" tab (same as HomeListScreen)
-  const currentAllTabData = useFilteredData ? browseFavorsResponse : allFavorsResponse;
-  const currentAllTabLoading = useFilteredData ? browseFavorsLoading : allFavorsLoading;
-  const currentAllTabError = useFilteredData ? browseFavorsError : allFavorsError;
-  const currentAllTabRefetch = useFilteredData ? refetchBrowseFavors : refetchAllFavors;
+  const currentData = useFilteredData ? browseFavorsData : favorsData;
+  const isLoadingCurrentData = useFilteredData ? browseFavorsLoading : favorsLoading;
+  const currentDataError = useFilteredData ? browseFavorsError : favorsError;
+  const refetchCurrentData = useFilteredData ? refetchBrowseFavors : refetchFavors;
 
   // Get current data based on active tab
   const getCurrentData = () => {
     switch (activeTab) {
       case 'All':
         // For "All" tab, use paginated data from allFavors state (same as HomeListScreen)
+        console.log('📊 getCurrentData for All tab - allFavors length:', allFavors.length);
         return allFavors;
       case 'Active':
         // Combine active and in-progress favors
@@ -177,10 +178,33 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
         const inProgressFavors = inProgressMyFavorsResponse?.data.favors || [];
         return [...activeFavors, ...inProgressFavors];
       case 'History':
-        // Combine completed and cancelled favors
-        const completedFavors = completedMyFavorsResponse?.data.favors || [];
-        const cancelledFavors = cancelledMyFavorsResponse?.data.favors || [];
-        return [...completedFavors, ...cancelledFavors];
+        // Combine completed and cancelled favors - with extra filtering for safety
+        const rawCompletedFavors = completedMyFavorsResponse?.data.favors || [];
+        const rawCancelledFavors = cancelledMyFavorsResponse?.data.favors || [];
+        
+        const completedFavors = rawCompletedFavors
+          .filter(favor => favor.status === 'completed');
+        const cancelledFavors = rawCancelledFavors
+          .filter(favor => favor.status === 'cancelled');
+        
+        // Debug logging to track status filtering
+        console.log('📊 History tab data filtering:');
+        console.log(`   Raw completed favors: ${rawCompletedFavors.length}, filtered: ${completedFavors.length}`);
+        console.log(`   Raw cancelled favors: ${rawCancelledFavors.length}, filtered: ${cancelledFavors.length}`);
+        
+        const allHistoryFavors = [...completedFavors, ...cancelledFavors];
+        console.log(`   Total history favors: ${allHistoryFavors.length}`);
+        
+        // Log any unexpected statuses for debugging
+        const allRawFavors = [...rawCompletedFavors, ...rawCancelledFavors];
+        const unexpectedStatuses = allRawFavors
+          .filter(favor => favor.status !== 'completed' && favor.status !== 'cancelled')
+          .map(favor => favor.status);
+        if (unexpectedStatuses.length > 0) {
+          console.warn('⚠️ Unexpected statuses in History tab:', Array.from(new Set(unexpectedStatuses)));
+        }
+        
+        return allHistoryFavors;
       default:
         return [];
     }
@@ -190,7 +214,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
     switch (activeTab) {
       case 'All':
         // Same logic as HomeListScreen
-        return currentAllTabLoading;
+        return isLoadingCurrentData;
       case 'Active':
         return activeMyFavorsLoading || inProgressMyFavorsLoading;
       case 'History':
@@ -204,7 +228,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
     switch (activeTab) {
       case 'All':
         // Same logic as HomeListScreen
-        return currentAllTabError;
+        return currentDataError;
       case 'Active':
         return activeMyFavorsError || inProgressMyFavorsError;
       case 'History':
@@ -217,6 +241,35 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
   const currentFavors = getCurrentData();
   const isLoading = getCurrentLoading();
   const error = getCurrentError();
+  
+  // Enhanced loading detection to prevent premature empty states
+  const isActuallyLoading = (
+    // For "All" tab: show loading if we don't have data yet and no error, but not during refresh when we have existing data
+    activeTab === 'All' && allFavors.length === 0 && !error && !refreshing && (
+      isLoadingCurrentData || (currentPage === 1 && !currentData)
+    )
+  ) || (
+    // For Active/History tabs: show loading if we don't have data yet and queries are enabled, or during refresh
+    activeTab !== 'All' && ((currentFavors.length === 0 && !error) || (refreshing && currentFavors.length === 0))
+  ) || (
+    // General loading states (but not for All tab during refresh with existing data)
+    (isLoading || refreshing) && !(activeTab === 'All' && refreshing && allFavors.length > 0)
+  );
+
+  // Debug logging for loading states
+  React.useEffect(() => {
+    console.log('🔍 ProvideFavorScreen Loading States:', {
+      activeTab,
+      isLoading,
+      isLoadingCurrentData,
+      refreshing,
+      isActuallyLoading,
+      currentFavorsLength: currentFavors.length,
+      allFavorsLength: allFavors.length,
+      hasError: !!error,
+      currentPage
+    });
+  }, [activeTab, isLoading, isLoadingCurrentData, refreshing, isActuallyLoading, currentFavors.length, allFavors.length, error, currentPage]);
 
   // Debug logging
   React.useEffect(() => {
@@ -232,36 +285,60 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
       console.log('Auth Store Token:', !!accessToken, accessToken ? `${accessToken.substring(0, 20)}...` : 'null');
       
       if (activeTab === 'All') {
-        console.log('All Favors Response:', allFavorsResponse);
-        console.log('All Favors Error:', allFavorsError);
+        console.log('Current Data Response:', currentData);
+        console.log('Current Data Error:', currentDataError);
       }
     };
     
     debugAuth();
-  }, [activeTab, currentFavors, isLoading, error, allFavorsResponse, allFavorsError, user, accessToken]);
+  }, [activeTab, currentFavors, isLoading, error, currentData, currentDataError, user, accessToken]);
 
-  // Reset pagination when switching between filtered and unfiltered or changing tabs (same as HomeListScreen)
+  // Reset pagination when switching between filtered and unfiltered (same as HomeListScreen)
   React.useEffect(() => {
+    console.log('🔄 Resetting pagination due to filter change');
+    console.log('🔍 Use Filtered Data:', useFilteredData);
+    
     setCurrentPage(1);
     setAllFavors([]);
     setHasMorePages(true);
-  }, [useFilteredData, activeTab]);
+  }, [useFilteredData]);
 
-  // Update allFavors when new data arrives for "All" tab (same as HomeListScreen)
+  // Reset pagination and state when switching to All tab
   React.useEffect(() => {
-    if (activeTab === 'All' && currentAllTabData?.data.favors) {
+    if (activeTab === 'All') {
+      console.log('🔄 Switching to All tab - resetting state');
+      setCurrentPage(1);
+      setAllFavors([]);
+      setHasMorePages(true);
+    }
+  }, [activeTab]);
+
+  // Update allFavors when new data arrives (same as HomeListScreen)
+  React.useEffect(() => {
+    if (currentData?.data?.favors) {
+      console.log('🔄 Updating allFavors for currentPage:', currentPage);
+      console.log('📊 Received favors count:', currentData.data.favors.length);
+      console.log('📄 Total pages:', currentData.data.meta?.total_pages);
+      
       if (currentPage === 1) {
         // First page - replace all favors
-        setAllFavors(currentAllTabData.data.favors);
+        console.log('🔄 First page - replacing all favors');
+        setAllFavors(currentData.data.favors);
       } else {
         // Additional pages - append to existing favors
-        setAllFavors(prev => [...prev, ...currentAllTabData.data.favors]);
+        console.log('🔄 Additional page - appending favors');
+        setAllFavors(prev => [...prev, ...currentData.data.favors]);
       }
       
       // Check if there are more pages
-      setHasMorePages(currentPage < currentAllTabData.data.meta.total_pages);
+      if (currentData.data.meta?.total_pages) {
+        setHasMorePages(currentPage < currentData.data.meta.total_pages);
+        console.log('📄 Has more pages:', currentPage < currentData.data.meta.total_pages);
+      }
+    } else {
+      console.log('⚠️ No data received or data structure is unexpected:', currentData);
     }
-  }, [currentAllTabData, currentPage, activeTab]);
+  }, [currentData, currentPage]);
 
   // Load more favors function (same as HomeListScreen)
   const loadMoreFavors = useCallback(() => {
@@ -271,29 +348,68 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
   }, [activeTab, isLoading, hasMorePages]);
 
   const handleRefresh = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      switch (activeTab) {
-        case 'All':
-          // Reset pagination and refresh (same as HomeListScreen)
+    console.log('🔄 Handle refresh triggered for tab:', activeTab);
+    
+    switch (activeTab) {
+      case 'All':
+        // For All tab, use the refreshing state and refetch without clearing data first
+        console.log('🔄 Refreshing All tab - setting refreshing state');
+        setRefreshing(true);
+        
+        try {
+          // Reset pagination state
           setCurrentPage(1);
-          setAllFavors([]);
           setHasMorePages(true);
-          await currentAllTabRefetch();
-          break;
-        case 'Active':
-          await Promise.all([refetchActiveMyFavors(), refetchInProgressMyFavors()]);
-          break;
-        case 'History':
-          await Promise.all([refetchCompletedMyFavors(), refetchCancelledMyFavors()]);
-          break;
-      }
-    } catch (error) {
-      console.error('Error refreshing:', error);
-    } finally {
-      setRefreshing(false);
+          
+          console.log('🚀 Calling refetch for All tab');
+          const result = await refetchCurrentData();
+          
+          // Only clear and reset data after successful refetch
+          if (result.data) {
+            console.log('✅ All tab refetch successful, updating data');
+            setAllFavors(result.data.data.favors || []);
+            
+            // Update pagination info
+            if (result.data.data.meta?.total_pages) {
+              setHasMorePages(1 < result.data.data.meta.total_pages);
+            }
+          }
+        } catch (error) {
+          console.error('❌ Error refreshing All tab:', error);
+        } finally {
+          setRefreshing(false);
+        }
+        break;
+      case 'Active':
+        console.log('🔄 Refreshing Active tab');
+        setRefreshing(true);
+        Promise.all([refetchActiveMyFavors(), refetchInProgressMyFavors()])
+          .then(() => {
+            console.log('✅ Active tab refetch completed');
+          })
+          .catch((error) => {
+            console.error('❌ Error refreshing Active tab:', error);
+          })
+          .finally(() => {
+            setRefreshing(false);
+          });
+        break;
+      case 'History':
+        console.log('🔄 Refreshing History tab');
+        setRefreshing(true);
+        Promise.all([refetchCompletedMyFavors(), refetchCancelledMyFavors()])
+          .then(() => {
+            console.log('✅ History tab refetch completed');
+          })
+          .catch((error) => {
+            console.error('❌ Error refreshing History tab:', error);
+          })
+          .finally(() => {
+            setRefreshing(false);
+          });
+        break;
     }
-  }, [activeTab, currentAllTabRefetch, refetchActiveMyFavors, refetchInProgressMyFavors, refetchCompletedMyFavors, refetchCancelledMyFavors]);
+  }, [activeTab, refetchCurrentData, refetchActiveMyFavors, refetchInProgressMyFavors, refetchCompletedMyFavors, refetchCancelledMyFavors]);
 
   const handleAskFavor = () => {
     navigation?.navigate('AskFavorScreen');
@@ -335,7 +451,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
       try {
         switch (activeTab) {
           case 'All':
-            await refetchAllFavors();
+            await refetchCurrentData();
             break;
           case 'Active':
             await Promise.all([refetchActiveMyFavors(), refetchInProgressMyFavors()]);
@@ -571,7 +687,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
                   style={{ backgroundColor: '#f3f4f6' }}
                 />
               ) : (
-                <View className="w-28 h-28 rounded-2xl mr-4 bg-gray-200 items-center justify-center border border-gray-300">
+                <View className="w-28 h-28 rounded-2xl mr-4 bg-[#44A27B] items-center justify-center border border-gray-300">
                   <View className="items-center">
                     <UserSvg focused={false} />
                   </View>
@@ -652,7 +768,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
                 style={{ backgroundColor: '#f3f4f6' }}
               />
             ) : (
-              <View className="w-28 h-28 rounded-2xl mr-4 bg-gray-200 items-center justify-center border border-gray-300">
+              <View className="w-28 h-28 rounded-2xl mr-4 bg-[#44A27B] items-center justify-center border border-gray-300">
                 <View className="items-center">
                   <UserSvg focused={false} />
                 </View>
@@ -673,6 +789,32 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
               <Text className="text-gray-700 text-sm mb-4 leading-5">
                 {favor.description}
               </Text>
+
+              {/* Status Badge - Only show in History tab */}
+              {activeTab === 'History' && (
+                <View className={`self-start px-3 py-1 rounded-full mb-3 ${
+                  favor.status === 'completed' 
+                    ? 'bg-green-100 border border-green-300' 
+                    : favor.status === 'cancelled'
+                    ? 'bg-red-100 border border-red-300'
+                    : 'bg-gray-100 border border-gray-300'
+                }`}>
+                  <Text className={`text-xs font-medium ${
+                    favor.status === 'completed' 
+                      ? 'text-green-700' 
+                      : favor.status === 'cancelled'
+                      ? 'text-red-700'
+                      : 'text-gray-700'
+                  }`}>
+                    {favor.status === 'completed' 
+                      ? 'Completed' 
+                      : favor.status === 'cancelled'
+                      ? 'Cancelled'
+                      : favor.status?.charAt(0).toUpperCase() + favor.status?.slice(1) || 'Unknown'
+                    }
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
 
@@ -763,7 +905,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
       </View>
 
       {/* Content Area */}
-      {isLoading ? (
+      {isActuallyLoading ? (
         <View className="flex-1 justify-center items-center">
           <ActivityIndicator size="large" color="#44A27B" />
           <Text className="text-gray-600 mt-4">Loading favors...</Text>
@@ -797,7 +939,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
             contentContainerStyle={{ paddingTop: 16, paddingBottom: 120 }}
             refreshControl={
               <RefreshControl
-                refreshing={isLoading && currentPage === 1}
+                refreshing={refreshing}
                 onRefresh={handleRefresh}
                 colors={['#44A27B']}
                 tintColor="#44A27B"
@@ -852,7 +994,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
           </View>
           
           <Text className="text-2xl font-bold text-[#000000B8] mb-4 text-center">
-            {activeTab === 'All' && (hasActiveFilters() ? 'No favor found' : 'No New Favors Yet')}
+            {activeTab === 'All' && (hasActiveFilters() ? 'No favor found' : 'No favors available')}
             {activeTab === 'Active' && 'No Active Favors'}
             {activeTab === 'History' && 'No History Yet'}
           </Text>
@@ -861,7 +1003,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
             {activeTab === 'All' && (
               hasActiveFilters() 
                 ? 'Try adjusting your filters to see more results'
-                : 'Check back soon or post a favor to get\nhelp from your community.'
+                : 'Check back later for new favors'
             )}
             {activeTab === 'Active' && "You don't have any ongoing favors right\nnow. Start helping or request a hand to see\nthem here."}
             {activeTab === 'History' && 'Once you help someone, your favor history\nwill appear here.'}

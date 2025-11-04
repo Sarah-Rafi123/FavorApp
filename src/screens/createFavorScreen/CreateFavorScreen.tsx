@@ -21,6 +21,7 @@ import FilterSvg from '../../assets/icons/Filter';
 import { NotificationBell } from '../../components/notifications/NotificationBell';
 import CancelSvg from '../../assets/icons/Cancel';
 import UserSvg from '../../assets/icons/User';
+import EditSvg from '../../assets/icons/Edit';
 import { useMyFavors, useFavorApplicants } from '../../services/queries/FavorQueries';
 import { useDeleteFavor, useAcceptApplicant, useReassignFavor } from '../../services/mutations/FavorMutations';
 import { Favor, FavorApplicant } from '../../services/apis/FavorApis';
@@ -319,6 +320,17 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
 
     return (
       <View className="bg-white rounded-2xl p-4 mb-4 mx-4 border-2 border-[#44A27B] shadow-sm">
+        {/* Edit Icon - Top Right */}
+        <View className="absolute top-4 right-4 z-10">
+          <TouchableOpacity 
+            onPress={() => navigation?.navigate('EditFavorScreen', { favorId: favor.id })}
+            className="bg-white rounded-full p-2 shadow-sm border border-gray-200"
+            activeOpacity={0.7}
+          >
+            <EditSvg />
+          </TouchableOpacity>
+        </View>
+
         {/* Header with favor details */}
         <TouchableOpacity 
           onPress={() => navigation?.navigate('FavorDetailsScreen', { favorId: favor.id, source: 'CreateFavorScreen' })}
@@ -334,7 +346,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
                 resizeMode="cover"
               />
             ) : (
-              <View className="w-20 h-20 rounded-xl mr-4 items-center justify-center border border-gray-300" style={{ backgroundColor: '#F4F5DE' }}>
+              <View className="w-20 h-20 bg-[#44A27B] rounded-xl mr-4 items-center justify-center border border-gray-300" >
                 <UserSvg focused={false} width={40} height={40} />
               </View>
             )}
@@ -480,7 +492,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
                 resizeMode="cover"
               />
             ) : (
-              <View className="w-20 h-20 rounded-xl mr-4 items-center justify-center border border-gray-300" style={{ backgroundColor: '#F4F5DE' }}>
+              <View className="w-20 h-20 rounded-xl mr-4 items-center justify-center border bg-[#44A27B] border-gray-300" >
                 <UserSvg focused={false} width={40} height={40} />
               </View>
             )}
@@ -596,7 +608,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
                 resizeMode="cover"
               />
             ) : (
-              <View className="w-16 h-16 rounded-xl mr-4 items-center justify-center border border-gray-300" style={{ backgroundColor: '#F4F5DE' }}>
+              <View className="w-16 h-16 rounded-xl mr-4 items-center justify-center border bg-[#44A27B] border-gray-300" >
                 <UserSvg focused={false} width={32} height={32} />
               </View>
             )}
@@ -681,6 +693,17 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
     // If no pending reviews, show regular active card
     return (
       <View className="bg-white rounded-2xl p-4 mb-4 mx-4 border-2 border-[#44A27B]">
+        {/* Edit Icon - Top Right */}
+        <View className="absolute top-4 right-4 z-10">
+          <TouchableOpacity 
+            onPress={() => navigation?.navigate('EditFavorScreen', { favorId: favor.id })}
+            className="bg-white rounded-full p-2 shadow-sm border border-gray-200"
+            activeOpacity={0.7}
+          >
+            <EditSvg />
+          </TouchableOpacity>
+        </View>
+
         <TouchableOpacity 
           onPress={() => navigation?.navigate('FavorDetailsScreen', { favorId: favor.id, source: 'CreateFavorScreen' })}
           activeOpacity={0.7}
@@ -694,7 +717,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
                 resizeMode="cover"
               />
             ) : (
-              <View className="w-16 h-16 rounded-xl mr-4 items-center justify-center border border-gray-300" style={{ backgroundColor: '#F4F5DE' }}>
+              <View className="w-16 h-16 rounded-xl mr-4 items-center justify-center border border-gray-300 bg-[#44A27B]">
                 <UserSvg focused={false} width={32} height={32} />
               </View>
             )}
@@ -746,7 +769,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
               resizeMode="cover"
             />
           ) : (
-            <View className="w-16 h-16 rounded-xl mr-4 items-center justify-center border border-gray-300" style={{ backgroundColor: '#F4F5DE' }}>
+            <View className="w-16 h-16 rounded-xl mr-4 items-center justify-center border border-gray-300 bg-[#44A27B]">
               <UserSvg focused={false} width={32} height={32} />
             </View>
           )}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   ScrollView,
   Platform,
   Modal,
+  Keyboard,
 } from 'react-native';
 import { CarouselButton } from '../../components/buttons';
 import useAuthStore from '../../store/useAuthStore';
@@ -48,6 +49,12 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
   const [showInvalidCredentialsModal, setShowInvalidCredentialsModal] = useState(false);
   const [savedCredentials, setSavedCredentials] = useState<Array<{email: string, password: string}>>([]);
   const [showEmailDropdown, setShowEmailDropdown] = useState(false);
+  
+  // Refs for handling keyboard and scrolling
+  const scrollViewRef = useRef<ScrollView>(null);
+  const emailInputRef = useRef<TextInput>(null);
+  const passwordInputRef = useRef<TextInput>(null);
+  const confirmPasswordInputRef = useRef<TextInput>(null);
 
   const setUser = useAuthStore((state) => state.setUser);
   const setUserAndTokens = useAuthStore((state) => state.setUserAndTokens);
@@ -327,6 +334,20 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
     setShowConfirmPassword(false);
   };
 
+  // Function to scroll to input when focused
+  const scrollToInput = (inputRef: React.RefObject<TextInput>) => {
+    setTimeout(() => {
+      if (inputRef.current && scrollViewRef.current) {
+        inputRef.current.measure((x, y, width, height, pageX, pageY) => {
+          scrollViewRef.current?.scrollTo({
+            y: pageY - 100, // Scroll to position above the input
+            animated: true,
+          });
+        });
+      }
+    }, 100);
+  };
+
   const updateFormData = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     
@@ -379,13 +400,17 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
       <KeyboardAvoidingView 
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+        enabled={true}
       >
         <ScrollView 
+          ref={scrollViewRef}
           className="flex-1"
-          contentContainerStyle={{ flexGrow: 1, paddingBottom: 50 }}
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          bounces={false}
+          automaticallyAdjustKeyboardInsets={true}
         >
           <View className="flex-1 px-6 pt-20">
             <View className="items-center mb-8">
@@ -449,6 +474,7 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
                 </Text>
                 <View className="relative">
                   <TextInput
+                    ref={emailInputRef}
                     className={`px-4 py-3 rounded-xl border text-base bg-transparent ${
                       errors.email ? 'border-red-500' : 'border-gray-200'
                     }`}
@@ -467,6 +493,8 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
                       if (activeTab === 'signin' && savedCredentials.length > 0) {
                         setShowEmailDropdown(true);
                       }
+                      // Scroll to input when focused
+                      scrollToInput(emailInputRef);
                     }}
                     onBlur={() => {
                       // Hide dropdown after a short delay to allow selection
@@ -524,6 +552,7 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
                 </Text>
                 <View className="relative">
                   <TextInput
+                    ref={passwordInputRef}
                     className={`px-4 py-3 rounded-xl border pr-12 text-base bg-transparent ${
                       errors.password ? 'border-red-500' : 'border-gray-200'
                     }`}
@@ -537,6 +566,7 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
                     placeholderTextColor="#9CA3AF"
                     value={formData.password}
                     onChangeText={(text) => updateFormData('password', text)}
+                    onFocus={() => scrollToInput(passwordInputRef)}
                     secureTextEntry={!showPassword}
                   />
                   <TouchableOpacity
@@ -567,6 +597,7 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
                   </Text>
                   <View className="relative">
                     <TextInput
+                      ref={confirmPasswordInputRef}
                       className={`px-4 py-3 rounded-xl border pr-12 text-base bg-transparent ${
                         errors.confirmPassword ? 'border-red-500' : 'border-gray-200'
                       }`}
@@ -580,6 +611,7 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
                       placeholderTextColor="#9CA3AF"
                       value={formData.confirmPassword}
                       onChangeText={(text) => updateFormData('confirmPassword', text)}
+                      onFocus={() => scrollToInput(confirmPasswordInputRef)}
                       secureTextEntry={!showConfirmPassword}
                     />
                     <TouchableOpacity

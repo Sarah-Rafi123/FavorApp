@@ -2,7 +2,7 @@
   "expo": {
     "name": "FavorApp",
     "slug": "favorapp",
-    "version": "1.0.2",
+    "version": "1.0.4",
     "orientation": "portrait",
     "icon": "./assets/AppLogo.png",
     "userInterfaceStyle": "light",
@@ -13,7 +13,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.favorappllc.mobile",
       "config": {
-        "googleMapsApiKey": "AIzaSyDt1zyVSt1snXRBteLuH9ngKmE8ABve268"
+        "googleMapsApiKey": "$EXPO_PUBLIC_GOOGLE_MAPS_API_KEY"
       },
       "infoPlist": {
         "NSCameraUsageDescription": "This app needs access to camera to take photos for favor requests.",
@@ -37,7 +37,7 @@
       "playStoreUrl": "https://play.google.com/store/apps/details?id=com.favorappllc.mobile",
       "config": {
         "googleMaps": {
-          "apiKey": "AIzaSyDt1zyVSt1snXRBteLuH9ngKmE8ABve268"
+          "apiKey": "$EXPO_PUBLIC_GOOGLE_MAPS_API_KEY"
         }
       },
       "permissions": [

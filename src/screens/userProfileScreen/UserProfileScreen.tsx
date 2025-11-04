@@ -266,7 +266,7 @@ export function UserProfileScreen({ navigation, route }: UserProfileScreenProps)
           </View>
 
           {/* Contact Buttons */}
-          <View className="flex-row">
+          {/* <View className="flex-row">
             <TouchableOpacity 
               className="flex-1 bg-transparent border border-black rounded-xl mr-2 py-3 px-2"
               onPress={() => handleCallNumber(userProfile.phone_no_call || '917-582-3220')}
@@ -283,7 +283,7 @@ export function UserProfileScreen({ navigation, route }: UserProfileScreenProps)
                 Text: {userProfile.phone_no_text || '908-245-4242'}
               </Text>
             </TouchableOpacity>
-          </View>
+          </View> */}
         </View>
 
         {/* Reviews Section */}

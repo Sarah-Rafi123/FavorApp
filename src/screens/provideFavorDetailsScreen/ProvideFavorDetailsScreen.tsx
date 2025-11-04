@@ -23,6 +23,7 @@ import { Favor } from '../../services/apis/FavorApis';
 import { PublicUserProfile } from '../../services/apis/ProfileApis';
 import { Linking } from 'react-native';
 import Toast from 'react-native-toast-message';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface ProvideFavorDetailsScreenProps {
   navigation?: any;
@@ -55,6 +56,27 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
 
   // Get favor ID from route params
   const favorId = route?.params?.favorId || route?.params?.favor?.id;
+  
+  // Debug token status on screen load
+  React.useEffect(() => {
+    const checkTokenOnLoad = async () => {
+      try {
+        const token = await AsyncStorage.getItem('auth_token');
+        console.log('🔥 DEBUGGING: ProvideFavorDetailsScreen loaded');
+        console.log('🔑 Auth token status on screen load:', token ? `Present (${token.substring(0, 20)}...)` : 'MISSING');
+        console.log('🎯 Favor ID from params:', favorId);
+        
+        if (!token) {
+          console.error('🚨 NO AUTH TOKEN FOUND ON SCREEN LOAD!');
+          console.error('🔐 This could be why APIs are failing');
+        }
+      } catch (error) {
+        console.error('❌ Failed to check token on screen load:', error);
+      }
+    };
+    
+    checkTokenOnLoad();
+  }, [favorId]);
   
   // Fetch favor data using the API
   const { data: favorResponse, isLoading, error } = useFavor(favorId, {
@@ -170,42 +192,145 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
     if (!favor) return;
 
     try {
+      console.log('🔥 DEBUGGING: Starting complete favor process');
+      
+      // Check auth token before making the API call
+      const token = await AsyncStorage.getItem('auth_token');
+      console.log('🔑 Auth token status before completeFavor:', token ? `Present (${token.substring(0, 20)}...)` : 'MISSING');
+      
+      if (!token) {
+        console.error('🚨 NO AUTH TOKEN FOUND BEFORE COMPLETE FAVOR API CALL!');
+        console.error('🔐 This is the source of the session expiration');
+        return;
+      }
+      
       console.log('🎯 Marking favor as completed:', favor.id);
-      await completeFavorMutation.mutateAsync(favor.id);
+      console.log('📊 Favor status before completion:', favor.status);
+      console.log('👤 Current user role: Provider');
+      console.log('👥 Favor requester:', favor.user.full_name, '(ID:', favor.user.id + ')');
+      console.log('🚀 About to call completeFavorMutation.mutateAsync...');
+      
+      const completionResult = await completeFavorMutation.mutateAsync(favor.id);
+      
+      console.log('🎉 completeFavorMutation completed successfully!');
+      console.log('📄 Completion Result:', JSON.stringify(completionResult, null, 2));
       
       // Show review modal after successful completion
       setShowReviewModal(true);
       
-      console.log('✅ Favor marked as completed successfully');
+      console.log('✅ Favor marked as completed successfully, review modal shown');
     } catch (error: any) {
-      console.error('❌ Complete favor failed:', error.message);
+      console.error('❌ Complete favor failed in handleSubmitReview');
+      console.error('📄 Error details:', error);
+      console.error('📊 Error message:', error.message);
+      console.error('📋 Error name:', error.name);
+      console.error('📚 Error stack:', error.stack);
+      
+      // Check if it's a session expiration (401 error)
+      if (error.message && error.message.includes('Authentication required')) {
+        console.error('🔐 SESSION EXPIRATION DETECTED!');
+        console.error('🚨 Session expired during COMPLETE FAVOR step');
+      }
+      
       // Error handling is done by the mutation's onError callback
     }
   };
 
   const handleReviewSubmit = async () => {
+    console.log('\n🔥🔥🔥 === USER REVIEW SUBMISSION DEBUG START ===');
+    console.log('📅 Timestamp:', new Date().toISOString());
+    console.log('🎯 Function: handleReviewSubmit()');
+    console.log('📍 Location: ProvideFavorDetailsScreen.tsx');
+    
     if (!favor || rating === 0 || !reviewText.trim()) {
+      console.log('❌ Validation failed:');
+      console.log('  - Favor exists:', !!favor);
+      console.log('  - Rating provided:', rating);
+      console.log('  - Review text provided:', !!reviewText.trim());
+      
       Toast.show({
         type: 'error',
         text1: 'Incomplete Review',
         text2: 'Please provide a rating and review text.',
         visibilityTime: 3000,
       });
+
       return;
     }
 
     try {
+      console.log('\n🔐 === AUTHENTICATION CHECK ===');
+      
+      // Check auth token before making the API call
+      const token = await AsyncStorage.getItem('auth_token');
+      const refreshToken = await AsyncStorage.getItem('refresh_token');
+      console.log('🔑 Auth token status:', token ? `Present (length: ${token.length}, preview: ${token.substring(0, 20)}...)` : '❌ MISSING');
+      console.log('🔄 Refresh token status:', refreshToken ? `Present (length: ${refreshToken.length})` : '❌ MISSING');
+      
+      if (!token) {
+        console.error('\n🚨🚨🚨 CRITICAL ERROR: NO AUTH TOKEN FOUND!');
+        console.error('🔐 This will cause 401 Unauthorized error');
+        console.error('🚨 User needs to log in again');
+        return;
+      }
+      
+      console.log('\n📊 === FAVOR & USER DATA ===');
+      console.log('🎯 Favor ID:', favor.id);
+      console.log('📋 Favor Title:', favor.title || 'No title');
+      console.log('📍 Favor Status:', favor.status);
+      console.log('👤 Favor Requester (being reviewed):');
+      console.log('  - ID:', favor.user.id);
+      console.log('  - Name:', favor.user.full_name);
+      console.log('  - Email:', favor.user.email);
+      console.log('🏢 Current User Role: PROVIDER (giving review TO requester)');
+      
+      console.log('\n📝 === REVIEW DATA ===');
+      console.log('⭐ Rating:', rating, '(out of 5)');
+      console.log('📝 Description length:', reviewText.trim().length, 'characters');
+      console.log('📝 Description preview:', `"${reviewText.trim().substring(0, 50)}${reviewText.trim().length > 50 ? '...' : ''}"`);
+      console.log('👥 Given to ID (requester):', favor.user.id);
+      
       const reviewData = {
         rating,
         description: reviewText.trim(),
         given_to_id: favor.user.id // Provider reviewing the requester
       };
 
-      console.log('🌟 Submitting user review:', reviewData);
-      await createUserReviewMutation.mutateAsync({
+      console.log('\n📦 === API REQUEST PAYLOAD ===');
+      console.log('📍 Endpoint: POST /favors/' + favor.id + '/user_review');
+      console.log('📤 Complete Request Data:');
+      console.log(JSON.stringify({
+        favorId: favor.id,
+        data: reviewData
+      }, null, 2));
+      
+      console.log('\n🚀 === MAKING API CALL ===');
+      console.log('⏰ API call started at:', new Date().toISOString());
+      console.log('🔗 Calling: createUserReviewMutation.mutateAsync()');
+      
+      const result = await createUserReviewMutation.mutateAsync({
         favorId: favor.id,
         data: reviewData
       });
+      
+      console.log('\n🎉🎉🎉 === API CALL SUCCESS ===');
+      console.log('⏰ API call completed at:', new Date().toISOString());
+      console.log('📄 Response Status: SUCCESS');
+      console.log('📋 Full API Response:');
+      console.log(JSON.stringify(result, null, 2));
+      
+      if (result?.data?.review) {
+        console.log('\n📊 === REVIEW DETAILS ===');
+        console.log('🆔 Review ID:', result.data.review.id);
+        console.log('⭐ Rating recorded:', result.data.review.rating);
+        console.log('📝 Description recorded:', result.data.review.description);
+        console.log('👤 Given by:', result.data.review.given_by?.full_name);
+        console.log('👥 Given to:', result.data.review.given_to?.full_name);
+        console.log('📅 Created at:', result.data.review.created_at);
+      }
+      
+      console.log('\n🧹 === CLEANUP & NAVIGATION ===');
+      console.log('🔄 Resetting form state...');
       
       // Reset form and close modal
       setShowReviewModal(false);
@@ -214,12 +339,50 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
       setShowTipOption(false);
       setTipAmount('');
       
+      console.log('🏠 Navigating back to previous screen...');
       // Navigate back after successful review
       navigation?.goBack();
       
-      console.log('✅ User review submitted successfully');
+      console.log('✅ === USER REVIEW SUBMISSION COMPLETED SUCCESSFULLY ===\n');
     } catch (error: any) {
-      console.error('❌ User review submission failed:', error.message);
+      console.log('\n❌❌❌ === API CALL FAILED ===');
+      console.error('⏰ Error occurred at:', new Date().toISOString());
+      console.error('📍 Error location: handleReviewSubmit() catch block');
+      console.error('📄 Error object type:', typeof error);
+      console.error('📋 Error details:');
+      console.error('  - Name:', error.name);
+      console.error('  - Message:', error.message);
+      console.error('  - Stack trace:', error.stack);
+      
+      if (error.response) {
+        console.error('\n🌐 === HTTP ERROR RESPONSE ===');
+        console.error('📊 Status Code:', error.response.status);
+        console.error('📊 Status Text:', error.response.statusText);
+        console.error('📋 Response Headers:', JSON.stringify(error.response.headers, null, 2));
+        console.error('📄 Response Data:', JSON.stringify(error.response.data, null, 2));
+      }
+      
+      if (error.request) {
+        console.error('\n📡 === REQUEST ERROR ===');
+        console.error('📤 Request that failed:', error.request);
+      }
+      
+      if (error.config) {
+        console.error('\n⚙️ === REQUEST CONFIG ===');
+        console.error('🔗 URL:', error.config.url);
+        console.error('📝 Method:', error.config.method);
+        console.error('🔑 Headers:', JSON.stringify(error.config.headers, null, 2));
+      }
+      
+      // Check if it's a session expiration (401 error)
+      if (error.response?.status === 401 || error.message?.includes('Authentication required')) {
+        console.error('\n🔐🔐🔐 === SESSION EXPIRATION DETECTED ===');
+        console.error('🚨 401 Unauthorized - Session expired during review submission');
+        console.error('💡 User needs to log in again');
+        console.error('🔄 Token was cleared by axios interceptor');
+      }
+      
+      console.error('\n❌ === USER REVIEW SUBMISSION FAILED ===\n');
       // Error handling is done by the mutation's onError callback
     }
   };
@@ -262,14 +425,18 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
         <View className="mx-4 mb-6 bg-white rounded-3xl p-6 border-4 border-[#71DFB1]">
           {/* Favor Image */}
           <View className="items-center mb-6">
-            <View className="w-32 h-24 bg-gray-200 rounded-2xl overflow-hidden">
-              <Image
-                source={{ 
-                  uri: favor.image_url || 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400&h=400&fit=crop' 
-                }}
-                className="w-full h-full"
-                resizeMode="cover"
-              />
+            <View className="w-32 h-24 rounded-2xl overflow-hidden items-center justify-center">
+              {favor.image_url ? (
+                <Image
+                  source={{ uri: favor.image_url }}
+                  className="w-full h-full"
+                  resizeMode="cover"
+                />
+              ) : (
+                <View className="w-full h-full bg-[#44A27B] items-center justify-center">
+                  <UserSvg focused={false} />
+                </View>
+              )}
             </View>
           </View>
 
@@ -311,12 +478,12 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
         {favor.user && (
           <View className="mx-4 mb-6">
             <Text className="text-lg font-semibold text-black mb-4">
-              You helped
+              You are helping
             </Text>
             
             <View className="flex-row items-center bg-white border rounded-2xl border-gray-300 p-4 border-1 mb-4">
               <View className="relative">
-                <View className="w-16 h-16 bg-gray-200 rounded-full overflow-hidden items-center justify-center">
+                <View className="w-20 h-16 bg-[#44A27B] rounded-xl overflow-hidden items-center justify-center">
                   {userProfile?.image_url ? (
                     <Image
                       source={{ uri: userProfile.image_url }}
@@ -324,7 +491,16 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
                       resizeMode="cover"
                     />
                   ) : (
-                    <UserSvg focused={false} />
+                    <Text className="text-white font-semibold text-lg">
+                      {favor.user?.full_name 
+                        ? favor.user.full_name
+                          .split(' ')
+                          .map(name => name.charAt(0).toUpperCase())
+                          .join('')
+                          .substring(0, 2)
+                        : 'U'
+                      }
+                    </Text>
                   )}
                 </View>
                 {userProfile?.is_certified && (
@@ -338,14 +514,18 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
                 <Text className="text-lg font-semibold text-black">
                   {favor.user.full_name}
                 </Text>
-                <View className="flex-row items-center">
-                  <Text className="text-gray-600 text-sm">⭐ 4.5 | </Text>
-                  <Text className="text-gray-600 text-sm">456 Reviews</Text>
-                </View>
+                {favor.user.rating && (
+                  <View className="flex-row items-center">
+                    <Text className="text-gray-600 text-sm">⭐ {favor.user.rating.toFixed(1)} | </Text>
+                    <Text className="text-gray-600 text-sm">
+                      {reviewsResponse?.data?.reviews?.length || 0} Reviews
+                    </Text>
+                  </View>
+                )}
                 {userProfile?.years_of_experience && (
                   <Text className="text-gray-600 text-sm">{userProfile.years_of_experience} years experience</Text>
                 )}
-                <Text className="text-gray-600 text-sm">2 Mins Away</Text>
+             
                 <TouchableOpacity onPress={() => navigation?.navigate('UserProfileScreen', { userId: favor.user.id })}>
                   <Text className="text-[#44A27B] text-sm font-medium">View Profile</Text>
                 </TouchableOpacity>
@@ -353,27 +533,37 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
             </View>
 
             {/* Contact Buttons */}
-            <View className="flex-row mb-4">
-              <TouchableOpacity 
-                className="flex-1 bg-transparent border border-black rounded-xl mr-2 py-3 px-2"
-                onPress={() => handleCallNumber(userProfile?.phone_no_call || '917-582-3220')}
-              >
-                <Text className="text-center text-gray-800 font-medium text-sm">
-                  Call: {userProfile?.phone_no_call || '917-582-3220'}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                className="flex-1 bg-transparent border border-black rounded-xl ml-2 py-3 px-2"
-                onPress={() => handleTextNumber(userProfile?.phone_no_text || '908-245-4242')}
-              >
-                <Text className="text-center text-gray-800 font-medium text-sm">
-                  Text: {userProfile?.phone_no_text || '908-245-4242'}
-                </Text>
-              </TouchableOpacity>
-            </View>
+            {/* {(userProfile?.phone_no_call || userProfile?.phone_no_text) && (
+              <View className="flex-row mb-4">
+                {userProfile?.phone_no_call && (
+                  <TouchableOpacity 
+                    className={`flex-1 bg-transparent border border-black rounded-xl py-3 px-2 ${
+                      userProfile?.phone_no_text ? 'mr-2' : ''
+                    }`}
+                    onPress={() => handleCallNumber(userProfile.phone_no_call)}
+                  >
+                    <Text className="text-center text-gray-800 font-medium text-sm">
+                      Call: {userProfile.phone_no_call}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                {userProfile?.phone_no_text && (
+                  <TouchableOpacity 
+                    className={`flex-1 bg-transparent border border-black rounded-xl py-3 px-2 ${
+                      userProfile?.phone_no_call ? 'ml-2' : ''
+                    }`}
+                    onPress={() => handleTextNumber(userProfile.phone_no_text)}
+                  >
+                    <Text className="text-center text-gray-800 font-medium text-sm">
+                      Text: {userProfile.phone_no_text}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )} */}
 
             {/* Submit Review Button */}
-            {favor.status !== 'completed' && (
+            {favor.status === 'completed' && (
               <TouchableOpacity 
                 className="bg-[#44A27B] rounded-xl py-3 mb-4"
                 onPress={handleSubmitReview}
@@ -395,14 +585,8 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
               <View key={index} className="bg-white rounded-2xl p-4 mb-3 border border-gray-200">
                 {/* Reviewer Info */}
                 <View className="flex-row items-center mb-3">
-                  <View className="w-10 h-10 bg-gray-200 rounded-full overflow-hidden">
-                    <Image
-                      source={{ 
-                        uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face' 
-                      }}
-                      className="w-full h-full"
-                      resizeMode="cover"
-                    />
+                  <View className="w-10 h-10 bg-[#44A27B] rounded-full overflow-hidden items-center justify-center">
+                    <UserSvg focused={false} />
                   </View>
                   <View className="ml-3 flex-1">
                     <Text className="text-base font-semibold text-gray-800">

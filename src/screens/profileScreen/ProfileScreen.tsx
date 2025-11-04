@@ -409,12 +409,12 @@ export function ProfileScreen() {
         <View className="flex-row justify-between items-center">
           <Text className="text-2xl font-bold text-black">Profile</Text>
           <View className="flex-row gap-x-2">
-            <TouchableOpacity 
+            {/* <TouchableOpacity 
               className="w-10 h-10  rounded-full items-center justify-center"
               onPress={() => navigation.navigate('FilterScreen' as never)}
             >
               <FilterSvg />
-            </TouchableOpacity>
+            </TouchableOpacity> */}
             <NotificationBell />
           </View>
         </View>
@@ -458,17 +458,17 @@ export function ProfileScreen() {
           {/* Personal Details */}
           <View className="mb-6">
             <View className="space-y-2">
-              <Text className="text-gray-600 text-base">Email: <Text className="text-black font-medium text-base">{profile?.email || 'kathrynmurphy@gmail.com'}</Text></Text>
-              <Text className="text-gray-600 text-base">Age: <Text className="text-black font-medium text-base">{profile?.age || '26'}</Text></Text>
-              <Text className="text-gray-600 text-base">Call: <Text className="text-black font-medium text-base">{profile?.phone_no_call || profileData.phoneCall}</Text></Text>
-              <Text className="text-gray-600 text-base">Text: <Text className="text-black font-medium text-base">{profile?.phone_no_text || profileData.phoneText}</Text></Text>
-              <Text className="text-gray-600 text-base">Experience: <Text className="text-black font-medium text-base">{profile?.years_of_experience ? `${profile.years_of_experience} year${profile.years_of_experience !== 1 ? 's' : ''}` : 'Not specified'}</Text></Text>
-              <Text className="text-gray-600 text-base">Since: <Text className="text-black font-medium text-base">{profile?.member_since || 'March 2025'}</Text></Text>
+              <Text className="text-black font-bold text-lg">Email: <Text className="text-black font-normal text-lg">{profile?.email || 'kathrynmurphy@gmail.com'}</Text></Text>
+              <Text className="text-black font-bold text-lg">Age: <Text className="text-black font-normal text-lg">{profile?.age || '26'}</Text></Text>
+              <Text className="text-black font-bold text-lg">Call: <Text className="text-black font-normal text-lg">{profile?.phone_no_call || profileData.phoneCall}</Text></Text>
+              <Text className="text-black font-bold text-lg">Text: <Text className="text-black font-normal text-lg">{profile?.phone_no_text || profileData.phoneText}</Text></Text>
+              <Text className="text-black font-bold text-lg">Experience: <Text className="text-black font-normal text-lg">{profile?.years_of_experience ? `${profile.years_of_experience} year${profile.years_of_experience !== 1 ? 's' : ''}` : 'Not specified'}</Text></Text>
+              <Text className="text-black font-bold text-lg">Since: <Text className="text-black font-normal text-lg">{profile?.member_since || 'March 2025'}</Text></Text>
               {profile?.address && (
-                <Text className="text-gray-600 text-base">Location: <Text className="text-black font-medium text-base">{profile.address.city}, {profile.address.state}</Text></Text>
+                <Text className="text-black font-bold text-lg">Location: <Text className="text-black font-normal text-lg">{profile.address.city}, {profile.address.state}</Text></Text>
               )}
               {profile?.is_certified !== null && (
-                <Text className="text-gray-600 text-base">Certified: <Text className={`font-medium text-base ${profile?.is_certified ? 'text-green-600' : 'text-gray-500'}`}>{profile?.is_certified ? 'Yes' : 'No'}</Text></Text>
+                <Text className="text-black font-bold text-lg">Certified: <Text className={`font-normal text-lg ${profile?.is_certified ? 'text-green-600' : 'text-gray-500'}`}>{profile?.is_certified ? 'Yes' : 'No'}</Text></Text>
               )}
             </View>
           </View>
@@ -476,25 +476,25 @@ export function ProfileScreen() {
           {/* About Me Section */}
           {profile?.about_me && (
             <View className="mb-6">
-              <Text className="text-base font-bold text-black mb-3">About Me</Text>
-              <Text className="text-gray-700 text-base leading-6">{profile.about_me}</Text>
+              <Text className="text-lg font-bold text-black mb-3">About Me</Text>
+              <Text className="text-black font-normal text-lg leading-6">{profile.about_me}</Text>
             </View>
           )}
 
           {/* Skills Section */}
           {profile?.skills && profile.skills.length > 0 && (
             <View className="mb-6">
-              <Text className="text-base font-bold text-black mb-3">Skills</Text>
+              <Text className="text-lg font-bold text-black mb-3">Skills</Text>
               <View className="flex-row flex-wrap gap-2">
                 {profile.skills.map((skill, index) => (
                   <View key={index} className="bg-[#E8F5E8] px-3 py-1.5 rounded-full">
-                    <Text className="text-[#44A27B] text-xs font-medium">{skill}</Text>
+                    <Text className="text-[#44A27B] text-lg font-normal">{skill}</Text>
                   </View>
                 ))}
               </View>
               {profile.other_skills && (
                 <View className="mt-2">
-                  <Text className="text-gray-600 text-base">Other: <Text className="text-black font-medium text-base">{profile.other_skills}</Text></Text>
+                  <Text className="text-black font-bold text-lg">Other: <Text className="text-black font-normal text-lg">{profile.other_skills}</Text></Text>
                 </View>
               )}
             </View>
@@ -502,17 +502,17 @@ export function ProfileScreen() {
 
           {/* Favor Details */}
           <View className="mb-6">
-            <Text className="text-base font-bold text-black mb-3">Favor Details</Text>
+            <Text className="text-lg font-bold text-black mb-3">Favor Details</Text>
             <View className="space-y-2">
-              <Text className="text-gray-600 text-sm">Asked: <Text className="text-black font-bold">0/0:0 Hours</Text></Text>
-              <Text className="text-gray-600 text-sm">Provided: <Text className="text-black font-bold">0/0:0 Hours</Text></Text>
+              <Text className="text-black font-bold text-lg">Asked: <Text className="text-black font-normal">0/0:0 Hours</Text></Text>
+              <Text className="text-black font-bold text-lg">Provided: <Text className="text-black font-normal">0/0:0 Hours</Text></Text>
             </View>
           </View>
 
           {/* Fund Details */}
           <View className="mb-6">
             <View className="flex-row justify-between items-center mb-3">
-              <Text className="text-base font-bold text-black">Fund Details</Text>
+              <Text className="text-lg font-bold text-black">Fund Details</Text>
               <View className="flex-row gap-2">
                 <TouchableOpacity 
                   onPress={() => scheduleTestNotificationWithType('favor_request', 'New Favor Request', 'John Doe wants help with moving furniture')}
@@ -533,24 +533,24 @@ export function ProfileScreen() {
             </View>
             {balanceError ? (
               <View className="space-y-2">
-                <Text className="text-red-500 text-sm">Failed to load balance</Text>
-                <Text className="text-gray-600 text-sm">Available: <Text className="text-black font-bold">$0.00</Text></Text>
-                <Text className="text-gray-600 text-sm">Pending: <Text className="text-black font-bold">$0.00</Text></Text>
+                <Text className="text-red-500 text-lg font-normal">Failed to load balance</Text>
+                <Text className="text-black font-bold text-lg">Available: <Text className="text-black font-normal">$0.00</Text></Text>
+                <Text className="text-black font-bold text-lg">Pending: <Text className="text-black font-normal">$0.00</Text></Text>
               </View>
             ) : balance?.has_account ? (
               <View className="space-y-2">
-                <Text className="text-gray-600 text-sm">Available: <Text className="text-green-600 font-bold">${(balance.available || 0).toFixed(2)}</Text></Text>
-                <Text className="text-gray-600 text-sm">Pending: <Text className="text-orange-600 font-bold">${(balance.pending || 0).toFixed(2)}</Text></Text>
-                <Text className="text-gray-600 text-xs mt-1">Total: <Text className="text-black font-bold">${((balance.available || 0) + (balance.pending || 0)).toFixed(2)} {balance.currency?.toUpperCase()}</Text></Text>
-                <Text className="text-gray-500 text-xs mt-2">
+                <Text className="text-black font-bold text-lg">Available: <Text className="text-green-600 font-normal">${(balance.available || 0).toFixed(2)}</Text></Text>
+                <Text className="text-black font-bold text-lg">Pending: <Text className="text-orange-600 font-normal">${(balance.pending || 0).toFixed(2)}</Text></Text>
+                <Text className="text-black font-bold text-lg mt-1">Total: <Text className="text-black font-normal">${((balance.available || 0) + (balance.pending || 0)).toFixed(2)} {balance.currency?.toUpperCase()}</Text></Text>
+                <Text className="text-black font-normal text-lg mt-2">
                   Available funds can be withdrawn. Pending funds will be available in 2-7 days.
                 </Text>
               </View>
             ) : (
               <View className="space-y-2">
-                <Text className="text-gray-600 text-sm">Available: <Text className="text-black font-bold">$0.00</Text></Text>
-                <Text className="text-gray-600 text-sm">Pending: <Text className="text-black font-bold">$0.00</Text></Text>
-                <Text className="text-gray-500 text-xs mt-1">Set up payment account to start earning</Text>
+                <Text className="text-black font-bold text-lg">Available: <Text className="text-black font-normal">$0.00</Text></Text>
+                <Text className="text-black font-bold text-lg">Pending: <Text className="text-black font-normal">$0.00</Text></Text>
+                <Text className="text-black font-normal text-lg mt-1">Set up payment account to start earning</Text>
               </View>
             )}
           </View>
@@ -567,7 +567,7 @@ export function ProfileScreen() {
 
           {/* Export PDF Section */}
           <View className="bg-[#DCFBCC] rounded-2xl p-4">
-            <Text className="text-center text-gray-700 text-sm mb-3">
+            <Text className="text-center text-black font-normal text-lg mb-3">
               Export your free community service hours as a PDF
             </Text>
             <TouchableOpacity 

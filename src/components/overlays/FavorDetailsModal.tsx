@@ -299,13 +299,13 @@ export function FavorDetailsModal({ visible, onClose, favorId }: FavorDetailsMod
                     {/* Row 1 */}
                     <View className="flex-row justify-between">
                       <View className="flex-1 mr-2">
-                        <Text className="text-gray-600 text-sm mb-1">Priority</Text>
+                        <Text className="text-gray-600 font-bold text-sm mb-1">Priority</Text>
                         <Text className="text-red-600 font-medium">
                           {formatPriority(favor.priority)}
                         </Text>
                       </View>
                       <View className="flex-1 ml-2">
-                        <Text className="text-gray-600 text-sm mb-1">Time to Complete</Text>
+                        <Text className="text-gray-600 font-bold text-sm mb-1">Time to Complete</Text>
                         <Text className="text-gray-800">
                           {favor.time_to_complete || 'Not specified'}
                         </Text>
@@ -315,7 +315,7 @@ export function FavorDetailsModal({ visible, onClose, favorId }: FavorDetailsMod
                     {/* Row 2 */}
                     <View className="flex-row justify-between">
                       <View className="flex-1 mr-2">
-                        <Text className="text-gray-600 text-sm mb-1">Payment</Text>
+                        <Text className="text-gray-600 font-bold text-sm mb-1">Payment</Text>
                         <Text className="text-gray-800 font-bold">
                           {parseFloat((favor.tip || 0).toString()) > 0 
                             ? `$${parseFloat((favor.tip || 0).toString()).toFixed(2)}`
@@ -323,7 +323,7 @@ export function FavorDetailsModal({ visible, onClose, favorId }: FavorDetailsMod
                         </Text>
                       </View>
                       <View className="flex-1 ml-2">
-                        <Text className="text-gray-600 text-sm mb-1">Location</Text>
+                        <Text className="text-gray-600 font-bold text-sm mb-1">Location</Text>
                         <Text className="text-gray-800">
                           {favor.city && favor.city !== 'undefined' ? favor.city : 'undefined'}, {favor.state && favor.state !== 'undefined' ? favor.state : 'Ohio'}
                         </Text>
@@ -333,7 +333,7 @@ export function FavorDetailsModal({ visible, onClose, favorId }: FavorDetailsMod
                     {/* Row 3 */}
                     <View className="flex-row justify-between">
                       <View className="flex-1 mr-2">
-                        <Text className="text-gray-600 text-sm mb-1">Date Posted</Text>
+                        <Text className="text-gray-600 font-bold text-sm mb-1">Date Posted</Text>
                         <Text className="text-gray-800">
                           {new Date(favor.created_at).toLocaleDateString('en-US', {
                             month: 'short',
@@ -343,7 +343,7 @@ export function FavorDetailsModal({ visible, onClose, favorId }: FavorDetailsMod
                         </Text>
                       </View>
                       <View className="flex-1 ml-2">
-                        <Text className="text-gray-600 text-sm mb-1">Category</Text>
+                        <Text className="text-gray-600 font-bold text-sm mb-1">Category</Text>
                         <Text className="text-gray-800">
                           {favor.favor_subject.name}
                         </Text>
@@ -354,7 +354,7 @@ export function FavorDetailsModal({ visible, onClose, favorId }: FavorDetailsMod
                   {/* Description Section */}
                   {favor.description && (
                     <View className="mt-6">
-                      <Text className="text-gray-600 text-sm mb-2">Description</Text>
+                      <Text className="text-gray-600 font-bold text-sm mb-2">Description</Text>
                       <Text className="text-gray-800 leading-5">
                         {favor.description}
                       </Text>
@@ -373,7 +373,7 @@ export function FavorDetailsModal({ visible, onClose, favorId }: FavorDetailsMod
 
                   {/* User Avatar and Basic Info */}
                   <View className="flex-row mb-4">
-                    <View className="w-12 h-12 bg-gray-200 rounded-full mr-4 items-center justify-center">
+                    <View className="w-12 h-12 bg-[#44A27B] rounded-xl mr-4 items-center justify-center">
                       {userProfile?.image_url ? (
                         <Image 
                           source={{ uri: userProfile.image_url }}
@@ -387,7 +387,7 @@ export function FavorDetailsModal({ visible, onClose, favorId }: FavorDetailsMod
                       )}
                     </View>
                     <View className="flex-1">
-                      <Text className="text-gray-600 text-sm">Email</Text>
+                      <Text className="text-gray-600 font-bold text-sm">Email</Text>
                       <BlurredText>
                         {userProfile?.email || favor.user.email}
                       </BlurredText>
@@ -399,13 +399,13 @@ export function FavorDetailsModal({ visible, onClose, favorId }: FavorDetailsMod
                     {/* Row 1 */}
                     <View className="flex-row justify-between">
                       <View className="flex-1 mr-2">
-                        <Text className="text-gray-600 text-sm mb-1">Member Since</Text>
+                        <Text className="text-gray-600 font-bold text-sm mb-1">Member Since</Text>
                         <Text className="text-gray-800">
                           {userProfile?.member_since || 'July 2025'}
                         </Text>
                       </View>
                       <View className="flex-1 ml-2">
-                        <Text className="text-gray-600 text-sm mb-1">Phone number (call)</Text>
+                        <Text className="text-gray-600 font-bold text-sm mb-1">Phone number (call)</Text>
                         <BlurredText>
                           {userProfile?.phone_no_call || '** *** ****'}
                         </BlurredText>
@@ -415,13 +415,13 @@ export function FavorDetailsModal({ visible, onClose, favorId }: FavorDetailsMod
                     {/* Row 2 */}
                     <View className="flex-row justify-between">
                       <View className="flex-1 mr-2">
-                        <Text className="text-gray-600 text-sm mb-1">Age</Text>
+                        <Text className="text-gray-600 font-bold text-sm mb-1">Age</Text>
                         <Text className="text-gray-800">
                           {userProfile?.age || 'Not specified'}
                         </Text>
                       </View>
                       <View className="flex-1 ml-2">
-                        <Text className="text-gray-600 text-sm mb-1">Phone number (text)</Text>
+                        <Text className="text-gray-600 font-bold text-sm mb-1">Phone number (text)</Text>
                         <BlurredText>
                           {userProfile?.phone_no_text || '** *** ****'}
                         </BlurredText>
@@ -431,7 +431,7 @@ export function FavorDetailsModal({ visible, onClose, favorId }: FavorDetailsMod
                     {/* Row 3 */}
                     <View className="flex-row justify-between">
                       <View className="flex-1 mr-2">
-                        <Text className="text-gray-600 text-sm mb-1">Experience</Text>
+                        <Text className="text-gray-600 font-bold text-sm mb-1">Experience</Text>
                         <Text className="text-gray-800">
                           {userProfile?.years_of_experience 
                             ? `${userProfile.years_of_experience} Years`

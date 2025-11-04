@@ -32,10 +32,10 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
     favorPrice: 'Free',
     tip: 0,
     additionalTip: 0,
-    address: '1600 Amphitheatre Pkwy, Mountain View, CA 94043, USA',
+    address: '',
     description: '',
-    city: 'Mountain View',
-    state: 'CA',
+    city: '',
+    state: '',
     latLng: '',
   });
 
@@ -198,6 +198,9 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
     try {
       setShowImageOptions(false);
       
+      // Add a small delay to ensure modal is fully closed
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       const image = await ImagePicker.openPicker({
         width: 800,
         height: 600,
@@ -224,12 +227,18 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
       if (error.code !== 'E_PICKER_CANCELLED') {
         Alert.alert('Error', 'Failed to select image. Please try again.');
       }
+    } finally {
+      // Ensure modal is definitely closed
+      setShowImageOptions(false);
     }
   };
 
   const launchCamera = async () => {
     try {
       setShowImageOptions(false);
+      
+      // Add a small delay to ensure modal is fully closed
+      await new Promise(resolve => setTimeout(resolve, 100));
       
       const image = await ImagePicker.openCamera({
         width: 800,
@@ -257,6 +266,9 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
       if (error.code !== 'E_PICKER_CANCELLED') {
         Alert.alert('Error', 'Failed to take photo. Please try again.');
       }
+    } finally {
+      // Ensure modal is definitely closed
+      setShowImageOptions(false);
     }
   };
 
@@ -370,12 +382,14 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
     try {
       const createRequest: CreateFavorRequest = {
         description: formData.description.trim(),
-        address: formData.address.trim(),
+        address_attributes: {
+          full_address: formData.address.trim(),
+          city: formData.city.trim(),
+          state: formData.state.trim(),
+        },
         priority: formData.priority,
         favor_subject_id: formData.favorSubjectId === 8 ? 'other' : formData.favorSubjectId!,
         favor_pay: formData.favorPrice === 'Paid' ? '0' : '1', // 0 = paid, 1 = free
-        city: formData.city.trim(),
-        state: formData.state.trim(),
         time_to_complete: formData.timeToComplete,
         tip: formData.favorPrice === 'Paid' ? formData.tip : 0,
         additional_tip: formData.favorPrice === 'Paid' && formData.additionalTip > 0 ? formData.additionalTip : undefined,
@@ -612,26 +626,121 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
           </View>
 
           {/* Address Section */}
-          <View className="mb-8">
+          <View className="mb-12" style={{ zIndex: 1000 }}>
             <Text className="text-xl font-bold text-black mb-6">Address</Text>
             <Text className="text-sm font-medium text-gray-700 mb-2">
               Address
             </Text>
-            <TextInput
-              className={`px-4 py-3 rounded-xl border text-base bg-transparent ${
-                errors.address ? 'border-red-500' : 'border-gray-200'
-              }`}
-              style={{
-                backgroundColor: 'transparent',
-                fontSize: 16,
-                lineHeight: 22,
-                height: 56
-              }}
+            <GooglePlacesAutocomplete
               placeholder="Enter your address"
-              placeholderTextColor="#9CA3AF"
-              value={formData.address}
-              onChangeText={(text) => updateFormData('address', text)}
-              editable={false}
+              minLength={2}
+              listViewDisplayed="auto"
+              enablePoweredByContainer={false}
+              onPress={(data, details = null) => {
+                if (details) {
+                  const addressComponents = details.address_components;
+                  let city = '';
+                  let state = '';
+                  let fullAddress = details.formatted_address;
+
+                  // Extract city and state from address components
+                  addressComponents.forEach((component) => {
+                    if (component.types.includes('locality')) {
+                      city = component.long_name;
+                    }
+                    if (component.types.includes('administrative_area_level_1')) {
+                      state = component.short_name;
+                    }
+                  });
+
+                  // Update form data with complete address information
+                  setFormData(prev => ({
+                    ...prev,
+                    address: fullAddress,
+                    city: city,
+                    state: state,
+                  }));
+                  
+                  // Clear any address errors
+                  setErrors(prev => ({ ...prev, address: '' }));
+                }
+              }}
+              query={{
+                key: process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY,
+                language: 'en',
+                types: 'address'
+              }}
+              fetchDetails={true}
+              textInputProps={{
+                value: formData.address,
+                onChangeText: (text) => {
+                  updateFormData('address', text);
+                },
+                style: {
+                  fontSize: 16,
+                  color: '#000',
+                  backgroundColor: 'transparent'
+                },
+                placeholderTextColor: '#9CA3AF'
+              }}
+              styles={{
+                container: {
+                  flex: 0,
+                  zIndex: 999,
+                },
+                textInputContainer: {
+                  backgroundColor: 'transparent',
+                  borderWidth: 1,
+                  borderColor: errors.address ? '#ef4444' : '#e5e7eb',
+                  borderRadius: 12,
+                  paddingHorizontal: 16,
+                  paddingVertical: 16,
+                  height: 56,
+                },
+                textInput: {
+                  backgroundColor: 'transparent',
+                  height: 'auto',
+                  margin: 0,
+                  padding: 0,
+                  fontSize: 16,
+                  color: '#000',
+                  lineHeight: 22,
+                },
+                listView: {
+                  backgroundColor: 'white',
+                  borderWidth: 1,
+                  borderColor: '#e5e7eb',
+                  borderRadius: 12,
+                  marginTop: 4,
+                  elevation: 10,
+                  zIndex: 1000,
+                  maxHeight: 200,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.25,
+                  shadowRadius: 12,
+                },
+                row: {
+                  backgroundColor: 'white',
+                  padding: 13,
+                  minHeight: 44,
+                  borderBottomWidth: 1,
+                  borderBottomColor: '#f3f4f6',
+                },
+                separator: {
+                  height: 0,
+                },
+                poweredContainer: {
+                  display: 'none'
+                },
+                description: {
+                  fontSize: 13,
+                  color: '#6b7280',
+                },
+                predefinedPlacesDescription: {
+                  color: '#374151',
+                }
+              }}
             />
             {errors.address ? (
               <Text className="text-red-500 text-sm mt-1">{errors.address}</Text>
@@ -764,13 +873,15 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
         transparent
         animationType="fade"
         onRequestClose={() => setShowTimeDropdown(false)}
+        statusBarTranslucent={true}
       >
         <TouchableOpacity 
           className="flex-1 bg-black/50 justify-center px-6"
           activeOpacity={1}
           onPress={() => setShowTimeDropdown(false)}
+          style={{ pointerEvents: 'auto' }}
         >
-          <View className="bg-white rounded-xl max-w-sm mx-auto w-full">
+          <View className="bg-white rounded-xl max-w-sm mx-auto w-full" style={{ pointerEvents: 'auto' }}>
             <View className="py-4 border-b border-gray-200">
               <Text className="text-lg font-semibold text-gray-800 text-center">
                 Time to Complete
@@ -798,13 +909,15 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
         transparent
         animationType="fade"
         onRequestClose={() => setShowImageOptions(false)}
+        statusBarTranslucent={true}
       >
         <TouchableOpacity 
           className="flex-1 bg-black/50 justify-center px-6"
           activeOpacity={1}
           onPress={() => setShowImageOptions(false)}
+          style={{ pointerEvents: 'auto' }}
         >
-          <View className="bg-white rounded-2xl max-w-sm mx-auto w-full">
+          <View className="bg-white rounded-2xl max-w-sm mx-auto w-full" style={{ pointerEvents: 'auto' }}>
             <View className="py-6 border-b border-gray-200">
               <Text className="text-xl font-bold text-gray-800 text-center">
                 Select Image

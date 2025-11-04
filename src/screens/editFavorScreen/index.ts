@@ -1,0 +1,1 @@
+export { EditFavorScreen } from './EditFavorScreen';

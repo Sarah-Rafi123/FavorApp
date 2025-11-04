@@ -12,6 +12,7 @@ import {
   ScrollView,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import { CarouselButton } from '../../components/buttons';
 import { CountryDropdown } from '../../components/overlays';
 import { useRegisterMutation } from '../../services/mutations/AuthMutations';
@@ -51,6 +52,8 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
     lastName: '',
     dateOfBirth: new Date(),
     fullAddress: '',
+    city: '',
+    state: '',
     phoneCall: '',
     phoneText: '',
     yearsOfExperience: '',
@@ -64,9 +67,6 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
   const [selectedCountryCall, setSelectedCountryCall] = useState<CountryCode>(countryData[0]);
   const [selectedCountryText, setSelectedCountryText] = useState<CountryCode>(countryData[0]);
   
-  // Extracted from address
-  const [extractedCity, setExtractedCity] = useState('');
-  const [extractedState, setExtractedState] = useState('');
 
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showCountryCallDropdown, setShowCountryCallDropdown] = useState(false);
@@ -202,12 +202,18 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
           }
           
           // Auto-populate extracted city and state
-          setExtractedCity(city);
-          setExtractedState(state);
+          setFormData(prev => ({
+            ...prev,
+            city: city,
+            state: state
+          }));
         } else {
           // Clear city and state if address format is invalid
-          setExtractedCity('');
-          setExtractedState('');
+          setFormData(prev => ({
+            ...prev,
+            city: '',
+            state: ''
+          }));
         }
       }
     }
@@ -328,7 +334,7 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
       isValid = false;
     } else {
       // Check if city and state were successfully extracted
-      if (!extractedCity.trim() || !extractedState.trim()) {
+      if (!formData.city.trim() || !formData.state.trim()) {
         newErrors.fullAddress = 'Please enter a valid address in format: Street, City, State';
         isValid = false;
       }
@@ -379,8 +385,8 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
         other_skills: formData.otherSkills || undefined,
         address_attributes: {
           full_address: formData.fullAddress,
-          city: extractedCity,
-          state: extractedState,
+          city: formData.city,
+          state: formData.state,
         },
       },
     };
@@ -469,6 +475,8 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
       lastName: '',
       dateOfBirth: new Date(),
       fullAddress: '',
+      city: '',
+      state: '',
       phoneCall: '',
       phoneText: '',
       yearsOfExperience: '',
@@ -493,9 +501,7 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
       ageConsent: '',
     });
     
-    // Clear extracted address data
-    setExtractedCity('');
-    setExtractedState('');
+    // Clear extracted address data is now handled in setFormData above
     
     // Clear country selections
     setSelectedCountryCall(countryData[0]);
@@ -639,17 +645,118 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
               </View>
 
               {/* Full Address */}
-              <View className="mb-2">
+              <View className="mb-8" style={{ zIndex: 1000 }}>
                 <Text className="text-sm font-medium text-gray-700 mb-2">
                   Full Address *
                 </Text>
-                <TextInput
-                  className="px-4 py-4 rounded-xl border border-gray-200 text-base bg-transparent"
+                <GooglePlacesAutocomplete
                   placeholder="Enter your address"
-                  placeholderTextColor="#9CA3AF"
-                  value={formData.fullAddress}
-                  onChangeText={(text) => updateFormData('fullAddress', text)}     
-                  multiline
+                  minLength={2}
+                  listViewDisplayed="auto"
+                  enablePoweredByContainer={false}
+                  onPress={(data, details = null) => {
+                    if (details) {
+                      const addressComponents = details.address_components;
+                      let city = '';
+                      let state = '';
+                      let fullAddress = details.formatted_address;
+
+                      // Extract city and state from address components
+                      addressComponents.forEach((component) => {
+                        if (component.types.includes('locality')) {
+                          city = component.long_name;
+                        }
+                        if (component.types.includes('administrative_area_level_1')) {
+                          state = component.short_name;
+                        }
+                      });
+
+                      // Update form data with complete address information
+                      setFormData(prev => ({
+                        ...prev,
+                        fullAddress: fullAddress,
+                        city: city,
+                        state: state,
+                      }));
+                      
+                      // Clear any address errors
+                      setErrors(prev => ({ ...prev, fullAddress: '' }));
+                    }
+                  }}
+                  query={{
+                    key: process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY,
+                    language: 'en',
+                    types: 'address'
+                  }}
+                  fetchDetails={true}
+                  textInputProps={{
+                    value: formData.fullAddress,
+                    onChangeText: (text) => {
+                      updateFormData('fullAddress', text);
+                    },
+                    style: {
+                      fontSize: 16,
+                      color: '#000',
+                      backgroundColor: 'transparent'
+                    },
+                    placeholderTextColor: '#9CA3AF'
+                  }}
+                  styles={{
+                    container: {
+                      flex: 0,
+                      zIndex: 999,
+                    },
+                    textInputContainer: {
+                      backgroundColor: 'transparent',
+                      borderWidth: 1,
+                      borderColor: errors.fullAddress ? '#ef4444' : '#e5e7eb',
+                      borderRadius: 12,
+                      paddingHorizontal: 16,
+                      paddingVertical: 16,
+                    },
+                    textInput: {
+                      backgroundColor: 'transparent',
+                      height: 'auto',
+                      margin: 0,
+                      padding: 0,
+                      fontSize: 16,
+                      color: '#000',
+                    },
+                    listView: {
+                      backgroundColor: 'white',
+                      borderWidth: 1,
+                      borderColor: '#e5e7eb',
+                      borderRadius: 12,
+                      marginTop: 4,
+                      elevation: 10,
+                      zIndex: 1000,
+                      maxHeight: 200,
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.25,
+                      shadowRadius: 12,
+                    },
+                    row: {
+                      backgroundColor: 'white',
+                      padding: 13,
+                      minHeight: 44,
+                      borderBottomWidth: 1,
+                      borderBottomColor: '#f3f4f6',
+                    },
+                    separator: {
+                      height: 0,
+                    },
+                    poweredContainer: {
+                      display: 'none'
+                    },
+                    description: {
+                      fontSize: 13,
+                      color: '#6b7280',
+                    },
+                    predefinedPlacesDescription: {
+                      color: '#374151',
+                    }
+                  }}
                 />
                 <Text className="text-xs text-gray-500 mt-1">
                   Example: 123 Main St, New York, NY
