@@ -34,7 +34,7 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
   const clearRegistrationData = useAuthStore((state) => state.clearRegistrationData);
   const setUser = useAuthStore((state) => state.setUser);
   const registerMutation = useRegisterMutation();
-  const { data: skillsData, isLoading: skillsLoading, error: skillsError } = useSkillsQuery();
+  const { data: skillsData, error: skillsError } = useSkillsQuery();
 
   // Show error toast if skills fail to load
   React.useEffect(() => {
@@ -69,10 +69,16 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
   
 
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showYearPicker, setShowYearPicker] = useState(false);
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [showDayPicker, setShowDayPicker] = useState(false);
   const [showCountryCallDropdown, setShowCountryCallDropdown] = useState(false);
   const [showCountryTextDropdown, setShowCountryTextDropdown] = useState(false);
   const [showSkillsDropdown, setShowSkillsDropdown] = useState(false);
   const [showHeardAboutDropdown, setShowHeardAboutDropdown] = useState(false);
+  
+  // Address field state
+  const [showAddressModal, setShowAddressModal] = useState(false);
 
   // Get skills from API or use fallback
   const skillsOptions = skillsData?.data?.skills || [
@@ -131,7 +137,13 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
     return '';
   };
 
+
   const updateFormData = (field: string, value: string | boolean | string[] | Date) => {
+    // Skip address field - use separate handler
+    if (field === 'fullAddress') {
+      return;
+    }
+    
     // Field-specific validations and character limits
     if (typeof value === 'string') {
       // First and Last Name: no numbers, 3-50 characters
@@ -181,41 +193,6 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
       if (field === 'otherSkills' && value.length > 150) {
         return;
       }
-      
-      // Auto-extract city and state from address
-      if (field === 'fullAddress') {
-        const addressParts = value.split(',').map(part => part.trim());
-        if (addressParts.length >= 2) {
-          let city = '';
-          let state = '';
-          
-          if (addressParts.length === 2) {
-            // Format: "City, State" or "City, State ZIP"
-            city = addressParts[0];
-            const stateZip = addressParts[1];
-            state = stateZip.split(' ')[0];
-          } else if (addressParts.length >= 3) {
-            // Format: "Street, City, State" or "Street, City, State ZIP"
-            city = addressParts[addressParts.length - 2];
-            const stateZip = addressParts[addressParts.length - 1];
-            state = stateZip.split(' ')[0];
-          }
-          
-          // Auto-populate extracted city and state
-          setFormData(prev => ({
-            ...prev,
-            city: city,
-            state: state
-          }));
-        } else {
-          // Clear city and state if address format is invalid
-          setFormData(prev => ({
-            ...prev,
-            city: '',
-            state: ''
-          }));
-        }
-      }
     }
     
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -230,6 +207,67 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
     if (date) {
       updateFormData('dateOfBirth', date);
     }
+  };
+
+  // Generate arrays for date selectors
+  const generateYears = () => {
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    for (let year = currentYear - 18; year >= 1900; year--) {
+      years.push(year);
+    }
+    return years;
+  };
+
+  const generateMonths = () => {
+    return [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+  };
+
+  const generateDaysInMonth = (year: number, month: number) => {
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const days = [];
+    for (let day = 1; day <= daysInMonth; day++) {
+      days.push(day);
+    }
+    return days;
+  };
+
+  const handleYearSelect = (year: number) => {
+    const newDate = new Date(formData.dateOfBirth);
+    newDate.setFullYear(year);
+    
+    // Adjust day if it doesn't exist in the new month/year combination
+    const maxDay = new Date(year, newDate.getMonth() + 1, 0).getDate();
+    if (newDate.getDate() > maxDay) {
+      newDate.setDate(maxDay);
+    }
+    
+    updateFormData('dateOfBirth', newDate);
+    setShowYearPicker(false);
+  };
+
+  const handleMonthSelect = (monthIndex: number) => {
+    const newDate = new Date(formData.dateOfBirth);
+    newDate.setMonth(monthIndex);
+    
+    // Adjust day if it doesn't exist in the new month
+    const maxDay = new Date(newDate.getFullYear(), monthIndex + 1, 0).getDate();
+    if (newDate.getDate() > maxDay) {
+      newDate.setDate(maxDay);
+    }
+    
+    updateFormData('dateOfBirth', newDate);
+    setShowMonthPicker(false);
+  };
+
+  const handleDaySelect = (day: number) => {
+    const newDate = new Date(formData.dateOfBirth);
+    newDate.setDate(day);
+    updateFormData('dateOfBirth', newDate);
+    setShowDayPicker(false);
   };
 
 
@@ -355,7 +393,7 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
       Toast.show({
         type: 'error',
         text1: 'Error',
-        text2: 'Please fill in all required fields'
+        text2: 'Please fill in all\nrequired fields'
       });
       return;
     }
@@ -399,7 +437,7 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
       Toast.show({
         type: 'success',
         text1: 'Registration Successful',
-        text2: 'Please check your email for OTP verification'
+        text2: 'Please check your email\nfor OTP verification'
       });
       
       // Navigate to OTP verification instead of completing profile
@@ -501,7 +539,8 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
       ageConsent: '',
     });
     
-    // Clear extracted address data is now handled in setFormData above
+    // Clear address modal state
+    setShowAddressModal(false);
     
     // Clear country selections
     setSelectedCountryCall(countryData[0]);
@@ -533,6 +572,7 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
           contentContainerStyle={{ flexGrow: 1, paddingBottom: 50 }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          nestedScrollEnabled={false}
         >
           <View className="flex-1 px-6 pt-16">
             {/* Back Button */}
@@ -645,122 +685,27 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
               </View>
 
               {/* Full Address */}
-              <View className="mb-8" style={{ zIndex: 1000 }}>
+              <View className="mb-8" style={{ zIndex: 1000, elevation: 1000 }}>
                 <Text className="text-sm font-medium text-gray-700 mb-2">
                   Full Address *
                 </Text>
-                <GooglePlacesAutocomplete
-                  placeholder="Enter your address"
-                  minLength={2}
-                  listViewDisplayed="auto"
-                  enablePoweredByContainer={false}
-                  onPress={(data, details = null) => {
-                    if (details) {
-                      const addressComponents = details.address_components;
-                      let city = '';
-                      let state = '';
-                      let fullAddress = details.formatted_address;
-
-                      // Extract city and state from address components
-                      addressComponents.forEach((component) => {
-                        if (component.types.includes('locality')) {
-                          city = component.long_name;
-                        }
-                        if (component.types.includes('administrative_area_level_1')) {
-                          state = component.short_name;
-                        }
-                      });
-
-                      // Update form data with complete address information
-                      setFormData(prev => ({
-                        ...prev,
-                        fullAddress: fullAddress,
-                        city: city,
-                        state: state,
-                      }));
-                      
-                      // Clear any address errors
-                      setErrors(prev => ({ ...prev, fullAddress: '' }));
-                    }
-                  }}
-                  query={{
-                    key: process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY,
-                    language: 'en',
-                    types: 'address'
-                  }}
-                  fetchDetails={true}
-                  textInputProps={{
-                    value: formData.fullAddress,
-                    onChangeText: (text) => {
-                      updateFormData('fullAddress', text);
-                    },
-                    style: {
-                      fontSize: 16,
-                      color: '#000',
-                      backgroundColor: 'transparent'
-                    },
-                    placeholderTextColor: '#9CA3AF'
-                  }}
-                  styles={{
-                    container: {
-                      flex: 0,
-                      zIndex: 999,
-                    },
-                    textInputContainer: {
-                      backgroundColor: 'transparent',
-                      borderWidth: 1,
-                      borderColor: errors.fullAddress ? '#ef4444' : '#e5e7eb',
-                      borderRadius: 12,
-                      paddingHorizontal: 16,
-                      paddingVertical: 16,
-                    },
-                    textInput: {
-                      backgroundColor: 'transparent',
-                      height: 'auto',
-                      margin: 0,
-                      padding: 0,
-                      fontSize: 16,
-                      color: '#000',
-                    },
-                    listView: {
-                      backgroundColor: 'white',
-                      borderWidth: 1,
-                      borderColor: '#e5e7eb',
-                      borderRadius: 12,
-                      marginTop: 4,
-                      elevation: 10,
-                      zIndex: 1000,
-                      maxHeight: 200,
-                      shadowColor: '#000',
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.25,
-                      shadowRadius: 12,
-                    },
-                    row: {
-                      backgroundColor: 'white',
-                      padding: 13,
-                      minHeight: 44,
-                      borderBottomWidth: 1,
-                      borderBottomColor: '#f3f4f6',
-                    },
-                    separator: {
-                      height: 0,
-                    },
-                    poweredContainer: {
-                      display: 'none'
-                    },
-                    description: {
-                      fontSize: 13,
-                      color: '#6b7280',
-                    },
-                    predefinedPlacesDescription: {
-                      color: '#374151',
-                    }
-                  }}
-                />
-                <Text className="text-xs text-gray-500 mt-1">
-                  Example: 123 Main St, New York, NY
-                </Text>
+                {!process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY && (
+                  <Text className="text-yellow-600 text-xs mb-2">
+                    ⚠️ Google Places API key not configured. Autocomplete may not work.
+                  </Text>
+                )}
+                <TouchableOpacity
+                  className={`px-4 py-4 rounded-xl border ${errors.fullAddress ? 'border-red-500' : 'border-gray-200'} bg-transparent`}
+                  onPress={() => setShowAddressModal(true)}
+                >
+                  <Text className={`text-base ${formData.fullAddress ? 'text-gray-800' : 'text-gray-400'}`}>
+                    {formData.fullAddress || 'Enter your address'}
+                  </Text>
+                </TouchableOpacity>
+              
+              <Text className="text-xs text-gray-500 mt-1">
+                Example: 123 Main St, New York, NY
+              </Text>
                 {errors.fullAddress ? (
                   <Text className="text-red-500 text-sm mt-1">{errors.fullAddress}</Text>
                 ) : null}
@@ -982,41 +927,93 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
 
       {/* Date Picker */}
       {showDatePicker && (
-        Platform.OS === 'ios' ? (
-          <Modal
-            visible={showDatePicker}
-            transparent
-            animationType="slide"
-          >
-            <View className="flex-1 bg-black/50 justify-end">
-              <View className="bg-white rounded-t-3xl p-4">
-                <View className="flex-row justify-between items-center mb-4">
-                  <TouchableOpacity onPress={() => setShowDatePicker(false)}>
-                    <Text className="text-blue-500 text-lg">Cancel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => setShowDatePicker(false)}>
-                    <Text className="text-blue-500 text-lg font-semibold">Done</Text>
-                  </TouchableOpacity>
-                </View>
+        <Modal
+          visible={showDatePicker}
+          transparent
+          animationType="slide"
+        >
+          <View className="flex-1 bg-black/50 justify-center items-center px-6">
+            <View className="bg-white rounded-3xl w-full max-w-sm p-6">
+              <View className="flex-row justify-between items-center mb-6">
+                <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                  <Text className="text-gray-500 text-lg">Cancel</Text>
+                </TouchableOpacity>
+                <Text className="text-xl font-bold text-gray-800">Select Date of Birth</Text>
+                <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                  <Text className="text-green-500 text-lg font-semibold">Done</Text>
+                </TouchableOpacity>
+              </View>
+              
+              {Platform.OS === 'ios' ? (
                 <DateTimePicker
                   value={formData.dateOfBirth}
                   mode="date"
                   display="spinner"
                   onChange={handleDateChange}
-                  maximumDate={new Date(Date.now() - 18 * 365 * 24 * 60 * 60 * 1000)}
+                  minimumDate={new Date(1900, 0, 1)}
+                  maximumDate={(() => {
+                    const today = new Date();
+                    return new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
+                  })()}
                 />
-              </View>
+              ) : (
+                <View className="space-y-4">
+                  {/* Year Selector */}
+                  <View>
+                    <Text className="text-sm font-medium text-gray-700 mb-2">Year</Text>
+                    <View className="border border-gray-200 rounded-xl">
+                      <TouchableOpacity 
+                        className="px-4 py-3 flex-row justify-between items-center"
+                        onPress={() => setShowYearPicker(true)}
+                      >
+                        <Text className="text-base text-gray-800">{formData.dateOfBirth.getFullYear()}</Text>
+                        <Text className="text-gray-500">▼</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                  
+                  {/* Month Selector */}
+                  <View>
+                    <Text className="text-sm font-medium text-gray-700 mb-2">Month</Text>
+                    <View className="border border-gray-200 rounded-xl">
+                      <TouchableOpacity 
+                        className="px-4 py-3 flex-row justify-between items-center"
+                        onPress={() => setShowMonthPicker(true)}
+                      >
+                        <Text className="text-base text-gray-800">
+                          {new Date(2000, formData.dateOfBirth.getMonth()).toLocaleDateString('en-US', { month: 'long' })}
+                        </Text>
+                        <Text className="text-gray-500">▼</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                  
+                  {/* Day Selector */}
+                  <View>
+                    <Text className="text-sm font-medium text-gray-700 mb-2">Day</Text>
+                    <View className="border border-gray-200 rounded-xl">
+                      <TouchableOpacity 
+                        className="px-4 py-3 flex-row justify-between items-center"
+                        onPress={() => setShowDayPicker(true)}
+                      >
+                        <Text className="text-base text-gray-800">{formData.dateOfBirth.getDate()}</Text>
+                        <Text className="text-gray-500">▼</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                  
+                  {/* Selected Date Preview */}
+                  <View className="bg-green-50 border border-green-200 rounded-xl p-4 mt-4">
+                    <Text className="text-sm text-green-700 font-medium mb-1">Selected Date:</Text>
+                    <Text className="text-lg text-green-800 font-semibold">
+                      {formatDateDisplay(formData.dateOfBirth)}
+                    </Text>
+                  </View>
+                </View>
+              )}
             </View>
-          </Modal>
-        ) : (
-          <DateTimePicker
-            value={formData.dateOfBirth}
-            mode="date"
-            display="default"
-            onChange={handleDateChange}
-            maximumDate={new Date(Date.now() - 18 * 365 * 24 * 60 * 60 * 1000)}
-          />
-        )
+          </View>
+        </Modal>
       )}
 
       {/* Country Dropdowns */}
@@ -1107,6 +1104,238 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
             ))}
           </View>
         </TouchableOpacity>
+      </Modal>
+
+      {/* Year Picker Modal */}
+      <Modal
+        visible={showYearPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowYearPicker(false)}
+      >
+        <TouchableOpacity 
+          className="flex-1 bg-black/50 justify-center px-6"
+          activeOpacity={1}
+          onPress={() => setShowYearPicker(false)}
+        >
+          <View className="bg-white rounded-xl max-w-sm mx-auto w-full max-h-96">
+            <View className="py-4 border-b border-gray-200">
+              <Text className="text-lg font-semibold text-gray-800 text-center">Select Year</Text>
+            </View>
+            <ScrollView className="max-h-80" showsVerticalScrollIndicator={false}>
+              {generateYears().map((year) => (
+                <TouchableOpacity
+                  key={year}
+                  className={`py-3 px-6 border-b border-gray-100 ${
+                    year === formData.dateOfBirth.getFullYear() ? 'bg-green-50' : ''
+                  }`}
+                  onPress={() => handleYearSelect(year)}
+                >
+                  <Text className={`text-base ${
+                    year === formData.dateOfBirth.getFullYear() ? 'text-green-600 font-semibold' : 'text-gray-800'
+                  }`}>
+                    {year}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Month Picker Modal */}
+      <Modal
+        visible={showMonthPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowMonthPicker(false)}
+      >
+        <TouchableOpacity 
+          className="flex-1 bg-black/50 justify-center px-6"
+          activeOpacity={1}
+          onPress={() => setShowMonthPicker(false)}
+        >
+          <View className="bg-white rounded-xl max-w-sm mx-auto w-full">
+            <View className="py-4 border-b border-gray-200">
+              <Text className="text-lg font-semibold text-gray-800 text-center">Select Month</Text>
+            </View>
+            {generateMonths().map((month, index) => (
+              <TouchableOpacity
+                key={month}
+                className={`py-4 px-6 border-b border-gray-100 last:border-b-0 ${
+                  index === formData.dateOfBirth.getMonth() ? 'bg-green-50' : ''
+                }`}
+                onPress={() => handleMonthSelect(index)}
+              >
+                <Text className={`text-base ${
+                  index === formData.dateOfBirth.getMonth() ? 'text-green-600 font-semibold' : 'text-gray-800'
+                }`}>
+                  {month}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Day Picker Modal */}
+      <Modal
+        visible={showDayPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowDayPicker(false)}
+      >
+        <TouchableOpacity 
+          className="flex-1 bg-black/50 justify-center px-6"
+          activeOpacity={1}
+          onPress={() => setShowDayPicker(false)}
+        >
+          <View className="bg-white rounded-xl max-w-sm mx-auto w-full max-h-96">
+            <View className="py-4 border-b border-gray-200">
+              <Text className="text-lg font-semibold text-gray-800 text-center">Select Day</Text>
+            </View>
+            <ScrollView className="max-h-80" showsVerticalScrollIndicator={false}>
+              <View className="flex-row flex-wrap">
+                {generateDaysInMonth(formData.dateOfBirth.getFullYear(), formData.dateOfBirth.getMonth()).map((day) => (
+                  <TouchableOpacity
+                    key={day}
+                    className={`w-1/7 py-3 m-1 rounded-lg items-center ${
+                      day === formData.dateOfBirth.getDate() ? 'bg-green-500' : 'bg-gray-100'
+                    }`}
+                    style={{ width: '13%' }}
+                    onPress={() => handleDaySelect(day)}
+                  >
+                    <Text className={`text-base font-medium ${
+                      day === formData.dateOfBirth.getDate() ? 'text-white' : 'text-gray-800'
+                    }`}>
+                      {day}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Address Search Modal */}
+      <Modal
+        visible={showAddressModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowAddressModal(false)}
+      >
+        <View className="flex-1 bg-black/50">
+          <View className="flex-1 bg-white mt-20 rounded-t-3xl">
+            <View className="flex-row justify-between items-center p-6 border-b border-gray-200">
+              <Text className="text-xl font-bold text-gray-800">Search Address</Text>
+              <TouchableOpacity onPress={() => setShowAddressModal(false)}>
+                <Text className="text-gray-500 text-lg">✕</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View className="p-6 flex-1">
+              <GooglePlacesAutocomplete
+                placeholder="Enter your address"
+                minLength={2}
+                listViewDisplayed="auto"
+                enablePoweredByContainer={false}
+                predefinedPlaces={[]}
+                currentLocation={false}
+                keyboardShouldPersistTaps="handled"
+                suppressDefaultStyles={false}
+                onPress={(_, details = null) => {
+                  if (details) {
+                    const addressComponents = details.address_components;
+                    let city = '';
+                    let state = '';
+                    let fullAddress = details.formatted_address;
+
+                    // Extract city and state from address components
+                    addressComponents.forEach((component) => {
+                      if (component.types.includes('locality')) {
+                        city = component.long_name;
+                      }
+                      if (component.types.includes('administrative_area_level_1')) {
+                        state = component.short_name;
+                      }
+                    });
+
+                    // Update form data
+                    setFormData(prev => ({
+                      ...prev,
+                      fullAddress: fullAddress,
+                      city: city,
+                      state: state,
+                    }));
+                    
+                    // Clear any address errors
+                    setErrors(prev => ({ ...prev, fullAddress: '' }));
+                    
+                    // Close modal
+                    setShowAddressModal(false);
+                  }
+                }}
+                query={{
+                  key: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
+                  language: 'en',
+                  types: 'address',
+                  components: 'country:us',
+                }}
+                fetchDetails={true}
+                styles={{
+                  container: {
+                    flex: 0,
+                  },
+                  textInputContainer: {
+                    backgroundColor: 'transparent',
+                    borderWidth: 1,
+                    borderColor: '#e5e7eb',
+                    borderRadius: 12,
+                    paddingHorizontal: 16,
+                    paddingVertical: 13,
+                    height: 56,
+                    margin: 0,
+                  },
+                  textInput: {
+                    backgroundColor: 'transparent',
+                    height: 30,
+                    margin: 0,
+                    padding: 0,
+                    fontSize: 16,
+                    color: '#374151',
+                    fontWeight: '400',
+                  },
+                  listView: {
+                    backgroundColor: 'white',
+                    borderWidth: 1,
+                    borderColor: '#e5e7eb',
+                    borderRadius: 12,
+                    marginTop: 8,
+                    maxHeight: 300,
+                  },
+                  row: {
+                    backgroundColor: 'white',
+                    padding: 13,
+                    minHeight: 44,
+                    borderBottomWidth: 1,
+                    borderBottomColor: '#f3f4f6',
+                  },
+                  separator: {
+                    height: 0,
+                  },
+                  poweredContainer: {
+                    display: 'none'
+                  },
+                  description: {
+                    fontSize: 13,
+                    color: '#6b7280',
+                  },
+                }}
+              />
+            </View>
+          </View>
+        </View>
       </Modal>
     </ImageBackground>
   );

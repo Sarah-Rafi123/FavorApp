@@ -55,6 +55,7 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
   const emailInputRef = useRef<TextInput>(null);
   const passwordInputRef = useRef<TextInput>(null);
   const confirmPasswordInputRef = useRef<TextInput>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   const setUser = useAuthStore((state) => state.setUser);
   const setUserAndTokens = useAuthStore((state) => state.setUserAndTokens);
@@ -65,6 +66,21 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
   // Load saved credentials on component mount and auto-populate if available
   useEffect(() => {
     loadSavedCredentials();
+    
+    // Add keyboard listeners
+    const keyboardDidShowListener = Keyboard.addListener(
+      'keyboardDidShow',
+      (e) => setKeyboardHeight(e.endCoordinates.height)
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      'keyboardDidHide',
+      () => setKeyboardHeight(0)
+    );
+
+    return () => {
+      keyboardDidShowListener?.remove();
+      keyboardDidHideListener?.remove();
+    };
   }, []);
 
   // Clear all data when navigating back from other screens
@@ -338,14 +354,24 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
   const scrollToInput = (inputRef: React.RefObject<TextInput>) => {
     setTimeout(() => {
       if (inputRef.current && scrollViewRef.current) {
-        inputRef.current.measure((x, y, width, height, pageX, pageY) => {
-          scrollViewRef.current?.scrollTo({
-            y: pageY - 100, // Scroll to position above the input
-            animated: true,
-          });
+        inputRef.current.measureInWindow((x, y, width, height) => {
+          const { Dimensions } = require('react-native');
+          const screenHeight = Dimensions.get('window').height;
+          const effectiveKeyboardHeight = keyboardHeight || (Platform.OS === 'ios' ? 320 : 280);
+          const inputBottom = y + height;
+          const visibleAreaHeight = screenHeight - effectiveKeyboardHeight;
+          
+          if (inputBottom > visibleAreaHeight - 20) { // 20px buffer
+            // Calculate how much to scroll
+            const scrollOffset = inputBottom - visibleAreaHeight + 80; // Extra padding for visibility
+            scrollViewRef.current?.scrollTo({
+              y: scrollOffset,
+              animated: true,
+            });
+          }
         });
       }
-    }, 100);
+    }, 200); // Increased delay for better measurement
   };
 
   const updateFormData = (field: string, value: string | boolean) => {
@@ -400,17 +426,18 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
       <KeyboardAvoidingView 
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
         enabled={true}
       >
         <ScrollView 
           ref={scrollViewRef}
           className="flex-1"
-          contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: 150 }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
-          bounces={false}
-          automaticallyAdjustKeyboardInsets={true}
+          bounces={true}
+          automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+          keyboardDismissMode="interactive"
         >
           <View className="flex-1 px-6 pt-20">
             <View className="items-center mb-8">

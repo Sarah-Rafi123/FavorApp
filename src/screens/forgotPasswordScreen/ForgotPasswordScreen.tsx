@@ -53,7 +53,7 @@ export function ForgotPasswordScreen({ onBackToLogin, onContinue }: ForgotPasswo
       Toast.show({
         type: 'success',
         text1: 'Success',
-        text2: 'Password reset email sent successfully!'
+        text2: 'Password reset email\nsent successfully!'
       });
       
       // Navigate to OTP verification screen

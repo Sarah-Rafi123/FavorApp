@@ -347,7 +347,7 @@ export function ProfileScreen() {
       Toast.show({
         type: 'success',
         text1: 'PDF Generated! 📄',
-        text2: 'Your profile has been exported as PDF',
+        text2: 'Your profile has\nbeen exported as PDF',
         visibilityTime: 4000,
       });
 
@@ -361,14 +361,14 @@ export function ProfileScreen() {
       Toast.show({
         type: 'error',
         text1: 'Export Failed',
-        text2: error.message || 'Failed to export profile. Please try again.',
+        text2: error.message || 'Failed to export profile.\nPlease try again.',
         visibilityTime: 4000,
       });
       
       // Also show alert for better visibility
       Alert.alert(
         'Export Failed',
-        error.message || 'Failed to export profile. Please try again.',
+        error.message || 'Failed to export profile.\nPlease try again.',
         [{ text: 'OK' }]
       );
     } finally {

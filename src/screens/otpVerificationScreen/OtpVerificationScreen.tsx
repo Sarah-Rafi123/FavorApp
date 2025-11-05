@@ -157,7 +157,7 @@ export function OtpVerificationScreen({ onBack, onVerifySuccess, email }: OtpVer
         Toast.show({
           type: 'success',
           text1: 'Success',
-          text2: 'OTP code sent successfully!'
+          text2: 'OTP code sent\nsuccessfully!'
         });
         
       } catch (error: any) {

@@ -64,7 +64,7 @@ export const useDeleteAccountMutation = () => {
       Toast.show({
         type: 'success',
         text1: 'Account Deleted',
-        text2: 'Your account has been successfully deleted.',
+        text2: 'Your account has been\nsuccessfully deleted.',
         position: 'top',
       });
     },

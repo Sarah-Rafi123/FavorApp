@@ -31,7 +31,7 @@ export const useSubmitSupportRequest = () => {
       Toast.show({
         type: 'error',
         text1: 'Submission Failed',
-        text2: error.message || 'Failed to submit support request. Please try again.',
+        text2: error.message || 'Failed to submit support request.\nPlease try again.',
         position: 'top',
         visibilityTime: 4000,
         autoHide: true,

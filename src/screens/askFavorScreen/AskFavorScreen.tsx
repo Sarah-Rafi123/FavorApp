@@ -41,6 +41,7 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
 
   const [showTimeDropdown, setShowTimeDropdown] = useState(false);
   const [showImageOptions, setShowImageOptions] = useState(false);
+  const [showAddressModal, setShowAddressModal] = useState(false);
   const [selectedImage, setSelectedImage] = useState<{
     uri: string;
     type: string;
@@ -382,6 +383,9 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
     try {
       const createRequest: CreateFavorRequest = {
         description: formData.description.trim(),
+        address: formData.address.trim(),
+        city: formData.city.trim(),
+        state: formData.state.trim(),
         address_attributes: {
           full_address: formData.address.trim(),
           city: formData.city.trim(),
@@ -626,122 +630,19 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
           </View>
 
           {/* Address Section */}
-          <View className="mb-12" style={{ zIndex: 1000 }}>
+          <View className="mb-12">
             <Text className="text-xl font-bold text-black mb-6">Address</Text>
             <Text className="text-sm font-medium text-gray-700 mb-2">
               Address
             </Text>
-            <GooglePlacesAutocomplete
-              placeholder="Enter your address"
-              minLength={2}
-              listViewDisplayed="auto"
-              enablePoweredByContainer={false}
-              onPress={(data, details = null) => {
-                if (details) {
-                  const addressComponents = details.address_components;
-                  let city = '';
-                  let state = '';
-                  let fullAddress = details.formatted_address;
-
-                  // Extract city and state from address components
-                  addressComponents.forEach((component) => {
-                    if (component.types.includes('locality')) {
-                      city = component.long_name;
-                    }
-                    if (component.types.includes('administrative_area_level_1')) {
-                      state = component.short_name;
-                    }
-                  });
-
-                  // Update form data with complete address information
-                  setFormData(prev => ({
-                    ...prev,
-                    address: fullAddress,
-                    city: city,
-                    state: state,
-                  }));
-                  
-                  // Clear any address errors
-                  setErrors(prev => ({ ...prev, address: '' }));
-                }
-              }}
-              query={{
-                key: process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY,
-                language: 'en',
-                types: 'address'
-              }}
-              fetchDetails={true}
-              textInputProps={{
-                value: formData.address,
-                onChangeText: (text) => {
-                  updateFormData('address', text);
-                },
-                style: {
-                  fontSize: 16,
-                  color: '#000',
-                  backgroundColor: 'transparent'
-                },
-                placeholderTextColor: '#9CA3AF'
-              }}
-              styles={{
-                container: {
-                  flex: 0,
-                  zIndex: 999,
-                },
-                textInputContainer: {
-                  backgroundColor: 'transparent',
-                  borderWidth: 1,
-                  borderColor: errors.address ? '#ef4444' : '#e5e7eb',
-                  borderRadius: 12,
-                  paddingHorizontal: 16,
-                  paddingVertical: 16,
-                  height: 56,
-                },
-                textInput: {
-                  backgroundColor: 'transparent',
-                  height: 'auto',
-                  margin: 0,
-                  padding: 0,
-                  fontSize: 16,
-                  color: '#000',
-                  lineHeight: 22,
-                },
-                listView: {
-                  backgroundColor: 'white',
-                  borderWidth: 1,
-                  borderColor: '#e5e7eb',
-                  borderRadius: 12,
-                  marginTop: 4,
-                  elevation: 10,
-                  zIndex: 1000,
-                  maxHeight: 200,
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.25,
-                  shadowRadius: 12,
-                },
-                row: {
-                  backgroundColor: 'white',
-                  padding: 13,
-                  minHeight: 44,
-                  borderBottomWidth: 1,
-                  borderBottomColor: '#f3f4f6',
-                },
-                separator: {
-                  height: 0,
-                },
-                poweredContainer: {
-                  display: 'none'
-                },
-                description: {
-                  fontSize: 13,
-                  color: '#6b7280',
-                },
-                predefinedPlacesDescription: {
-                  color: '#374151',
-                }
-              }}
-            />
+            <TouchableOpacity
+              className={`px-4 py-4 rounded-xl border ${errors.address ? 'border-red-500' : 'border-gray-200'} bg-transparent`}
+              onPress={() => setShowAddressModal(true)}
+            >
+              <Text className={`text-base ${formData.address ? 'text-black' : 'text-gray-400'}`}>
+                {formData.address || 'Enter your address'}
+              </Text>
+            </TouchableOpacity>
             {errors.address ? (
               <Text className="text-red-500 text-sm mt-1">{errors.address}</Text>
             ) : null}
@@ -974,6 +875,126 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
+      </Modal>
+
+      {/* Address Search Modal */}
+      <Modal
+        visible={showAddressModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowAddressModal(false)}
+      >
+        <View className="flex-1 bg-black/50">
+          <View className="flex-1 bg-white mt-20 rounded-t-3xl">
+            <View className="flex-row justify-between items-center p-6 border-b border-gray-200">
+              <Text className="text-xl font-bold text-gray-800">Search Address</Text>
+              <TouchableOpacity onPress={() => setShowAddressModal(false)}>
+                <Text className="text-gray-500 text-lg">✕</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View className="p-6 flex-1">
+              <GooglePlacesAutocomplete
+                placeholder="Enter your address"
+                minLength={2}
+                listViewDisplayed="auto"
+                enablePoweredByContainer={false}
+                predefinedPlaces={[]}
+                currentLocation={false}
+                keyboardShouldPersistTaps="handled"
+                suppressDefaultStyles={false}
+                onPress={(_, details = null) => {
+                  if (details) {
+                    const addressComponents = details.address_components;
+                    let city = '';
+                    let state = '';
+                    let fullAddress = details.formatted_address;
+
+                    // Extract city and state from address components
+                    addressComponents.forEach((component) => {
+                      if (component.types.includes('locality')) {
+                        city = component.long_name;
+                      }
+                      if (component.types.includes('administrative_area_level_1')) {
+                        state = component.short_name;
+                      }
+                    });
+
+                    // Update form data with complete address information
+                    setFormData(prev => ({
+                      ...prev,
+                      address: fullAddress,
+                      city: city,
+                      state: state,
+                    }));
+                    
+                    // Clear any address errors
+                    setErrors(prev => ({ ...prev, address: '' }));
+                    
+                    // Close modal
+                    setShowAddressModal(false);
+                  }
+                }}
+                query={{
+                  key: process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY,
+                  language: 'en',
+                  types: 'address',
+                  components: 'country:us',
+                }}
+                fetchDetails={true}
+                styles={{
+                  container: {
+                    flex: 0,
+                  },
+                  textInputContainer: {
+                    backgroundColor: 'transparent',
+                    borderWidth: 1,
+                    borderColor: '#e5e7eb',
+                    borderRadius: 12,
+                    paddingHorizontal: 16,
+                    paddingVertical: 13,
+                    height: 56,
+                    margin: 0,
+                  },
+                  textInput: {
+                    backgroundColor: 'transparent',
+                    height: 30,
+                    margin: 0,
+                    padding: 0,
+                    fontSize: 16,
+                    color: '#374151',
+                    fontWeight: '400',
+                  },
+                  listView: {
+                    backgroundColor: 'white',
+                    borderWidth: 1,
+                    borderColor: '#e5e7eb',
+                    borderRadius: 12,
+                    marginTop: 8,
+                    maxHeight: 300,
+                  },
+                  row: {
+                    backgroundColor: 'white',
+                    padding: 13,
+                    minHeight: 44,
+                    borderBottomWidth: 1,
+                    borderBottomColor: '#f3f4f6',
+                  },
+                  separator: {
+                    height: 0,
+                  },
+                  poweredContainer: {
+                    display: 'none'
+                  },
+                  description: {
+                    fontSize: 13,
+                    color: '#6b7280',
+                  },
+                }}
+              />
+            </View>
+          </View>
+        </View>
       </Modal>
 
     </ImageBackground>

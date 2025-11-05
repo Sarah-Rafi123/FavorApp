@@ -44,14 +44,14 @@ export const useUpdateProfileMutation = () => {
       Toast.show({
         type: 'success',
         text1: 'Profile Updated',
-        text2: 'Your profile has been updated successfully.',
+        text2: 'Your profile has been updated\nsuccessfully.',
         position: 'top',
       });
     },
     onError: (error: any) => {
       console.error('❌ Update Profile Error:', error);
       
-      const errorMessage = error.message || 'Failed to update profile. Please try again.';
+      const errorMessage = error.message || 'Failed to update profile.\nPlease try again.';
       
       Toast.show({
         type: 'error',
@@ -77,7 +77,7 @@ export const useUploadProfileImageMutation = () => {
       Toast.show({
         type: 'success',
         text1: 'Image Uploaded',
-        text2: 'Your profile image has been updated successfully.',
+        text2: 'Your profile image has been\nupdated successfully.',
         position: 'top',
       });
     },
@@ -110,7 +110,7 @@ export const useRemoveProfileImageMutation = () => {
       Toast.show({
         type: 'success',
         text1: 'Image Removed',
-        text2: 'Your profile image has been removed successfully.',
+        text2: 'Your profile image has been\nremoved successfully.',
         position: 'top',
       });
     },

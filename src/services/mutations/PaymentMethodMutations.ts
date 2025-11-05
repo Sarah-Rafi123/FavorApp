@@ -57,7 +57,7 @@ export const useDeletePaymentMethod = () => {
       Toast.show({
         type: 'success',
         text1: 'Payment Method Removed',
-        text2: 'Payment method has been removed successfully',
+        text2: 'Payment method has been\nremoved successfully',
         visibilityTime: 3000,
       });
     },

@@ -19,6 +19,7 @@ interface GetCertifiedScreenProps {
 
 
 
+
 const CheckIcon = () => (
   <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
     <Circle cx="12" cy="12" r="10" fill="#44A27B" />
@@ -154,4 +155,4 @@ export function GetCertifiedScreen({ navigation }: GetCertifiedScreenProps) {
       </ScrollView>
     </ImageBackground>
   );
-}
+}2

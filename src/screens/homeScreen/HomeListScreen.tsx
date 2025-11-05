@@ -318,7 +318,22 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications }: HomeLis
               {favor.title || favor.favor_subject.name} | {favor.time_to_complete || 'Time not specified'}
             </Text>
             <Text className="text-sm text-gray-600" numberOfLines={1}>
-              {favor.city && favor.city !== 'undefined' ? favor.city : ''}{favor.city && favor.city !== 'undefined' && favor.state && favor.state !== 'undefined' ? ', ' : ''}{favor.state && favor.state !== 'undefined' ? favor.state : favor.address}
+              {(() => {
+                // Display city and state if both are available
+                if (favor.city && favor.city !== 'undefined' && favor.state && favor.state !== 'undefined') {
+                  return `${favor.city}, ${favor.state}`;
+                }
+                // Display city only if available
+                if (favor.city && favor.city !== 'undefined') {
+                  return favor.city;
+                }
+                // Display state only if available
+                if (favor.state && favor.state !== 'undefined') {
+                  return favor.state;
+                }
+                // Fall back to full address
+                return favor.address || 'Location not specified';
+              })()}
             </Text>
             <Text className="text-gray-700 text-sm mb-4 leading-5" numberOfLines={2}>
               {favor.description}

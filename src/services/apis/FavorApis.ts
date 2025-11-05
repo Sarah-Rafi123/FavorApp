@@ -194,6 +194,9 @@ export interface GetFavorApplicantsResponse {
 
 export interface CreateFavorRequest {
   description: string;
+  address: string;
+  city: string;
+  state: string;
   address_attributes: {
     full_address: string;
     city: string;
@@ -215,6 +218,9 @@ export interface CreateFavorFormData extends FormData {
 
 export interface UpdateFavorRequest {
   description?: string;
+  address?: string;
+  city?: string;
+  state?: string;
   address_attributes?: {
     full_address?: string;
     city?: string;

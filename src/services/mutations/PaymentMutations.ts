@@ -11,7 +11,7 @@ export const useCreatePaymentIntent = () => {
       Toast.show({
         type: 'error',
         text1: 'Payment Error',
-        text2: 'Failed to initialize payment. Please try again.',
+        text2: 'Failed to initialize payment.\nPlease try again.',
       })
     },
   });
@@ -24,7 +24,7 @@ export const useConfirmPayment = () => {
       Toast.show({
         type: 'success',
         text1: 'Payment Successful',
-        text2: 'Your payment has been processed successfully.',
+        text2: 'Your payment has been processed\nsuccessfully.',
       });
     },
     onError: (error) => {
@@ -32,7 +32,7 @@ export const useConfirmPayment = () => {
       Toast.show({
         type: 'error',
         text1: 'Payment Failed',
-        text2: 'Payment could not be processed. Please try again.',
+        text2: 'Payment could not be processed.\nPlease try again.',
       });
     },
   });

@@ -251,7 +251,7 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
       Toast.show({
         type: 'error',
         text1: 'Incomplete Review',
-        text2: 'Please provide a rating and review text.',
+        text2: 'Please provide a rating\nand review text.',
         visibilityTime: 3000,
       });
 
@@ -465,6 +465,55 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
               <Text className="text-gray-700 text-base mr-2">:</Text>
               <Text className="text-gray-800 text-base flex-1">{favor.city}, {favor.state}</Text>
             </View>
+
+            {/* Payment Details - Show when favor is paid */}
+            {!favor.favor_pay && (
+              <>
+                <View className="flex-row">
+                  <Text className="text-gray-700 text-base w-20">Type</Text>
+                  <Text className="text-gray-700 text-base mr-2">:</Text>
+                  <Text className="text-green-600 text-base flex-1 font-semibold">Paid Favor</Text>
+                </View>
+
+                <View className="flex-row">
+                  <Text className="text-gray-700 text-base w-20">Tip</Text>
+                  <Text className="text-gray-700 text-base mr-2">:</Text>
+                  <Text className="text-gray-800 text-base flex-1 font-semibold">
+                    ${parseFloat((favor.tip || 0).toString()).toFixed(2)}
+                  </Text>
+                </View>
+
+                {favor.additional_tip && parseFloat((favor.additional_tip || 0).toString()) > 0 && (
+                  <View className="flex-row">
+                    <Text className="text-gray-700 text-base w-20">Bonus</Text>
+                    <Text className="text-gray-700 text-base mr-2">:</Text>
+                    <Text className="text-green-600 text-base flex-1 font-semibold">
+                      +${parseFloat((favor.additional_tip || 0).toString()).toFixed(2)}
+                    </Text>
+                  </View>
+                )}
+
+                <View className="flex-row">
+                  <Text className="text-gray-700 text-base w-20">Total</Text>
+                  <Text className="text-gray-700 text-base mr-2">:</Text>
+                  <Text className="text-green-700 text-base flex-1 font-bold">
+                    ${(
+                      parseFloat((favor.tip || 0).toString()) + 
+                      parseFloat((favor.additional_tip || 0).toString())
+                    ).toFixed(2)}
+                  </Text>
+                </View>
+              </>
+            )}
+
+            {/* Free Favor Indicator */}
+            {favor.favor_pay && (
+              <View className="flex-row">
+                <Text className="text-gray-700 text-base w-20">Type</Text>
+                <Text className="text-gray-700 text-base mr-2">:</Text>
+                <Text className="text-blue-600 text-base flex-1 font-semibold">Free Favor</Text>
+              </View>
+            )}
 
             <View className="flex-row items-start">
               <Text className="text-gray-700 text-base w-24">Description</Text>

@@ -975,7 +975,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
             </Text>
 
             {/* Buttons */}
-            <View className="flex-row space-x-4">
+            <View className="flex-row gap-x-4">
               <TouchableOpacity 
                 className="flex-1 bg-[#44A27B] rounded-full py-4"
                 onPress={handleCancelModalClose}

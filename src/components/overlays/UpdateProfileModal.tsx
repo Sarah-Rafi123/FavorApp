@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Modal, TouchableOpacity, ScrollView, Image, TextInput, Alert, ActionSheetIOS, Platform } from 'react-native';
+import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import { CustomButton } from '../buttons/CustomButton';
 import { useProfileQuery } from '../../services/queries/ProfileQueries';
 import { useUpdateProfileMutation, useUploadProfileImageMutation, useRemoveProfileImageMutation } from '../../services/mutations/ProfileMutations';
@@ -148,6 +149,7 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
   const [showSkillsDropdown, setShowSkillsDropdown] = useState(false);
   const [showCountryCallDropdown, setShowCountryCallDropdown] = useState(false);
   const [showCountryTextDropdown, setShowCountryTextDropdown] = useState(false);
+  const [showAddressModal, setShowAddressModal] = useState(false);
   
   // Country selection state
   const [selectedCountryCall, setSelectedCountryCall] = useState<CountryCode>(countryData[0]);
@@ -767,19 +769,15 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
                   <Text className="text-sm font-medium text-gray-700 mb-2">
                     Full Address
                   </Text>
-                  <TextInput
-                    value={profileData.address}
-                    onChangeText={(text) => updateField('address', text)}
-                    className="bg-transparent border border-gray-300 rounded-xl px-4 py-3 text-black"
-                    placeholder={profile?.address?.full_address || "4140 Parker Rd, Allentown, New Mexico 31134"}
-                    placeholderTextColor="#9CA3AF"
-                    style={{ 
-                      backgroundColor: 'transparent',
-                      fontSize: 16,
-                      lineHeight: 20,
-                      height: 50
-                    }}
-                  />
+                  <TouchableOpacity
+                    className={`bg-transparent border border-gray-300 rounded-xl px-4 py-3 ${errors.address ? 'border-red-500' : 'border-gray-300'}`}
+                    onPress={() => setShowAddressModal(true)}
+                    style={{ height: 50, justifyContent: 'center' }}
+                  >
+                    <Text className={`text-base ${profileData.address ? 'text-black' : 'text-gray-400'}`}>
+                      {profileData.address || profile?.address?.full_address || "4140 Parker Rd, Allentown, New Mexico 31134"}
+                    </Text>
+                  </TouchableOpacity>
                   {errors.address ? (
                     <Text className="text-red-500 text-sm mt-1">{errors.address}</Text>
                   ) : null}
@@ -1283,6 +1281,127 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
             </ScrollView>
           </View>
         </TouchableOpacity>
+      </Modal>
+
+      {/* Address Search Modal */}
+      <Modal
+        visible={showAddressModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowAddressModal(false)}
+        statusBarTranslucent={true}
+      >
+        <View className="flex-1 bg-black/50">
+          <View className="flex-1 bg-white mt-20 rounded-t-3xl">
+            <View className="flex-row justify-between items-center p-6 border-b border-gray-200">
+              <Text className="text-xl font-bold text-gray-800">Search Address</Text>
+              <TouchableOpacity onPress={() => setShowAddressModal(false)}>
+                <Text className="text-gray-500 text-lg">✕</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View className="p-6 flex-1">
+              <GooglePlacesAutocomplete
+                placeholder="Enter your address"
+                minLength={2}
+                listViewDisplayed="auto"
+                enablePoweredByContainer={false}
+                predefinedPlaces={[]}
+                currentLocation={false}
+                keyboardShouldPersistTaps="handled"
+                suppressDefaultStyles={false}
+                onPress={(_, details = null) => {
+                  if (details) {
+                    const addressComponents = details.address_components;
+                    let city = '';
+                    let state = '';
+                    let fullAddress = details.formatted_address;
+
+                    // Extract city and state from address components
+                    addressComponents.forEach((component) => {
+                      if (component.types.includes('locality')) {
+                        city = component.long_name;
+                      }
+                      if (component.types.includes('administrative_area_level_1')) {
+                        state = component.short_name;
+                      }
+                    });
+
+                    // Update profile data with complete address information
+                    setProfileData(prev => ({
+                      ...prev,
+                      address: fullAddress,
+                      city: city,
+                      state: state,
+                    }));
+                    
+                    // Clear any address errors
+                    setErrors(prev => ({ ...prev, address: '' }));
+                    
+                    // Close modal
+                    setShowAddressModal(false);
+                  }
+                }}
+                query={{
+                  key: process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY,
+                  language: 'en',
+                  types: 'address',
+                  components: 'country:us',
+                }}
+                fetchDetails={true}
+                styles={{
+                  container: {
+                    flex: 0,
+                  },
+                  textInputContainer: {
+                    backgroundColor: 'transparent',
+                    borderWidth: 1,
+                    borderColor: '#e5e7eb',
+                    borderRadius: 12,
+                    paddingHorizontal: 16,
+                    paddingVertical: 13,
+                    height: 56,
+                    margin: 0,
+                  },
+                  textInput: {
+                    backgroundColor: 'transparent',
+                    height: 30,
+                    margin: 0,
+                    padding: 0,
+                    fontSize: 16,
+                    color: '#374151',
+                    fontWeight: '400',
+                  },
+                  listView: {
+                    backgroundColor: 'white',
+                    borderWidth: 1,
+                    borderColor: '#e5e7eb',
+                    borderRadius: 12,
+                    marginTop: 8,
+                    maxHeight: 300,
+                  },
+                  row: {
+                    backgroundColor: 'white',
+                    padding: 13,
+                    minHeight: 44,
+                    borderBottomWidth: 1,
+                    borderBottomColor: '#f3f4f6',
+                  },
+                  separator: {
+                    height: 0,
+                  },
+                  poweredContainer: {
+                    display: 'none'
+                  },
+                  description: {
+                    fontSize: 13,
+                    color: '#6b7280',
+                  },
+                }}
+              />
+            </View>
+          </View>
+        </View>
       </Modal>
     </Modal>
   );

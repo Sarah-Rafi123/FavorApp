@@ -148,7 +148,7 @@ export function SignupOtpScreen({ onBack, onVerifySuccess, onBackToLogin, email,
         Toast.show({
           type: 'success',
           text1: 'Code Resent',
-          text2: response.message || 'OTP code has been resent successfully'
+          text2: response.message || 'OTP code has been\nresent successfully'
         });
         
         // Reset timer

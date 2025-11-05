@@ -709,13 +709,28 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
                     <Text className="text-[#D12E34] text-sm font-medium">{formatPriority(favor.priority)}</Text>
                   </View>
                 </View>
-                <Text className="text-sm text-gray-600 mb-1" numberOfLines={1}>
+                <Text className="text-sm text-gray-600 mb-1" numberOfLines={1} ellipsizeMode="tail">
                   {favor.title || favor.favor_subject.name} | {favor.time_to_complete || 'Time not specified'}
                 </Text>
-                <Text className="text-sm text-gray-600" numberOfLines={1}>
-                  {favor.city && favor.city !== 'undefined' ? favor.city : ''}{favor.city && favor.city !== 'undefined' && favor.state && favor.state !== 'undefined' ? ', ' : ''}{favor.state && favor.state !== 'undefined' ? favor.state : favor.address}
+                <Text className="text-sm text-gray-600" numberOfLines={1} ellipsizeMode="tail">
+                  {(() => {
+                    // Display city and state if both are available
+                    if (favor.city && favor.city !== 'undefined' && favor.state && favor.state !== 'undefined') {
+                      return `${favor.city}, ${favor.state}`;
+                    }
+                    // Display city only if available
+                    if (favor.city && favor.city !== 'undefined') {
+                      return favor.city;
+                    }
+                    // Display state only if available
+                    if (favor.state && favor.state !== 'undefined') {
+                      return favor.state;
+                    }
+                    // Fall back to full address
+                    return favor.address || 'Location not specified';
+                  })()}
                 </Text>
-                <Text className="text-gray-700 text-sm mb-4 leading-5" numberOfLines={2}>
+                <Text className="text-gray-700 text-sm mb-4 leading-5" numberOfLines={2} ellipsizeMode="tail">
                   {favor.description}
                 </Text>
               </View>
@@ -776,17 +791,32 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
             )}
             <View className="flex-1">
               {/* Category and Time */}
-              <Text className="text-sm text-gray-600 mb-1">
+              <Text className="text-sm text-gray-600 mb-1" numberOfLines={1} ellipsizeMode="tail">
                 {favor.title || favor.favor_subject.name} | {favor.time_to_complete || 'Time not specified'}
               </Text>
               
               {/* Location */}
-              <Text className="text-sm text-gray-600">
-                {favor.city && favor.city !== 'undefined' ? favor.city : ''}{favor.city && favor.city !== 'undefined' && favor.state && favor.state !== 'undefined' ? ', ' : ''}{favor.state && favor.state !== 'undefined' ? favor.state : favor.address}
+              <Text className="text-sm text-gray-600" numberOfLines={1} ellipsizeMode="tail">
+                {(() => {
+                  // Display city and state if both are available
+                  if (favor.city && favor.city !== 'undefined' && favor.state && favor.state !== 'undefined') {
+                    return `${favor.city}, ${favor.state}`;
+                  }
+                  // Display city only if available
+                  if (favor.city && favor.city !== 'undefined') {
+                    return favor.city;
+                  }
+                  // Display state only if available
+                  if (favor.state && favor.state !== 'undefined') {
+                    return favor.state;
+                  }
+                  // Fall back to full address
+                  return favor.address || 'Location not specified';
+                })()}
               </Text>
               
               {/* Description */}
-              <Text className="text-gray-700 text-sm mb-4 leading-5">
+              <Text className="text-gray-700 text-sm mb-4 leading-5" numberOfLines={2} ellipsizeMode="tail">
                 {favor.description}
               </Text>
 
@@ -1132,7 +1162,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
             </Text>
 
             {/* Buttons */}
-            <View className="flex-row space-x-4">
+            <View className="flex-row gap-x-4">
               <TouchableOpacity 
                 className="flex-1 bg-[#44A27B] rounded-full py-4"
                 onPress={handleCancelModalClose}

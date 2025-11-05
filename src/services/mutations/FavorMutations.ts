@@ -35,7 +35,7 @@ export const useCreateFavor = () => {
       Toast.show({
         type: 'success',
         text1: 'Favor Created',
-        text2: 'Your favor has been posted successfully!',
+        text2: 'Your favor has been\nposted successfully!',
         visibilityTime: 4000,
       });
     },
@@ -72,7 +72,7 @@ export const useCreateFavorWithImage = () => {
       Toast.show({
         type: 'success',
         text1: 'Favor Created',
-        text2: 'Your favor has been posted successfully!',
+        text2: 'Your favor has been\nposted successfully!',
         visibilityTime: 4000,
       });
     },
@@ -107,7 +107,7 @@ export const useUpdateFavor = () => {
       Toast.show({
         type: 'success',
         text1: 'Favor Updated',
-        text2: 'Your favor has been updated successfully!',
+        text2: 'Your favor has been\nupdated successfully!',
         visibilityTime: 4000,
       });
     },
@@ -142,7 +142,7 @@ export const useUpdateFavorWithImage = () => {
       Toast.show({
         type: 'success',
         text1: 'Favor Updated',
-        text2: 'Your favor with image has been updated successfully!',
+        text2: 'Your favor with image has\nbeen updated successfully!',
         visibilityTime: 4000,
       });
     },
@@ -322,7 +322,7 @@ export const useApplyToFavor = () => {
       Toast.show({
         type: 'success',
         text1: 'Application Submitted! 🎉',
-        text2: data.message || 'Your application has been submitted successfully!',
+        text2: data.message || 'Your application has been\nsubmitted successfully!',
         visibilityTime: 4000,
       });
     },
@@ -378,7 +378,7 @@ export const useDeleteFavor = () => {
       Toast.show({
         type: 'success',
         text1: 'Favor Cancelled ✅',
-        text2: data.message || 'Your favor has been cancelled successfully!',
+        text2: data.message || 'Your favor has been\ncancelled successfully!',
         visibilityTime: 4000,
       });
     },
@@ -415,7 +415,7 @@ export const useReassignFavor = () => {
       Toast.show({
         type: 'success',
         text1: 'Favor Reassigned! 🔄',
-        text2: data.message || 'Favor has been reassigned to new provider successfully!',
+        text2: data.message || 'Favor has been reassigned\nto new provider successfully!',
         visibilityTime: 4000,
       });
     },
@@ -451,7 +451,7 @@ export const useCancelRequest = () => {
       Toast.show({
         type: 'success',
         text1: 'Request Cancelled ✅',
-        text2: data.message || 'Your favor request has been cancelled successfully!',
+        text2: data.message || 'Your favor request has been\ncancelled successfully!',
         visibilityTime: 4000,
       });
     },
@@ -487,7 +487,7 @@ export const useCompleteFavor = () => {
       Toast.show({
         type: 'success',
         text1: 'Favor Completed! 🎉',
-        text2: data.data.completion_message || 'Favor has been marked as completed successfully!',
+        text2: data.data.completion_message || 'Favor has been marked\nas completed successfully!',
         visibilityTime: 4000,
       });
     },
@@ -523,7 +523,7 @@ export const useCancelAndRepost = () => {
       Toast.show({
         type: 'success',
         text1: 'Favor Reposted! 🔄',
-        text2: data.message || 'Favor has been cancelled and reposted successfully!',
+        text2: data.message || 'Favor has been cancelled\nand reposted successfully!',
         visibilityTime: 4000,
       });
     },
