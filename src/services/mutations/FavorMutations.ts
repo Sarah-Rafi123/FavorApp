@@ -398,19 +398,22 @@ export const useDeleteFavor = () => {
 /**
  * Hook for reassigning a favor to a different provider
  */
-export const useReassignFavor = () => {
+export const useReassignFavor = (options?: {
+  onSuccess?: (data: ReassignFavorResponse, variables: { favorId: number; newProviderId: number }) => void;
+  onError?: (error: Error, variables: { favorId: number; newProviderId: number }) => void;
+}) => {
   const queryClient = useQueryClient();
 
   return useMutation<ReassignFavorResponse, Error, { favorId: number; newProviderId: number }>({
     mutationFn: ({ favorId, newProviderId }) => FavorApis.reassignFavor(favorId, newProviderId),
-    onSuccess: (data, { favorId }) => {
-      console.log('Reassign favor successful:', favorId);
+    onSuccess: (data, variables) => {
+      console.log('Reassign favor successful:', variables.favorId);
       
       // Invalidate and refetch relevant queries
       queryClient.invalidateQueries({ queryKey: ['favors'] });
       queryClient.invalidateQueries({ queryKey: ['favors', 'my'] });
-      queryClient.invalidateQueries({ queryKey: ['favor', favorId] });
-      queryClient.invalidateQueries({ queryKey: ['favor', favorId, 'applicants'] });
+      queryClient.invalidateQueries({ queryKey: ['favor', variables.favorId] });
+      queryClient.invalidateQueries({ queryKey: ['favor', variables.favorId, 'applicants'] });
       
       Toast.show({
         type: 'success',
@@ -418,8 +421,10 @@ export const useReassignFavor = () => {
         text2: data.message || 'Favor has been reassigned\nto new provider successfully!',
         visibilityTime: 4000,
       });
+
+      options?.onSuccess?.(data, variables);
     },
-    onError: (error) => {
+    onError: (error, variables) => {
       console.error('Reassign favor failed:', error);
       
       Toast.show({
@@ -428,6 +433,8 @@ export const useReassignFavor = () => {
         text2: error.message,
         visibilityTime: 4000,
       });
+
+      options?.onError?.(error, variables);
     },
   });
 };

@@ -232,7 +232,7 @@ export function NotificationsScreen() {
             </Text>
             
             {/* Test Buttons */}
-            <View className="space-y-3">
+            {/* <View className="space-y-3">
               <TouchableOpacity
                 onPress={handleTestNotification}
                 className="bg-[#44A27B] px-6 py-3 rounded-full"
@@ -246,7 +246,7 @@ export function NotificationsScreen() {
               >
                 <Text className="text-white font-medium">Test API Notification</Text>
               </TouchableOpacity>
-            </View>
+            </View> */}
           </View>
         </View>
       ) : (

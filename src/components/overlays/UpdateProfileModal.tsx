@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Modal, TouchableOpacity, ScrollView, Image, TextInput, Alert, ActionSheetIOS, Platform } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, ScrollView, Image, TextInput, Alert, ActionSheetIOS, Platform, KeyboardAvoidingView } from 'react-native';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import { CustomButton } from '../buttons/CustomButton';
 import { useProfileQuery } from '../../services/queries/ProfileQueries';
@@ -656,9 +656,21 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
       statusBarTranslucent={true}
       onRequestClose={onClose}
     >
-      <View className="flex-1 bg-black/50 justify-center items-center p-4">
-        <View className="bg-[#FBFFF0] rounded-3xl w-full max-w-sm mx-4 border-4 border-[#71DFB1]">
-          <ScrollView className="max-h-[88vh]">
+      <KeyboardAvoidingView 
+        className="flex-1" 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 20}
+        enabled
+      >
+        <View className="flex-1 bg-black/50 justify-center items-center p-4">
+          <View className="bg-[#FBFFF0] rounded-3xl w-full max-w-sm mx-4 border-4 border-[#71DFB1]">
+            <ScrollView 
+              className="max-h-[88vh]"
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ flexGrow: 1 }}
+              nestedScrollEnabled={true}
+            >
             <View className="p-6">
               <View className="flex-row justify-between items-center mb-6">
                 <Text className="text-xl font-bold text-black">Update Profile</Text>
@@ -963,9 +975,10 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
                 />
               </View>
             </View>
-          </ScrollView>
+            </ScrollView>
+          </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
 
       {/* Calendar Modal */}
       <Modal
@@ -1292,7 +1305,7 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
         statusBarTranslucent={true}
       >
         <View className="flex-1 bg-black/50">
-          <View className="flex-1 bg-white mt-20 rounded-t-3xl">
+          <View className="flex-1 bg-[#FBFFF0] mt-20 rounded-t-3xl">
             <View className="flex-row justify-between items-center p-6 border-b border-gray-200">
               <Text className="text-xl font-bold text-gray-800">Search Address</Text>
               <TouchableOpacity onPress={() => setShowAddressModal(false)}>
@@ -1310,6 +1323,17 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
                 currentLocation={false}
                 keyboardShouldPersistTaps="handled"
                 suppressDefaultStyles={false}
+                textInputProps={{
+                  placeholder: "Enter your address",
+                  placeholderTextColor: "#9CA3AF"
+                }}
+                renderDescription={(row) => row.description}
+                isRowScrollable={true}
+                listEmptyComponent={() => (
+                  <View className="p-4 items-center">
+                    <Text className="text-gray-500 text-center">No addresses found. Please try a different search term.</Text>
+                  </View>
+                )}
                 onPress={(_, details = null) => {
                   if (details) {
                     const addressComponents = details.address_components;

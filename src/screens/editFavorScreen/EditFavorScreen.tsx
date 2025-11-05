@@ -808,7 +808,7 @@ export function EditFavorScreen({ navigation, route }: EditFavorScreenProps) {
         onRequestClose={() => setShowAddressModal(false)}
       >
         <View className="flex-1 bg-black/50">
-          <View className="flex-1 bg-white mt-20 rounded-t-3xl">
+          <View className="flex-1 bg-[#FBFFF0] mt-20 rounded-t-3xl">
             <View className="flex-row justify-between items-center p-6 border-b border-gray-200">
               <Text className="text-xl font-bold text-gray-800">Search Address</Text>
               <TouchableOpacity onPress={() => setShowAddressModal(false)}>
@@ -826,6 +826,17 @@ export function EditFavorScreen({ navigation, route }: EditFavorScreenProps) {
                 currentLocation={false}
                 keyboardShouldPersistTaps="handled"
                 suppressDefaultStyles={false}
+                textInputProps={{
+                  placeholder: "Enter your address",
+                  placeholderTextColor: "#9CA3AF"
+                }}
+                renderDescription={(row) => row.description}
+                isRowScrollable={true}
+                listEmptyComponent={() => (
+                  <View className="p-4 items-center">
+                    <Text className="text-gray-500 text-center">No addresses found. Please try a different search term.</Text>
+                  </View>
+                )}
                 onPress={(_, details = null) => {
                   if (details) {
                     const addressComponents = details.address_components;

@@ -140,7 +140,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
       per_page: 10,
       category: selectedCategories.length > 0 ? selectedCategories : undefined
     },
-    { enabled: activeTab === 'History' }
+    { enabled: true } // Always enabled to prevent re-fetching when switching tabs
   );
 
   const {
@@ -156,7 +156,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
       per_page: 10,
       category: selectedCategories.length > 0 ? selectedCategories : undefined
     },
-    { enabled: activeTab === 'History' }
+    { enabled: true } // Always enabled to prevent re-fetching when switching tabs
   );
 
   // Use the appropriate data source for "All" tab (same as HomeListScreen)
@@ -249,11 +249,11 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
       isLoadingCurrentData || (currentPage === 1 && !currentData)
     )
   ) || (
-    // For Active/History tabs: show loading if we don't have data yet and queries are enabled, or during refresh
-    activeTab !== 'All' && ((currentFavors.length === 0 && !error) || (refreshing && currentFavors.length === 0))
-  ) || (
-    // General loading states (but not for All tab during refresh with existing data)
-    (isLoading || refreshing) && !(activeTab === 'All' && refreshing && allFavors.length > 0)
+    // For Active/History tabs: only show loading during initial load or refresh, not when data is present
+    activeTab !== 'All' && (
+      (refreshing) || 
+      (currentFavors.length === 0 && !error && isLoading && !refreshing)
+    )
   );
 
   // Debug logging for loading states
@@ -267,9 +267,17 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
       currentFavorsLength: currentFavors.length,
       allFavorsLength: allFavors.length,
       hasError: !!error,
-      currentPage
+      currentPage,
+      ...(activeTab === 'History' && {
+        completedMyFavorsLoading,
+        cancelledMyFavorsLoading,
+        completedDataLength: completedMyFavorsResponse?.data?.favors?.length || 0,
+        cancelledDataLength: cancelledMyFavorsResponse?.data?.favors?.length || 0,
+        completedError: !!completedMyFavorsError,
+        cancelledError: !!cancelledMyFavorsError,
+      })
     });
-  }, [activeTab, isLoading, isLoadingCurrentData, refreshing, isActuallyLoading, currentFavors.length, allFavors.length, error, currentPage]);
+  }, [activeTab, isLoading, isLoadingCurrentData, refreshing, isActuallyLoading, currentFavors.length, allFavors.length, error, currentPage, completedMyFavorsLoading, cancelledMyFavorsLoading, completedMyFavorsResponse, cancelledMyFavorsResponse, completedMyFavorsError, cancelledMyFavorsError]);
 
   // Debug logging
   React.useEffect(() => {

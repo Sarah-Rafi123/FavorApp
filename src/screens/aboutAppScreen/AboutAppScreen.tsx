@@ -41,7 +41,7 @@ export function AboutAppScreen({ navigation }: AboutAppScreenProps) {
       <ScrollView 
         className="flex-1"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: 120 }}
       >
         <View className="px-6 pt-6">
           {/* App Logo */}

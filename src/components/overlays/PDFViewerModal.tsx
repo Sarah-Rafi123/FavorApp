@@ -45,7 +45,7 @@ export function PDFViewerModal({ visible, onClose, pdfUri, fileName }: PDFViewer
         {/* Header */}
         <View className="pt-12 pb-4 px-4 bg-white border-b border-gray-200">
           <View className="flex-row justify-between items-center">
-            <View className="flex-1">
+            <View className="flex-1 pt-8 ">
               <Text className="text-lg font-semibold text-gray-800" numberOfLines={1}>
                 {fileName}
               </Text>
@@ -56,15 +56,15 @@ export function PDFViewerModal({ visible, onClose, pdfUri, fileName }: PDFViewer
             <View className="flex-row gap-2">
               <TouchableOpacity
                 onPress={handleOpenExternal}
-                className="px-3 py-2 bg-[#44A27B] rounded-lg"
+                className="px-3 py-2 rounded-xl bg-[#44A27B]"
               >
                 <Text className="text-white text-sm font-medium">Share</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={onClose}
-                className="px-3 py-2 bg-gray-100 rounded-lg"
+                className="px-3 py-2 bg-gray-100 rounded-xl"
               >
-                <Text className="text-gray-800 text-sm font-medium">Close</Text>
+                <Text className="text-gray-800  text-sm font-medium">Close</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -90,7 +90,7 @@ export function PDFViewerModal({ visible, onClose, pdfUri, fileName }: PDFViewer
             </TouchableOpacity>
             <TouchableOpacity
               onPress={onClose}
-              className="bg-gray-100 px-6 py-3 rounded-lg"
+              className="bg-gray-100 px-6 py-3 rounded-xl"
             >
               <Text className="text-gray-800 font-medium">
                 Close

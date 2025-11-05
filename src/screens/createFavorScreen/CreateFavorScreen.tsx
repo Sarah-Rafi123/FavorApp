@@ -54,7 +54,12 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
   });
   
   // Reassign favor mutation
-  const reassignFavorMutation = useReassignFavor();
+  const reassignFavorMutation = useReassignFavor({
+    onSuccess: () => {
+      // Refresh data after successful reassign
+      handleRefresh();
+    }
+  });
 
   // API calls for different tabs
   // All tab: active favors (shows requests)

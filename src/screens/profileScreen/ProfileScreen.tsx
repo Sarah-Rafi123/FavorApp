@@ -514,12 +514,12 @@ export function ProfileScreen() {
             <View className="flex-row justify-between items-center mb-3">
               <Text className="text-lg font-bold text-black">Fund Details</Text>
               <View className="flex-row gap-2">
-                <TouchableOpacity 
+                {/* <TouchableOpacity 
                   onPress={() => scheduleTestNotificationWithType('favor_request', 'New Favor Request', 'John Doe wants help with moving furniture')}
                   className="px-3 py-1 bg-blue-500 rounded-full"
                 >
                   <Text className="text-white text-xs font-medium">Test</Text>
-                </TouchableOpacity>
+                </TouchableOpacity> */}
                 <TouchableOpacity 
                   onPress={() => refetchBalance()}
                   disabled={isBalanceLoading}

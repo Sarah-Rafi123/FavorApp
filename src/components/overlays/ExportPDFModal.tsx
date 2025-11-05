@@ -189,7 +189,7 @@ export function ExportPDFModal({ visible, onClose, onExport, isExporting = false
                 </View>
               )}
               <Text className="text-white text-center font-semibold text-base">
-                {isExporting ? 'Exporting...' : '⬇ Export PDF'}
+                {isExporting ? 'Exporting...' : 'Export PDF'}
               </Text>
             </TouchableOpacity>
           </View>
