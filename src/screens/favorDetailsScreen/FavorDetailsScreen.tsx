@@ -94,6 +94,24 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
   const userProfile = userProfileResponse?.data.user;
   const providerProfile = providerProfileResponse?.data.user;
 
+  // Debug logging to check contact information
+  React.useEffect(() => {
+    if (userProfile) {
+      console.log('📞 User Profile Contact Info:');
+      console.log('  - Phone Call:', userProfile.phone_no_call);
+      console.log('  - Phone Text:', userProfile.phone_no_text);
+      console.log('  - Has Call Number:', !!userProfile.phone_no_call);
+      console.log('  - Has Text Number:', !!userProfile.phone_no_text);
+    }
+    if (providerProfile) {
+      console.log('📞 Provider Profile Contact Info:');
+      console.log('  - Phone Call:', providerProfile.phone_no_call);
+      console.log('  - Phone Text:', providerProfile.phone_no_text);
+      console.log('  - Has Call Number:', !!providerProfile.phone_no_call);
+      console.log('  - Has Text Number:', !!providerProfile.phone_no_text);
+    }
+  }, [userProfile, providerProfile]);
+
   // Function to get user initials from full name
   const getUserInitials = (fullName: string) => {
     if (!fullName) return 'U';
@@ -410,7 +428,7 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
                 </View>
 
                 <View className="flex-row">
-                  <Text className="text-gray-700 text-base w-20">Tip</Text>
+                  <Text className="text-gray-700 text-base w-28">Favor Amount</Text>
                   <Text className="text-gray-700 text-base mr-2">:</Text>
                   <Text className="text-gray-800 text-base flex-1 font-semibold">
                     ${parseFloat((favor.tip || 0).toString()).toFixed(2)}
@@ -419,7 +437,7 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
 
                 {favor.additional_tip && parseFloat((favor.additional_tip || 0).toString()) > 0 && (
                   <View className="flex-row">
-                    <Text className="text-gray-700 text-base w-20">Bonus</Text>
+                    <Text className="text-gray-700 text-base w-20">Tip</Text>
                     <Text className="text-gray-700 text-base mr-2">:</Text>
                     <Text className="text-green-600 text-base flex-1 font-semibold">
                       +${parseFloat((favor.additional_tip || 0).toString()).toFixed(2)}
@@ -489,32 +507,27 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
               </View>
 
               <View className="ml-4 flex-1">
-                <Text className="text-lg font-semibold text-black">
+                <Text className="text-2xl font-bold text-black mb-1">
                   {favor.user.full_name}
                 </Text>
-                <View className="flex-row items-center">
-                  <Text className="text-gray-600 text-sm">⭐ {userProfile?.average_rating || '4.5'} | </Text>
-                  <Text className="text-gray-600 text-sm">{userProfile?.total_reviews || '0'} Reviews</Text>
+                <View className="flex-row items-center mb-1">
+                  <Text className="text-orange-500 text-base font-medium">⭐ 4.5</Text>
+                  <Text className="text-gray-500 text-base ml-2">| 456 Reviews</Text>
                 </View>
-                {userProfile?.years_of_experience && (
-                  <Text className="text-gray-600 text-sm">{userProfile.years_of_experience} years experience</Text>
-                )}
-                {userProfile?.has_contact_info && userProfile?.email && (
-                  <Text className="text-gray-600 text-sm">📧 {userProfile.email}</Text>
-                )}
+                <Text className="text-gray-500 text-base mb-2">2 Mins Away</Text>
                 <TouchableOpacity onPress={() => navigation?.navigate('UserProfileScreen', { userId: favor.user.id })}>
-                  <Text className="text-[#44A27B] text-sm font-medium">View Profile</Text>
+                  <Text className="text-[#44A27B] text-base font-medium underline">View Profile</Text>
                 </TouchableOpacity>
               </View>
             </View>
 
             {/* Contact Buttons - Only show if contact info is available */}
-            {userProfile?.has_contact_info ? (
-              <View className="flex-row mb-4">
+            {userProfile && (userProfile.phone_no_call || userProfile.phone_no_text) && (
+              <View className="flex-row space-x-3 mt-4 mb-6">
                 {userProfile.phone_no_call && (
                   <TouchableOpacity 
-                    className="flex-1 bg-transparent border border-black rounded-xl mr-2 py-3 px-2"
-                    onPress={() => handleCallNumber(userProfile.phone_no_call)}
+                    className="flex-1 bg-transparent border border-black rounded-xl py-3"
+                    onPress={() => handleCallNumber(userProfile.phone_no_call!)}
                   >
                     <Text className="text-center text-gray-800 font-medium text-sm">
                       Call: {userProfile.phone_no_call}
@@ -523,8 +536,8 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
                 )}
                 {userProfile.phone_no_text && (
                   <TouchableOpacity 
-                    className="flex-1 bg-transparent border border-black rounded-xl ml-2 py-3 px-2"
-                    onPress={() => handleTextNumber(userProfile.phone_no_text)}
+                    className={`flex-1 bg-transparent border border-black rounded-xl py-3 ${userProfile.phone_no_call ? 'ml-3' : ''}`}
+                    onPress={() => handleTextNumber(userProfile.phone_no_text!)}
                   >
                     <Text className="text-center text-gray-800 font-medium text-sm">
                       Text: {userProfile.phone_no_text}
@@ -532,13 +545,6 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
                   </TouchableOpacity>
                 )}
               </View>
-            ) : (
-              <View></View>
-              // <View className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-xl">
-              //   <Text className="text-center text-yellow-800 font-medium text-sm">
-              //     Contact information not available for this user
-              //   </Text>
-              // </View>
             )}
 
             {/* Submit Review Button for provider mode */}
@@ -585,32 +591,27 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
               </View>
 
               <View className="ml-4 flex-1">
-                <Text className="text-lg font-semibold text-black">
+                <Text className="text-2xl font-bold text-black mb-1">
                   {favor.accepted_response.user.full_name}
                 </Text>
-                <View className="flex-row items-center">
-                  <Text className="text-gray-600 text-sm">⭐ {providerProfile?.average_rating || '4.5'} | </Text>
-                  <Text className="text-gray-600 text-sm">{providerProfile?.total_reviews || '0'} Reviews</Text>
+                <View className="flex-row items-center mb-1">
+                  <Text className="text-orange-500 text-base font-medium">⭐ 4.5</Text>
+                  <Text className="text-gray-500 text-base ml-2">| 456 Reviews</Text>
                 </View>
-                {providerProfile?.years_of_experience && (
-                  <Text className="text-gray-600 text-sm">{providerProfile.years_of_experience} years experience</Text>
-                )}
-                {providerProfile?.has_contact_info && providerProfile?.email && (
-                  <Text className="text-gray-600 text-sm">📧 {providerProfile.email}</Text>
-                )}
+                <Text className="text-gray-500 text-base mb-2">2 Mins Away</Text>
                 <TouchableOpacity onPress={handleViewProfile}>
-                  <Text className="text-[#44A27B] text-sm font-medium">View Profile</Text>
+                  <Text className="text-[#44A27B] text-base font-medium underline">View Profile</Text>
                 </TouchableOpacity>
               </View>
             </View>
 
             {/* Contact Buttons - Only show if contact info is available */}
-            {providerProfile?.has_contact_info ? (
-              <View className="flex-row mb-4">
+            {providerProfile && (providerProfile.phone_no_call || providerProfile.phone_no_text) && (
+              <View className="flex-row space-x-3 mt-4 mb-6">
                 {providerProfile.phone_no_call && (
                   <TouchableOpacity 
-                    className="flex-1 bg-transparent border border-black rounded-xl mr-2 py-3 px-2"
-                    onPress={() => handleCallNumber(providerProfile.phone_no_call)}
+                    className="flex-1 bg-transparent border border-black rounded-xl py-3"
+                    onPress={() => handleCallNumber(providerProfile.phone_no_call!)}
                   >
                     <Text className="text-center text-gray-800 font-medium text-sm">
                       Call: {providerProfile.phone_no_call}
@@ -619,8 +620,8 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
                 )}
                 {providerProfile.phone_no_text && (
                   <TouchableOpacity 
-                    className="flex-1 bg-transparent border border-black rounded-xl ml-2 py-3 px-2"
-                    onPress={() => handleTextNumber(providerProfile.phone_no_text)}
+                    className={`flex-1 bg-transparent border border-black rounded-xl py-3 ${providerProfile.phone_no_call ? 'ml-3' : ''}`}
+                    onPress={() => handleTextNumber(providerProfile.phone_no_text!)}
                   >
                     <Text className="text-center text-gray-800 font-medium text-sm">
                       Text: {providerProfile.phone_no_text}
@@ -628,13 +629,6 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
                   </TouchableOpacity>
                 )}
               </View>
-            ) : (
-              <View></View>
-              /* <View className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-xl">
-                <Text className="text-center text-yellow-800 font-medium text-sm">
-                  Contact information not available for this provider
-                </Text>
-              </View> */
             )}
 
             {/* Action buttons based on context - only show if favor is not completed */}
@@ -687,7 +681,7 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
             </Text>
             
             {reviewsResponse.data.reviews.map((review, index) => (
-              <View key={index} className="bg-white rounded-2xl p-4 mb-3 border border-gray-200">
+              <View key={index} className="bg-white rounded-2xl p-4 mb-3 border border-gray-300">
                 {/* Reviewer Info */}
                 <View className="flex-row items-center mb-3">
                   <View className="w-10 h-10 bg-gray-200 rounded-full overflow-hidden">

@@ -242,7 +242,7 @@ export function OtpVerificationScreen({ onBack, onVerifySuccess, email }: OtpVer
                 if (ref) inputRefs.current[index] = ref;
               }}
               className={`w-12 h-12 border-2 rounded-lg text-center text-xl font-semibold bg-transparent ${
-                focusedIndex === index ? 'border-green-500' : 'border-gray-200'
+                focusedIndex === index ? 'border-green-500' : 'border-gray-300'
               }`}
               value={digit}
               onChangeText={(value) => handleOtpChange(value, index)}

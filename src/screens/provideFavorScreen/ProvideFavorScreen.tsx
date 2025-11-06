@@ -1073,7 +1073,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
         >
           <View className="bg-white rounded-2xl m-6 max-h-96">
             {/* Header */}
-            <View className="flex-row justify-between items-center p-4 border-b border-gray-200">
+            <View className="flex-row justify-between items-center p-4 border-b border-gray-300">
               <Text className="text-lg font-bold text-gray-900">Filter by Category</Text>
               <TouchableOpacity onPress={() => setShowCategoryFilter(false)}>
                 <Text className="text-gray-500 text-xl">✕</Text>
@@ -1110,7 +1110,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
             </ScrollView>
 
             {/* Footer */}
-            <View className="flex-row p-4 border-t border-gray-200">
+            <View className="flex-row p-4 border-t border-gray-300">
               <TouchableOpacity
                 className="flex-1 py-3 px-4 bg-gray-100 rounded-xl mr-2"
                 onPress={handleClearFilters}

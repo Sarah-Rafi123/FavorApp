@@ -10,6 +10,8 @@ export interface UpdateProfileData {
     middle_name?: string;
     phone_no_call?: string;
     phone_no_text?: string;
+    date_of_birth?: string;
+    age?: number;
     years_of_experience?: number;
     about_me?: string;
     skills?: string[];

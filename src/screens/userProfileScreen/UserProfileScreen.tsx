@@ -314,7 +314,7 @@ export function UserProfileScreen({ navigation, route }: UserProfileScreenProps)
             </Text>
             
             {reviews.map((review, index) => (
-              <View key={index} className="bg-white rounded-2xl p-4 mb-3 border border-gray-200">
+              <View key={index} className="bg-white rounded-2xl p-4 mb-3 border border-gray-300">
                 {/* Reviewer Info */}
                 <View className="flex-row items-center mb-3">
                   <View className="w-10 h-10 bg-gray-200 rounded-full overflow-hidden">
@@ -381,7 +381,7 @@ export function UserProfileScreen({ navigation, route }: UserProfileScreenProps)
 
         {/* No Reviews State */}
         {!reviewsLoading && reviews.length === 0 && (
-          <View className="mx-4 mb-6 bg-white rounded-2xl p-6 border border-gray-200">
+          <View className="mx-4 mb-6 bg-white rounded-2xl p-6 border border-gray-300">
             <Text className="text-center text-gray-600 text-base">
               No reviews yet
             </Text>

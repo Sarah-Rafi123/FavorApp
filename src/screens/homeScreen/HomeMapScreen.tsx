@@ -36,10 +36,9 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
   const [selectedProfile, setSelectedProfile] = useState<any>(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showLocationPermissionModal, setShowLocationPermissionModal] = useState(false);
+  const [showAddressModal, setShowAddressModal] = useState(false);
   const [currentAddress, setCurrentAddress] = useState('Getting location...');
   const [tempLocation, setTempLocation] = useState('');
-  const [searchText, setSearchText] = useState(''); // For the search input
-  const [isSearching, setIsSearching] = useState(false); // Track if user is actively searching
   const [liveLocation, setLiveLocation] = useState<any>(null); // User's actual GPS location
   const [selectedLocation, setSelectedLocation] = useState<{latitude: number, longitude: number} | null>(null); // Currently viewed location
   const [mapRegion, setMapRegion] = useState({
@@ -378,163 +377,46 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
         </MapView>
       </View>
 
-      {/* Location Search Bar with Google Places Autocomplete */}
-      <View className="absolute top-52 left-6 right-6 z-50" style={{ zIndex: 9998 }}>
-        <View className="bg-white rounded-full shadow-lg">
+      {/* Location Display Field */}
+      <View className="absolute top-52 left-6 right-6 z-50">
+        <TouchableOpacity 
+          onPress={() => setShowAddressModal(true)}
+          className="bg-white rounded-full shadow-lg"
+        >
           <View className="flex-row items-center px-4 py-3">
             <View className="w-2.5 h-2.5 bg-red-500 rounded-full mr-3"></View>
             <View className="flex-1">
-              <GooglePlacesAutocomplete
-                placeholder={isSearching ? "Search location..." : (selectedLocation ? "Search new location..." : "Search location...")}
-                minLength={2}
-                listViewDisplayed="auto"
-                enablePoweredByContainer={false}
-                predefinedPlaces={[]}
-                currentLocation={false}
-                currentLocationLabel=""
-                keyboardShouldPersistTaps="handled"
-                suppressDefaultStyles={false}
-                onPress={(_, details = null) => {
-                  if (details) {
-                    const { lat, lng } = details.geometry.location;
-                    const newAddress = details.formatted_address;
-                    
-                    // Update current address and location
-                    setCurrentAddress(newAddress);
-                    setTempLocation(newAddress);
-                    setSearchText(''); // Clear search text after selection
-                    setIsSearching(false); // Stop searching mode
-                    
-                    // Set this as the new current location (not live GPS, but selected location)
-                    const newLocationCoords = { latitude: lat, longitude: lng };
-                    setLocation(newLocationCoords);
-                    setSelectedLocation(newLocationCoords);
-                    
-                    // Set map region to exact selected location immediately (no animation)
-                    const newRegion = {
-                      latitude: lat,
-                      longitude: lng,
-                      latitudeDelta: 0.05,
-                      longitudeDelta: 0.05,
-                    };
-                    
-                    setMapRegion(newRegion);
-                  }
-                }}
-                query={{
-                  key: process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY,
-                  language: 'en',
-                  types: 'geocode'
-                }}
-                fetchDetails={true}
-                textInputProps={{
-                  value: isSearching ? searchText : (selectedLocation ? currentAddress : ''),
-                  onChangeText: (text) => {
-                    setIsSearching(true);
-                    setSearchText(text);
-                    if (!text.trim()) {
-                      setIsSearching(false);
-                    }
-                  },
-                  onFocus: () => {
-                    setIsSearching(true);
-                    if (!selectedLocation && currentAddress !== 'Getting location...' && currentAddress !== 'Your Location') {
-                      setSearchText(currentAddress);
-                    } else {
-                      setSearchText('');
-                    }
-                  },
-                  onBlur: () => {
-                    if (!searchText.trim()) {
-                      setIsSearching(false);
-                    }
-                  },
-                  style: {
-                    fontSize: 14,
-                    color: isSearching ? '#374151' : '#6B7280',
-                    backgroundColor: 'transparent',
-                    height: 30,
-                    paddingVertical: 0,
-                    margin: 0,
-                  },
-                  placeholderTextColor: '#9CA3AF',
-                  autoComplete: 'off',
-                  autoCorrect: false,
-                  returnKeyType: 'search',
-                }}
-                styles={{
-                  container: {
-                    flex: 1,
-                    zIndex: 9999,
-                  },
-                  textInputContainer: {
-                    backgroundColor: 'transparent',
-                    borderWidth: 0,
-                    paddingHorizontal: 0,
-                    paddingVertical: 0,
-                    height: 30,
-                    margin: 0,
-                  },
-                  textInput: {
-                    backgroundColor: 'transparent',
-                    height: 30,
-                    margin: 0,
-                    padding: 0,
-                    fontSize: 14,
-                    color: '#374151',
-                    fontWeight: '400',
-                  },
-                  listView: {
-                    backgroundColor: 'white',
-                    borderWidth: 1,
-                    borderColor: '#e5e7eb',
-                    borderRadius: 12,
-                    marginTop: 12,
-                    elevation: 999,
-                    zIndex: 10000,
-                    maxHeight: 250,
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 8 },
-                    shadowOpacity: 0.4,
-                    shadowRadius: 20,
-                    position: 'absolute',
-                    top: 50,
-                    left: -16,
-                    right: -16,
-                    overflow: 'scroll',
-                  },
-                  row: {
-                    backgroundColor: 'white',
-                    padding: 13,
-                    minHeight: 44,
-                    borderBottomWidth: 1,
-                    borderBottomColor: '#f3f4f6',
-                  },
-                  separator: {
-                    height: 0,
-                  },
-                  poweredContainer: {
-                    display: 'none'
-                  },
-                  description: {
-                    fontSize: 13,
-                    color: '#6b7280',
-                  },
-                  predefinedPlacesDescription: {
-                    color: '#374151',
-                  }
-                }}
-              />
+              <Text className="text-gray-800 text-sm font-medium" numberOfLines={1}>
+                {currentAddress}
+              </Text>
             </View>
             <TouchableOpacity 
-              onPress={() => {
+              onPress={async (e) => {
+                e.stopPropagation(); // Prevent modal from opening
                 // Return to live GPS location immediately
                 if (liveLocation) {
                   setLocation(liveLocation);
                   setSelectedLocation(null);
-                  setCurrentAddress('Your Location');
-                  setSearchText(''); // Clear search text completely
-                  setIsSearching(false); // Stop searching mode
+                  
+                  // Reverse geocode to get current address text
+                  try {
+                    const addresses = await Location.reverseGeocodeAsync({
+                      latitude: liveLocation.latitude,
+                      longitude: liveLocation.longitude,
+                    });
+                    
+                    if (addresses.length > 0) {
+                      const address = addresses[0];
+                      const formattedAddress = `${address.street || ''} ${address.city || ''}, ${address.region || ''}, ${address.country || ''}`.trim().replace(/\s+/g, ' ');
+                      setCurrentAddress(formattedAddress || 'Your Location');
+                    } else {
+                      setCurrentAddress('Your Location');
+                    }
+                  } catch (geocodeError) {
+                    console.error('Error reverse geocoding:', geocodeError);
+                    setCurrentAddress('Your Location');
+                  }
+                  
                   const newRegion = {
                     latitude: liveLocation.latitude,
                     longitude: liveLocation.longitude,
@@ -552,21 +434,37 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
               <Text className="text-gray-600 text-xs">📍</Text>
             </TouchableOpacity>
           </View>
-          
-        </View>
+        </TouchableOpacity>
       </View>
 
       {/* GPS Location Button */}
       <View className="absolute bottom-36 right-6 z-10">
         <TouchableOpacity
-          onPress={() => {
+          onPress={async () => {
             // Return to live GPS location
             if (liveLocation) {
               setLocation(liveLocation);
               setSelectedLocation(null);
-              setCurrentAddress('Your Location');
-              setSearchText(''); // Clear search text completely
-              setIsSearching(false); // Stop searching mode
+              
+              // Reverse geocode to get current address text
+              try {
+                const addresses = await Location.reverseGeocodeAsync({
+                  latitude: liveLocation.latitude,
+                  longitude: liveLocation.longitude,
+                });
+                
+                if (addresses.length > 0) {
+                  const address = addresses[0];
+                  const formattedAddress = `${address.street || ''} ${address.city || ''}, ${address.region || ''}, ${address.country || ''}`.trim().replace(/\s+/g, ' ');
+                  setCurrentAddress(formattedAddress || 'Your Location');
+                } else {
+                  setCurrentAddress('Your Location');
+                }
+              } catch (geocodeError) {
+                console.error('Error reverse geocoding:', geocodeError);
+                setCurrentAddress('Your Location');
+              }
+              
               const newRegion = {
                 latitude: liveLocation.latitude,
                 longitude: liveLocation.longitude,
@@ -641,6 +539,122 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
               >
                 <Text className="text-white text-center font-semibold">Allow</Text>
               </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Address Search Modal */}
+      <Modal
+        visible={showAddressModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowAddressModal(false)}
+        statusBarTranslucent={true}
+      >
+        <View className="flex-1 bg-black/50">
+          <View className="flex-1 bg-[#FBFFF0] mt-20 rounded-t-3xl">
+            <View className="flex-row justify-between items-center p-6 border-b border-gray-300">
+              <Text className="text-xl font-bold text-gray-800">Search Location</Text>
+              <TouchableOpacity onPress={() => setShowAddressModal(false)}>
+                <Text className="text-gray-500 text-lg">✕</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View className="p-6 flex-1">
+              <GooglePlacesAutocomplete
+                placeholder="Enter your location"
+                minLength={2}
+                listViewDisplayed="auto"
+                enablePoweredByContainer={false}
+                predefinedPlaces={[]}
+                currentLocation={false}
+                keyboardShouldPersistTaps="handled"
+                suppressDefaultStyles={false}
+                textInputProps={{
+                  placeholder: "Enter your location",
+                  placeholderTextColor: "#9CA3AF"
+                }}
+                onPress={(_, details = null) => {
+                  if (details) {
+                    const { lat, lng } = details.geometry.location;
+                    const newAddress = details.formatted_address;
+                    
+                    // Update current address and location
+                    setCurrentAddress(newAddress);
+                    setTempLocation(newAddress);
+                    
+                    // Set this as the new current location (not live GPS, but selected location)
+                    const newLocationCoords = { latitude: lat, longitude: lng };
+                    setLocation(newLocationCoords);
+                    setSelectedLocation(newLocationCoords);
+                    
+                    // Set map region to exact selected location
+                    const newRegion = {
+                      latitude: lat,
+                      longitude: lng,
+                      latitudeDelta: 0.05,
+                      longitudeDelta: 0.05,
+                    };
+                    
+                    setMapRegion(newRegion);
+                    
+                    // Close the modal
+                    setShowAddressModal(false);
+                  }
+                }}
+                query={{
+                  key: process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY,
+                  language: 'en',
+                  types: 'geocode'
+                }}
+                fetchDetails={true}
+                styles={{
+                  container: {
+                    flex: 1,
+                  },
+                  textInputContainer: {
+                    backgroundColor: '#FFFFFF',
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: '#D1D5DB',
+                    paddingHorizontal: 16,
+                    paddingVertical: 4,
+                    marginBottom: 16,
+                  },
+                  textInput: {
+                    backgroundColor: 'transparent',
+                    height: 44,
+                    margin: 0,
+                    padding: 0,
+                    fontSize: 16,
+                    color: '#374151',
+                  },
+                  listView: {
+                    backgroundColor: 'white',
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: '#D1D5DB',
+                    maxHeight: 300,
+                  },
+                  row: {
+                    backgroundColor: 'white',
+                    padding: 16,
+                    borderBottomWidth: 1,
+                    borderBottomColor: '#F3F4F6',
+                  },
+                  separator: {
+                    height: 0,
+                  },
+                  poweredContainer: {
+                    display: 'none'
+                  },
+                  description: {
+                    fontSize: 14,
+                    color: '#6B7280',
+                  },
+                }}
+              />
             </View>
           </View>
         </View>

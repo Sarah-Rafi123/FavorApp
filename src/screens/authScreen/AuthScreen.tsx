@@ -503,7 +503,7 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
                   <TextInput
                     ref={emailInputRef}
                     className={`px-4 py-3 rounded-xl border text-base bg-transparent ${
-                      errors.email ? 'border-red-500' : 'border-gray-200'
+                      errors.email ? 'border-red-500' : 'border-gray-300'
                     }`}
                     style={{ 
                       backgroundColor: 'transparent',
@@ -533,7 +533,7 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
                 
                 {/* Credential Dropdown */}
                 {showEmailDropdown && activeTab === 'signin' && savedCredentials.length > 0 && (
-                  <View className="absolute top-14 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-10 max-h-48">
+                  <View className="absolute top-14 left-0 right-0 bg-white border border-gray-300 rounded-xl shadow-lg z-10 max-h-48">
                     <View className="p-2">
                       <Text className="text-xs font-medium text-gray-500 px-2 py-1">Saved Accounts</Text>
                       {savedCredentials.map((credential, index) => (
@@ -581,7 +581,7 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
                   <TextInput
                     ref={passwordInputRef}
                     className={`px-4 py-3 rounded-xl border pr-12 text-base bg-transparent ${
-                      errors.password ? 'border-red-500' : 'border-gray-200'
+                      errors.password ? 'border-red-500' : 'border-gray-300'
                     }`}
                     style={{ 
                       backgroundColor: 'transparent',
@@ -626,7 +626,7 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
                     <TextInput
                       ref={confirmPasswordInputRef}
                       className={`px-4 py-3 rounded-xl border pr-12 text-base bg-transparent ${
-                        errors.confirmPassword ? 'border-red-500' : 'border-gray-200'
+                        errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
                       }`}
                       style={{ 
                         backgroundColor: 'transparent',

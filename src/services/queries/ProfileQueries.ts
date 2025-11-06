@@ -42,6 +42,15 @@ export const useUserReviewsQuery = (
     enabled: !!userId && (options?.enabled !== false),
     staleTime: 1000 * 60 * 3, // 3 minutes (reviews change more frequently)
     gcTime: 1000 * 60 * 15, // 15 minutes
+    retry: (failureCount, error: any) => {
+      // Don't retry on 500 errors after first attempt
+      if (error?.response?.status === 500) {
+        return failureCount < 1;
+      }
+      // Retry other errors up to 3 times
+      return failureCount < 3;
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
   });
 };
 

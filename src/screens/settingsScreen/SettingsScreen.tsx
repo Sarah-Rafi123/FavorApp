@@ -69,7 +69,7 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
     hideBorder?: boolean;
   }) => (
     <TouchableOpacity 
-      className={`flex-row items-center py-5 px-6 bg-transparent ${hideBorder ? '' : 'border-b border-gray-200'}`}
+      className={`flex-row items-center py-5 px-6 bg-transparent ${hideBorder ? '' : 'border-b border-gray-300'}`}
       onPress={onPress}
       disabled={hasSwitch}
     >

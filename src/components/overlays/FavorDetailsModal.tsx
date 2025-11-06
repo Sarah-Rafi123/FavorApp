@@ -363,7 +363,7 @@ export function FavorDetailsModal({ visible, onClose, favorId }: FavorDetailsMod
                 </View>
 
                 {/* Divider */}
-                <View className="border-t border-gray-200 my-6"></View>
+                <View className="border-t border-gray-300 my-6"></View>
 
                 {/* About User Section */}
                 <View className="mb-6">

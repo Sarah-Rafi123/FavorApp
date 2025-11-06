@@ -201,7 +201,7 @@ export function HelpSupportScreen({ navigation }: HelpSupportScreenProps) {
             </Text>
             <TextInput
               className={`px-4 py-3 rounded-xl border text-base bg-transparent ${
-                errors.fullName ? 'border-red-500' : 'border-gray-200'
+                errors.fullName ? 'border-red-500' : 'border-gray-300'
               }`}
               style={{ 
                 backgroundColor: 'transparent',
@@ -235,7 +235,7 @@ export function HelpSupportScreen({ navigation }: HelpSupportScreenProps) {
             </Text>
             <TextInput
               className={`px-4 py-3 rounded-xl border text-base bg-transparent ${
-                errors.email ? 'border-red-500' : 'border-gray-200'
+                errors.email ? 'border-red-500' : 'border-gray-300'
               }`}
               style={{ 
                 backgroundColor: 'transparent',
@@ -263,7 +263,7 @@ export function HelpSupportScreen({ navigation }: HelpSupportScreenProps) {
             </Text>
             <TextInput 
               className={`px-4 py-3 rounded-xl border text-base bg-transparent ${
-                errors.subject ? 'border-red-500' : 'border-gray-200'
+                errors.subject ? 'border-red-500' : 'border-gray-300'
               }`}
               style={{ 
                 backgroundColor: 'transparent',
@@ -296,7 +296,7 @@ export function HelpSupportScreen({ navigation }: HelpSupportScreenProps) {
             </Text>
             <TextInput
               className={`px-4 py-3 rounded-xl border text-base bg-transparent ${
-                errors.description ? 'border-red-500' : 'border-gray-200'
+                errors.description ? 'border-red-500' : 'border-gray-300'
               }`}
               style={{ 
                 backgroundColor: 'transparent',

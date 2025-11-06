@@ -507,7 +507,7 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
                 </View>
 
                 <View className="flex-row">
-                  <Text className="text-gray-700 text-base w-20">Tip</Text>
+                  <Text className="text-gray-700 text-base w-28">Favor Amount</Text>
                   <Text className="text-gray-700 text-base mr-2">:</Text>
                   <Text className="text-gray-800 text-base flex-1 font-semibold">
                     ${parseFloat((favor.tip || 0).toString()).toFixed(2)}
@@ -516,7 +516,7 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
 
                 {favor.additional_tip && parseFloat((favor.additional_tip || 0).toString()) > 0 && (
                   <View className="flex-row">
-                    <Text className="text-gray-700 text-base w-20">Bonus</Text>
+                    <Text className="text-gray-700 text-base w-20">Tip</Text>
                     <Text className="text-gray-700 text-base mr-2">:</Text>
                     <Text className="text-green-600 text-base flex-1 font-semibold">
                       +${parseFloat((favor.additional_tip || 0).toString()).toFixed(2)}
@@ -662,7 +662,7 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
             </Text>
             
             {reviewsResponse.data.reviews.map((review, index) => (
-              <View key={index} className="bg-white rounded-2xl p-4 mb-3 border border-gray-200">
+              <View key={index} className="bg-white rounded-2xl p-4 mb-3 border border-gray-300">
                 {/* Reviewer Info */}
                 <View className="flex-row items-center mb-3">
                   <View className="w-10 h-10 bg-[#44A27B] rounded-full overflow-hidden items-center justify-center">

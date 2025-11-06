@@ -45,11 +45,17 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
   // Helper function to format date from API to MM/DD/YYYY
   const formatDateForForm = (dateString: string) => {
     if (!dateString) return '';
-    const date = new Date(dateString);
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
-    const year = date.getFullYear();
-    return `${month}/${day}/${year}`;
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return '';
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const day = date.getDate().toString().padStart(2, '0');
+      const year = date.getFullYear();
+      return `${month}/${day}/${year}`;
+    } catch (error) {
+      console.warn('Date formatting error:', error);
+      return '';
+    }
   };
 
   // Helper function to format phone number for form display (without country code)
@@ -114,11 +120,17 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
   // Update form data when profile data is loaded from API
   useEffect(() => {
     if (profile) {
+      const formattedDate = formatDateForForm(profile.date_of_birth);
+      console.log('🗓️ Date formatting debug:', {
+        raw: profile.date_of_birth,
+        formatted: formattedDate
+      });
+      
       setProfileData({
         firstName: profile.first_name || '',
         lastName: profile.last_name || '',
         middleName: profile.middle_name || '',
-        dateOfBirth: formatDateForForm(profile.date_of_birth) || '',
+        dateOfBirth: formattedDate,
         address: profile.address?.full_address || '',
         phoneCall: formatPhoneForForm(profile.phone_no_call || '', getCountryFromPhone(profile.phone_no_call || '')) || '',
         phoneText: formatPhoneForForm(profile.phone_no_text || '', getCountryFromPhone(profile.phone_no_text || '')) || '',
@@ -180,11 +192,19 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
   // Initialize calendar to show user's birth date when opened
   React.useEffect(() => {
     if (showCalendar && profileData.dateOfBirth) {
-      const birthDate = new Date(profileData.dateOfBirth);
-      if (!isNaN(birthDate.getTime())) {
-        setCurrentMonth(birthDate.getMonth());
-        setCurrentYear(birthDate.getFullYear());
-        setSelectedDate(birthDate);
+      try {
+        // Parse MM/DD/YYYY format
+        const [month, day, year] = profileData.dateOfBirth.split('/').map(num => parseInt(num, 10));
+        if (month && day && year && month >= 1 && month <= 12 && day >= 1 && day <= 31 && year > 1900) {
+          const birthDate = new Date(year, month - 1, day);
+          if (!isNaN(birthDate.getTime())) {
+            setCurrentMonth(birthDate.getMonth());
+            setCurrentYear(birthDate.getFullYear());
+            setSelectedDate(birthDate);
+          }
+        }
+      } catch (error) {
+        console.warn('Error parsing birth date for calendar:', error);
       }
     }
   }, [showCalendar, profileData.dateOfBirth]);
@@ -276,17 +296,44 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
       const year = selectedDate.getFullYear();
       const formattedDate = `${month}/${day}/${year}`;
       
+      // Calculate age for the new date
+      const [monthNum, dayNum, yearNum] = formattedDate.split('/').map(Number);
+      const birthDate = new Date(yearNum, monthNum - 1, dayNum);
+      const today = new Date();
+      let calculatedAge = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      const dayDiff = today.getDate() - birthDate.getDate();
+      if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+        calculatedAge = calculatedAge - 1;
+      }
+      
+      console.log('🗓️ Date update debug:', {
+        selectedDate,
+        formattedDate,
+        calculatedAge,
+        month,
+        day,
+        year
+      });
+      
       // Validate age before updating
       const validationError = validateDate(formattedDate);
       if (validationError) {
+        console.warn('🗓️ Date validation error:', validationError);
         // Show error but don't close modal
         setErrors(prev => ({ ...prev, dateOfBirth: validationError }));
         return;
       }
       
+      // Clear any existing errors
+      setErrors(prev => ({ ...prev, dateOfBirth: '' }));
+      
+      // Update the field
       updateField('dateOfBirth', formattedDate);
       setShowCalendar(false);
       setSelectedDate(null);
+      
+      console.log('🗓️ Date updated successfully:', formattedDate, 'Age:', calculatedAge);
     }
   };
 
@@ -415,6 +462,45 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
         return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
       };
 
+      // Calculate age from date of birth
+      const calculateAge = (dateStr: string) => {
+        if (!dateStr) return 0;
+        
+        try {
+          const [month, day, year] = dateStr.split('/').map(Number);
+          if (!month || !day || !year) return 0;
+          
+          const birthDate = new Date(year, month - 1, day);
+          const today = new Date();
+          
+          // Basic validation
+          if (isNaN(birthDate.getTime()) || birthDate > today) return 0;
+          
+          let age = today.getFullYear() - birthDate.getFullYear();
+          const monthDiff = today.getMonth() - birthDate.getMonth();
+          const dayDiff = today.getDate() - birthDate.getDate();
+          
+          // Adjust age if birthday hasn't occurred this year
+          if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+            age = age - 1;
+          }
+          
+          console.log('🎂 Age Calculation Debug:', {
+            input: dateStr,
+            birthDate: birthDate.toDateString(),
+            today: today.toDateString(),
+            calculatedAge: age,
+            monthDiff,
+            dayDiff
+          });
+          
+          return Math.max(0, age); // Ensure non-negative age
+        } catch (error) {
+          console.error('🎂 Age calculation error:', error);
+          return 0;
+        }
+      };
+
       // Extract city and state from address (improved extraction)
       const extractCityState = (address: string) => {
         if (!address) return { city: '', state: '' };
@@ -475,13 +561,30 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
       }
 
       // Transform form data to API format
+      const convertedDate = convertDateFormat(profileData.dateOfBirth);
+      const calculatedAge = calculateAge(profileData.dateOfBirth);
+      
+      console.log('🔄 Profile Update Debug:', {
+        originalDateOfBirth: profileData.dateOfBirth,
+        convertedDate,
+        calculatedAge,
+        dateValidation: validateDate(profileData.dateOfBirth),
+      });
+
+      // Additional date debugging
+      if (profileData.dateOfBirth) {
+        const [month, day, year] = profileData.dateOfBirth.split('/');
+        console.log('🔄 Date Parts Debug:', { month, day, year, convertedDate });
+      }
+      
       const updateData = {
         profile: {
           first_name: profileData.firstName,
           last_name: profileData.lastName,
           phone_no_call: `${selectedCountryCall.dialCode}${profileData.phoneCall.replace(/\D/g, '')}`,
           phone_no_text: `${selectedCountryText.dialCode}${profileData.phoneText.replace(/\D/g, '')}`,
-          date_of_birth: convertDateFormat(profileData.dateOfBirth),
+          date_of_birth: convertedDate,
+          age: calculatedAge,
           years_of_experience: profileData.yearsOfExperience || 0,
           about_me: profileData.aboutMe || '',
           skills: profileData.skills || [],
@@ -494,10 +597,40 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
         },
       };
 
+      console.log('✅ Sending both date_of_birth AND calculated age');
+
+      console.log('🚀 Final API Payload:', JSON.stringify(updateData, null, 2));
+      console.log('🔍 Date-specific payload check:', {
+        date_of_birth: updateData.profile.date_of_birth,
+        age: updateData.profile.age,
+        raw_input: profileData.dateOfBirth,
+        is_date_valid: !validateDate(profileData.dateOfBirth),
+        calculated_age: calculatedAge,
+      });
+
       updateProfileMutation.mutate(updateData, {
-        onSuccess: () => {
+        onSuccess: (response) => {
+          console.log('✅ Profile Update Success Response:', JSON.stringify(response, null, 2));
+          console.log('🔍 Returned date_of_birth:', (response?.data?.profile as any)?.date_of_birth);
+          console.log('🔍 Returned age:', (response?.data?.profile as any)?.age);
+          console.log('🔍 Expected date_of_birth:', convertedDate);
+          console.log('🔍 Expected age:', calculatedAge);
+          
+          // Check if the returned date matches what we sent
+          const returnedDate = (response?.data?.profile as any)?.date_of_birth;
+          if (returnedDate && returnedDate !== convertedDate) {
+            console.warn('⚠️  DATE MISMATCH! Backend returned different date:', {
+              sent: convertedDate,
+              received: returnedDate
+            });
+          }
+          
           onUpdate(profileData);
           onClose();
+        },
+        onError: (error: any) => {
+          console.error('❌ Profile Update Error:', error);
+          console.error('❌ Error response:', error?.response?.data);
         },
       });
     }
@@ -509,6 +642,14 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
     // Format phone numbers
     if ((field === 'phoneCall' || field === 'phoneText') && typeof value === 'string') {
       formattedValue = formatPhoneNumber(value);
+    }
+    
+    // Debug date updates
+    if (field === 'dateOfBirth') {
+      console.log('🗓️ UpdateField dateOfBirth:', {
+        oldValue: profileData.dateOfBirth,
+        newValue: formattedValue
+      });
     }
     
     setProfileData(prev => ({ ...prev, [field]: formattedValue }));
@@ -777,9 +918,31 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
                     className="bg-transparent border border-gray-300 rounded-xl px-4 py-3 flex-row items-center justify-between" 
                     style={{ height: 56 }}
                   >
-                    <Text className="flex-1 text-black" style={{ fontSize: 16, lineHeight: 20 }}>
-                      {profileData.dateOfBirth || formatDateForForm(profile?.date_of_birth || '') || '8/2/2001'}
-                    </Text>
+                    <View className="flex-1">
+                      <Text className="text-black" style={{ fontSize: 16, lineHeight: 20 }}>
+                        {profileData.dateOfBirth || 'Select date of birth'}
+                      </Text>
+                      {profileData.dateOfBirth && (
+                        <Text className="text-gray-500 text-sm mt-1">
+                          Age: {(() => {
+                            try {
+                              const [month, day, year] = profileData.dateOfBirth.split('/').map(Number);
+                              const birthDate = new Date(year, month - 1, day);
+                              const today = new Date();
+                              let age = today.getFullYear() - birthDate.getFullYear();
+                              const monthDiff = today.getMonth() - birthDate.getMonth();
+                              const dayDiff = today.getDate() - birthDate.getDate();
+                              if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+                                age = age - 1;
+                              }
+                              return age;
+                            } catch {
+                              return '?';
+                            }
+                          })()}
+                        </Text>
+                      )}
+                    </View>
                     <CalendarSvg />
                   </TouchableOpacity>
                   {errors.dateOfBirth ? (
@@ -1164,7 +1327,7 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
                       className={`w-[30%] m-1 py-3 rounded-xl items-center ${
                         year === currentYear 
                           ? 'bg-[#71DFB1]' 
-                          : 'bg-white border border-gray-200'
+                          : 'bg-white border border-gray-300'
                       }`}
                     >
                       <Text className={`font-semibold ${
@@ -1241,7 +1404,7 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
           style={{ pointerEvents: 'auto' }}
         >
           <View className="bg-[#FBFFF0] rounded-3xl max-w-sm mx-auto w-full max-h-96 border-4 border-[#71DFB1]" style={{ pointerEvents: 'auto' }}>
-            <View className="py-4 border-b border-gray-200">
+            <View className="py-4 border-b border-gray-300">
               <Text className="text-lg font-semibold text-black text-center">
                 Select Country (Call)
               </Text>
@@ -1281,7 +1444,7 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
           style={{ pointerEvents: 'auto' }}
         >
           <View className="bg-[#FBFFF0] rounded-3xl max-w-sm mx-auto w-full max-h-96 border-4 border-[#71DFB1]" style={{ pointerEvents: 'auto' }}>
-            <View className="py-4 border-b border-gray-200">
+            <View className="py-4 border-b border-gray-300">
               <Text className="text-lg font-semibold text-black text-center">
                 Select Country (Text)
               </Text>
@@ -1316,7 +1479,7 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
       >
         <View className="flex-1 bg-black/50">
           <View className="flex-1 bg-[#FBFFF0] mt-20 rounded-t-3xl">
-            <View className="flex-row justify-between items-center p-6 border-b border-gray-200">
+            <View className="flex-row justify-between items-center p-6 border-b border-gray-300">
               <Text className="text-xl font-bold text-gray-800">Search Address</Text>
               <TouchableOpacity onPress={() => setShowAddressModal(false)}>
                 <Text className="text-gray-500 text-lg">✕</Text>

@@ -126,7 +126,7 @@ export function ForgotPasswordScreen({ onBackToLogin, onContinue }: ForgotPasswo
                  style={{ 
                     lineHeight: 18,
                   }}
-                  className="px-4 py-4 rounded-xl border border-gray-200 text-base bg-transparent"
+                  className="px-4 py-4 rounded-xl border border-gray-300 text-base bg-transparent"
                   placeholder="Enter your email"
                   placeholderTextColor="#9CA3AF"
                   value={email}

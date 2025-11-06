@@ -101,10 +101,25 @@ export function EditFavorScreen({ navigation, route }: EditFavorScreenProps) {
   // Pre-fill form when favor data is loaded
   useEffect(() => {
     if (favor) {
+      console.log('🔍 EditFavor - Loading favor data:', {
+        favorSubject: favor.favor_subject,
+        subjectName: favor.favor_subject?.name,
+        subjectId: favor.favor_subject?.id,
+        title: favor.title,
+        description: favor.description
+      });
+
+      // Check if this is an "Others" subject - if the subject name is not in our predefined list
+      const predefinedSubjectNames = ['Lifting', 'Gardening', 'Technical', 'Moving', 'Assisting', 'Opening', 'Maintenance'];
+      const isOtherSubject = favor.favor_subject?.name && !predefinedSubjectNames.includes(favor.favor_subject.name);
+      
+      // For "Other" subjects, the custom name might be in the favor_subject.name or title
+      const customSubjectName = isOtherSubject ? favor.favor_subject?.name : '';
+
       setFormData({
         priority: favor.priority || 'delayed',
-        favorSubjectId: favor.favor_subject?.id || null,
-        otherSubjectName: favor.favor_subject?.name === 'Other' ? '' : '', // Will need to get this from API response
+        favorSubjectId: isOtherSubject ? 8 : (favor.favor_subject?.id || null),
+        otherSubjectName: customSubjectName || '',
         timeToComplete: favor.time_to_complete || '20 minutes',
         favorPrice: !favor.favor_pay ? 'Paid' : 'Free',
         tip: favor.tip ? parseFloat(favor.tip.toString()) : 0,
@@ -114,6 +129,13 @@ export function EditFavorScreen({ navigation, route }: EditFavorScreenProps) {
         city: favor.city || '',
         state: favor.state || '',
         latLng: favor.lat_lng || '',
+      });
+
+      console.log('✅ EditFavor - Form data set:', {
+        favorSubjectId: isOtherSubject ? 8 : (favor.favor_subject?.id || null),
+        otherSubjectName: customSubjectName || '',
+        isOtherSubject,
+        customSubjectName
       });
 
       // Set existing image if available
@@ -493,7 +515,7 @@ export function EditFavorScreen({ navigation, route }: EditFavorScreenProps) {
               Time to complete
             </Text>
             <TouchableOpacity
-              className="px-4 py-3 rounded-xl border border-gray-200 bg-white flex-row justify-between items-center"
+              className="px-4 py-3 rounded-xl border border-gray-300 bg-white flex-row justify-between items-center"
               style={{ height: 56 }}
               onPress={() => setShowTimeDropdown(true)}
             >
@@ -543,11 +565,11 @@ export function EditFavorScreen({ navigation, route }: EditFavorScreenProps) {
               <View>
                 <View className="mb-4">
                   <Text className="text-sm font-medium text-gray-700 mb-2">
-                    Tip Amount ($) *
+                    Favor Amount ($) *
                   </Text>
                   <TextInput
                     className={`px-4 py-3 rounded-xl border text-base bg-white ${
-                      errors.tip ? 'border-red-500' : 'border-gray-200'
+                      errors.tip ? 'border-red-500' : 'border-gray-300'
                     }`}
                     style={{
                       fontSize: 16,
@@ -573,7 +595,7 @@ export function EditFavorScreen({ navigation, route }: EditFavorScreenProps) {
                     Additional Tip ($) - Optional
                   </Text>
                   <TextInput
-                    className="px-4 py-3 rounded-xl border border-gray-200 text-base bg-white"
+                    className="px-4 py-3 rounded-xl border border-gray-300 text-base bg-white"
                     style={{
                       fontSize: 16,
                       lineHeight: 22,
@@ -600,7 +622,7 @@ export function EditFavorScreen({ navigation, route }: EditFavorScreenProps) {
               Address
             </Text>
             <TouchableOpacity
-              className={`px-4 py-4 rounded-xl border ${errors.address ? 'border-red-500' : 'border-gray-200'} bg-white`}
+              className={`px-4 py-4 rounded-xl border ${errors.address ? 'border-red-500' : 'border-gray-300'} bg-white`}
               onPress={() => setShowAddressModal(true)}
             >
               <Text className={`text-base ${formData.address ? 'text-black' : 'text-gray-400'}`}>
@@ -620,7 +642,7 @@ export function EditFavorScreen({ navigation, route }: EditFavorScreenProps) {
             </Text>
             <TextInput
               className={`px-4 py-3 rounded-xl border text-base bg-white ${
-                errors.description ? 'border-red-500' : 'border-gray-200'
+                errors.description ? 'border-red-500' : 'border-gray-300'
               }`}
               style={{
                 fontSize: 16,
@@ -654,7 +676,7 @@ export function EditFavorScreen({ navigation, route }: EditFavorScreenProps) {
           {/* File Upload Section */}
           <View className="mb-8">
             <Text className="text-xl font-bold text-black mb-6">Add Image (Optional)</Text>
-            <View className="bg-white border border-gray-200 rounded-2xl p-8 items-center">
+            <View className="bg-white border border-gray-300 rounded-2xl p-8 items-center">
               {selectedImage ? (
                 <View className="items-center">
                   <Image 
@@ -819,7 +841,7 @@ export function EditFavorScreen({ navigation, route }: EditFavorScreenProps) {
       >
         <View className="flex-1 bg-black/50">
           <View className="flex-1 bg-[#FBFFF0] mt-20 rounded-t-3xl">
-            <View className="flex-row justify-between items-center p-6 border-b border-gray-200">
+            <View className="flex-row justify-between items-center p-6 border-b border-gray-300">
               <Text className="text-xl font-bold text-gray-800">Search Address</Text>
               <TouchableOpacity onPress={() => setShowAddressModal(false)}>
                 <Text className="text-gray-500 text-lg">✕</Text>

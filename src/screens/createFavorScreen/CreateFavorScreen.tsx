@@ -1,4 +1,5 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -38,6 +39,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
   const per_page = 10;
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [favorToCancel, setFavorToCancel] = useState<Favor | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0); // Used to reset carousel states
 
   // Get auth store state
   const { user, accessToken } = useAuthStore();
@@ -181,31 +183,18 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
   }, [activeTab, currentFavors, isLoading, error, user, accessToken]);
 
   const handleRefresh = async () => {
+    console.log('🔄 Starting comprehensive refresh of all tabs...');
     setRefreshing(true);
+    
     try {
-      switch (activeTab) {
-        case 'All':
-          await refetchAllFavors();
-          break;
-        case 'Active':
-          await Promise.all([refetchActiveFavors(), refetchInProgressFavors()]);
-          break;
-        case 'History':
-          await Promise.all([refetchCompletedFavors(), refetchCancelledFavors()]);
-          break;
-      }
-    } catch (error) {
-      console.error('Error refreshing:', error);
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
-  // Refresh all tabs - used when accepting/reassigning providers
-  const handleRefreshAllTabs = async () => {
-    setRefreshing(true);
-    try {
-      // Refresh all tabs simultaneously
+      // Reset all local state variables
+      setPage(1);
+      setFavorToCancel(null);
+      setShowCancelModal(false);
+      setRefreshTrigger(prev => prev + 1); // Force carousel components to reset
+      
+      // Refresh all tabs simultaneously regardless of which tab is active
+      console.log('🔄 Refreshing all API data...');
       await Promise.all([
         refetchAllFavors(),
         refetchActiveFavors(), 
@@ -213,12 +202,57 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
         refetchCompletedFavors(), 
         refetchCancelledFavors()
       ]);
+      
+      console.log('✅ All tabs refreshed successfully');
     } catch (error) {
-      console.error('Error refreshing all tabs:', error);
+      console.error('❌ Error refreshing all tabs:', error);
     } finally {
       setRefreshing(false);
     }
   };
+
+  // Refresh all tabs - used when accepting/reassigning providers
+  const handleRefreshAllTabs = async () => {
+    console.log('🔄 Starting mutation-triggered comprehensive refresh...');
+    setRefreshing(true);
+    
+    try {
+      // Reset all local state variables
+      setPage(1);
+      setFavorToCancel(null);
+      setShowCancelModal(false);
+      setRefreshTrigger(prev => prev + 1); // Force carousel components to reset
+      
+      // Refresh all tabs simultaneously
+      console.log('🔄 Refreshing all API data after mutation...');
+      await Promise.all([
+        refetchAllFavors(),
+        refetchActiveFavors(), 
+        refetchInProgressFavors(),
+        refetchCompletedFavors(), 
+        refetchCancelledFavors()
+      ]);
+      
+      console.log('✅ All tabs refreshed successfully after mutation');
+    } catch (error) {
+      console.error('❌ Error refreshing all tabs after mutation:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  // Refresh all tabs when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      console.log('📱 CreateFavorScreen focused - triggering comprehensive refresh');
+      if (user && accessToken) {
+        // Small delay to avoid overlapping with initial render
+        setTimeout(() => {
+          handleRefreshAllTabs();
+        }, 100);
+      }
+    }, [user, accessToken])
+  );
 
   const handleCancelFavor = async (favor: Favor) => {
     console.log('Cancel favor:', favor.user.full_name);
@@ -331,6 +365,14 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
     const screenWidth = Dimensions.get('window').width;
     const cardWidth = screenWidth - 32; // Account for margins
 
+    // Reset carousel when refreshTrigger changes
+    React.useEffect(() => {
+      setCurrentIndex(0);
+      if (scrollViewRef.current) {
+        scrollViewRef.current.scrollTo({ x: 0, animated: false });
+      }
+    }, [refreshTrigger]);
+
     const handleScroll = (event: any) => {
       const contentOffset = event.nativeEvent.contentOffset.x;
       const index = Math.round(contentOffset / cardWidth);
@@ -414,7 +456,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
         >
           {applicants.map((applicant, index) => (
             <View key={`${favor.id}-${applicant.id}`} style={{ width: cardWidth, paddingHorizontal: 16 }}>
-              <View className="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm">
+              <View className="bg-white rounded-2xl p-4 border border-gray-300 shadow-sm">
                 <View className="flex-row items-center">
                   {/* Large square profile image */}
                   {applicant.user.image_url ? (
@@ -550,7 +592,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
         </View>
 
         {/* User details card with border like in the image */}
-        <View className="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm">
+        <View className="bg-white rounded-2xl p-4 border border-gray-300 shadow-sm">
           <View className="flex-row items-center">
             {/* Large square profile image */}
             {applicant.user.image_url ? (
@@ -847,6 +889,15 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
         <View className="flex-row justify-between items-center mb-6">
           <Text className="text-2xl font-bold text-black">Create Favor</Text>
           <View className="flex-row gap-x-2">
+            <TouchableOpacity 
+              className="items-center justify-center w-8 h-8 bg-[#44A27B] rounded-full"
+              onPress={handleRefresh}
+              disabled={refreshing}
+            >
+              <Text className="text-white font-bold text-sm">
+                {refreshing ? '⟳' : '↻'}
+              </Text>
+            </TouchableOpacity>
             {/* <TouchableOpacity 
               className="items-center justify-center"
               onPress={() => navigation?.navigate('FilterScreen')}

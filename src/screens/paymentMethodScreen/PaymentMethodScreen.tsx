@@ -301,7 +301,7 @@ export function PaymentMethodScreen({ navigation }: PaymentMethodScreenProps) {
             <Text className="text-base font-medium text-black mb-2">
               Current Payment Method
             </Text>
-            <View className="bg-gray-100 border border-gray-200 rounded-xl p-4 mb-6">
+            <View className="bg-gray-100 border border-gray-300 rounded-xl p-4 mb-6">
               <Text className="text-base text-gray-600 mb-2">
                 {currentPaymentMethod?.billing_details?.name || 'Card holder name'}
               </Text>

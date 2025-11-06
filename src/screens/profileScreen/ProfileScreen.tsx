@@ -4,7 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { CarouselButton } from '../../components/buttons';
 import { UpdateProfileModal } from '../../components/overlays/UpdateProfileModal';
 import { ExportPDFModal } from '../../components/overlays/ExportPDFModal';
-import { useProfileQuery, useStripeBalanceQuery } from '../../services/queries/ProfileQueries';
+import { useProfileQuery, useStripeBalanceQuery, useUserReviewsQuery } from '../../services/queries/ProfileQueries';
 import { exportProfilePDF, ExportProfileParams, ExportProfileJSONResponse } from '../../services/apis/ProfileApis';
 import Toast from 'react-native-toast-message';
 import * as FileSystem from 'expo-file-system';
@@ -14,7 +14,6 @@ import { PDFViewerModal } from '../../components/overlays/PDFViewerModal';
 import EditSvg from '../../assets/icons/Edit';
 import FilterSvg from '../../assets/icons/Filter';
 import { NotificationBell } from '../../components/notifications/NotificationBell';
-import { usePushNotification } from '../../services/notifications/usePushNotificationDev';
 
 interface ProfileData {
   firstName: string;
@@ -37,7 +36,11 @@ export function ProfileScreen() {
   const [pdfUri, setPdfUri] = useState('');
   const { data: profileResponse, isLoading, error } = useProfileQuery();
   const { data: balanceResponse, isLoading: isBalanceLoading, error: balanceError, refetch: refetchBalance } = useStripeBalanceQuery();
-  const { scheduleTestNotificationWithType } = usePushNotification();
+  const { data: reviewsResponse, isLoading: isReviewsLoading, error: reviewsError } = useUserReviewsQuery(
+    profileResponse?.data?.profile?.id || null,
+    { page: 1, per_page: 10 },
+    { enabled: !!profileResponse?.data?.profile?.id }
+  );
   
   const [profileData, setProfileData] = useState<ProfileData>({
     firstName: 'Kathryn',
@@ -610,9 +613,111 @@ export function ProfileScreen() {
             </TouchableOpacity>
           </View>
 
-          <View className="items-center py-8">
-            <Text className="text-gray-500 text-sm">No reviews Found</Text>
-          </View>
+{isReviewsLoading ? (
+            <View className="items-center py-8">
+              <ActivityIndicator size="small" color="#44A27B" />
+              <Text className="text-gray-500 text-sm mt-2">Loading reviews...</Text>
+            </View>
+          ) : reviewsError ? (
+            <View className="items-center py-8">
+              <Text className="text-red-500 text-sm">Failed to load reviews</Text>
+              <Text className="text-gray-500 text-xs mt-1">Please check your connection and try again</Text>
+            </View>
+          ) : reviewsResponse?.data?.reviews && reviewsResponse.data.reviews.length > 0 ? (
+            <View>
+              {/* Review Statistics */}
+              <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm">
+                <View className="flex-row justify-between items-center">
+                  <View className="items-center">
+                    <Text className="text-2xl font-bold text-[#44A27B]">
+                      {reviewsResponse.data.statistics.average_rating.toFixed(1)}
+                    </Text>
+                    <Text className="text-gray-600 text-xs">Average Rating</Text>
+                  </View>
+                  <View className="items-center">
+                    <Text className="text-2xl font-bold text-[#44A27B]">
+                      {reviewsResponse.data.statistics.total_reviews}
+                    </Text>
+                    <Text className="text-gray-600 text-xs">Total Reviews</Text>
+                  </View>
+                </View>
+              </View>
+              
+              {/* Reviews List */}
+              <View className="space-y-3">
+                {reviewsResponse.data.reviews.map((review) => (
+                  <View key={review.id} className="bg-white rounded-2xl p-4 shadow-sm">
+                    {/* Reviewer Info */}
+                    <View className="flex-row items-center mb-3">
+                      <View className="w-10 h-10 bg-[#44A27B] rounded-full items-center justify-center">
+                        <Text className="text-white text-sm font-bold">
+                          {review.given_by.first_name[0]}{review.given_by.last_name[0]}
+                        </Text>
+                      </View>
+                      <View className="flex-1 ml-3">
+                        <View className="flex-row items-center justify-between">
+                          <Text className="font-semibold text-black">{review.given_by.full_name}</Text>
+                          {review.given_by.is_certified && (
+                            <View className="bg-green-100 px-2 py-0.5 rounded-full">
+                              <Text className="text-green-600 text-xs font-medium">Certified</Text>
+                            </View>
+                          )}
+                        </View>
+                        <Text className="text-gray-500 text-xs">
+                          {new Date(review.created_at).toLocaleDateString()}
+                        </Text>
+                      </View>
+                    </View>
+                    
+                    {/* Rating */}
+                    <View className="flex-row items-center mb-2">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Text 
+                          key={star} 
+                          className={`text-lg ${star <= review.rating ? 'text-yellow-400' : 'text-gray-300'}`}
+                        >
+                          ★
+                        </Text>
+                      ))}
+                      <Text className="ml-2 text-gray-600 text-sm">({review.rating}/5)</Text>
+                    </View>
+                    
+                    {/* Review Description */}
+                    {review.description && (
+                      <Text className="text-black text-sm leading-5 mb-2">
+                        {review.description}
+                      </Text>
+                    )}
+                    
+                    {/* Favor Info */}
+                    {review.favor && (
+                      <View className="bg-gray-50 rounded-lg p-2 mt-2">
+                        <Text className="text-gray-600 text-xs">For favor:</Text>
+                        <Text className="text-black text-sm font-medium">{review.favor.title}</Text>
+                      </View>
+                    )}
+                  </View>
+                ))}
+              </View>
+              
+              {/* Pagination Info */}
+              {reviewsResponse.data.meta.total_pages > 1 && (
+                <View className="items-center mt-4 py-3">
+                  <Text className="text-gray-500 text-xs">
+                    Showing {reviewsResponse.data.reviews.length} of {reviewsResponse.data.meta.total_count} reviews
+                  </Text>
+                  {reviewsResponse.data.meta.next_page && (
+                    <Text className="text-[#44A27B] text-xs mt-1">Tap to load more</Text>
+                  )}
+                </View>
+              )}
+            </View>
+          ) : (
+            <View className="items-center py-8">
+              <Text className="text-gray-500 text-sm">No reviews yet</Text>
+              <Text className="text-gray-400 text-xs mt-1">Reviews will appear here once you complete favors</Text>
+            </View>
+          )}
         </View>
       </ScrollView>
 

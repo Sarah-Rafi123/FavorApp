@@ -56,21 +56,10 @@ export function StripeConnectWebView({
       console.log('✅ Stripe onboarding completed, closing WebView');
       console.log('🔗 Completion URL:', navState.url);
       
-      // Give user feedback and close
+      // Close WebView and trigger success callback (success message will be handled by StripeConnectManager)
       setTimeout(() => {
-        Alert.alert(
-          'Setup Complete!',
-          'Your payment account setup is being processed. We\'ll check your status now.',
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                onClose(); // Close WebView first
-                onSuccess(); // Then execute success callback
-              }
-            }
-          ]
-        );
+        onClose(); // Close WebView first
+        onSuccess(); // Then execute success callback which will show the proper success message
       }, 1000);
     }
   };

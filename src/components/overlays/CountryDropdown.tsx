@@ -61,7 +61,7 @@ export function CountryDropdown({
         <SafeAreaView className="flex-1 bg-white mt-12 rounded-t-3xl">
         <View className="flex-1">
           {/* Header */}
-          <View className="flex-row items-center justify-between px-6 py-4 border-b border-gray-200">
+          <View className="flex-row items-center justify-between px-6 py-4 border-b border-gray-300">
             <TouchableOpacity onPress={onClose}>
               <Text className="text-blue-500 text-lg">Cancel</Text>
             </TouchableOpacity>
@@ -72,9 +72,9 @@ export function CountryDropdown({
           </View>
 
           {/* Search */}
-          <View className="px-6 py-4 border-b border-gray-200">
+          <View className="px-6 py-4 border-b border-gray-300">
             <TextInput
-              className="px-4 py-3 rounded-xl border border-gray-200 text-base bg-gray-50"
+              className="px-4 py-3 rounded-xl border border-gray-300 text-base bg-gray-50"
               placeholder="Search countries..."
               placeholderTextColor="#9CA3AF"
               value={searchQuery}

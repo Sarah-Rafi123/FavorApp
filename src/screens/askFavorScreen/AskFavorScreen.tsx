@@ -557,7 +557,7 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
               Time to complete
             </Text>
             <TouchableOpacity
-              className="px-4 py-3 rounded-xl border border-gray-200 bg-transparent flex-row justify-between items-center"
+              className="px-4 py-3 rounded-xl border border-gray-300 bg-transparent flex-row justify-between items-center"
               style={{ height: 56 }}
               onPress={() => setShowTimeDropdown(true)}
             >
@@ -587,11 +587,11 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
               <View>
                 <View className="mb-4">
                   <Text className="text-sm font-medium text-gray-700 mb-2">
-                    Tip Amount ($) *
+                    Favor Amount ($) *
                   </Text>
                   <TextInput
                     className={`px-4 py-3 rounded-xl border text-base bg-transparent ${
-                      errors.tip ? 'border-red-500' : 'border-gray-200'
+                      errors.tip ? 'border-red-500' : 'border-gray-300'
                     }`}
                     style={{
                       backgroundColor: 'transparent',
@@ -618,7 +618,7 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
                     Additional Tip ($) - Optional
                   </Text>
                   <TextInput
-                    className="px-4 py-3 rounded-xl border border-gray-200 text-base bg-transparent"
+                    className="px-4 py-3 rounded-xl border border-gray-300 text-base bg-transparent"
                     style={{
                       backgroundColor: 'transparent',
                       fontSize: 16,
@@ -646,7 +646,7 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
               Address
             </Text>
             <TouchableOpacity
-              className={`px-4 py-4 rounded-xl border ${errors.address ? 'border-red-500' : 'border-gray-200'} bg-transparent`}
+              className={`px-4 py-4 rounded-xl border ${errors.address ? 'border-red-500' : 'border-gray-300'} bg-transparent`}
               onPress={() => setShowAddressModal(true)}
             >
               <Text className={`text-base ${formData.address ? 'text-black' : 'text-gray-400'}`}>
@@ -666,7 +666,7 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
             </Text>
             <TextInput
               className={`px-4 py-3 rounded-xl border text-base bg-transparent ${
-                errors.description ? 'border-red-500' : 'border-gray-200'
+                errors.description ? 'border-red-500' : 'border-gray-300'
               }`}
               style={{
                 backgroundColor: 'transparent',
@@ -696,7 +696,7 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
 
           {/* File Upload Section */}
           <View className="mb-8">
-            <View className="bg-transparent border border-gray-200 rounded-2xl p-8 items-center">
+            <View className="bg-transparent border border-gray-300 rounded-2xl p-8 items-center">
               {selectedImage ? (
                 <View className="items-center">
                   <Image 
@@ -793,7 +793,7 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
           style={{ pointerEvents: 'auto' }}
         >
           <View className="bg-white rounded-xl max-w-sm mx-auto w-full" style={{ pointerEvents: 'auto' }}>
-            <View className="py-4 border-b border-gray-200">
+            <View className="py-4 border-b border-gray-300">
               <Text className="text-lg font-semibold text-gray-800 text-center">
                 Time to Complete
               </Text>
@@ -829,7 +829,7 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
           style={{ pointerEvents: 'auto' }}
         >
           <View className="bg-white rounded-2xl max-w-sm mx-auto w-full" style={{ pointerEvents: 'auto' }}>
-            <View className="py-6 border-b border-gray-200">
+            <View className="py-6 border-b border-gray-300">
               <Text className="text-xl font-bold text-gray-800 text-center">
                 Select Image
               </Text>
@@ -896,7 +896,7 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
       >
         <View className="flex-1 bg-black/50">
           <View className="flex-1 bg-[#FBFFF0] mt-20 rounded-t-3xl">
-            <View className="flex-row justify-between items-center p-6 border-b border-gray-200">
+            <View className="flex-row justify-between items-center p-6 border-b border-gray-300">
               <Text className="text-xl font-bold text-gray-800">Search Address</Text>
               <TouchableOpacity onPress={() => setShowAddressModal(false)}>
                 <Text className="text-gray-500 text-lg">✕</Text>
@@ -1017,7 +1017,6 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
           </View>
         </View>
       </Modal>
-
     </ImageBackground>
   );
 }
