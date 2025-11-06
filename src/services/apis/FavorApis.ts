@@ -679,7 +679,7 @@ export const FavorApis = {
       if (error.response?.status === 422) {
         const errorData = error.response?.data;
         if (errorData?.errors?.includes('No accepted response found for this favor')) {
-          throw new Error('No accepted response found for this favor');
+          throw new Error('Provider cancelled the offer');
         } else {
           throw new Error(errorData?.message || 'Cannot complete favor at this time.');
         }
@@ -779,6 +779,7 @@ export const FavorApis = {
   createUserReview: async (favorId: number, data: CreateUserReviewRequest): Promise<CreateUserReviewResponse> => {
     try {
       console.log('🚀 Making Create User Review API call to: /favors/' + favorId + '/user_review');
+      console.log('🌐 Full URL will be: ' + axiosInstance.defaults.baseURL + '/favors/' + favorId + '/user_review');
       console.log('📤 Request Data:', JSON.stringify(data, null, 2));
       
       const response = await axiosInstance.post(`/favors/${favorId}/user_review`, data);

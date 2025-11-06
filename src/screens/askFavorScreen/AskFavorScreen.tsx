@@ -209,6 +209,11 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
         compressImageQuality: 0.8,
         mediaType: 'photo',
         includeBase64: false,
+        // Android cropper customization for proper status bar handling
+        cropperStatusBarColor: '#71DFB1',
+        cropperToolbarColor: '#71DFB1',
+        cropperToolbarWidgetColor: '#FFFFFF',
+        cropperToolbarTitle: 'Edit Photo',
       });
       
       // Check file size (10MB limit)
@@ -248,6 +253,11 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
         compressImageQuality: 0.8,
         mediaType: 'photo',
         includeBase64: false,
+        // Android cropper customization for proper status bar handling
+        cropperStatusBarColor: '#71DFB1',
+        cropperToolbarColor: '#71DFB1',
+        cropperToolbarWidgetColor: '#FFFFFF',
+        cropperToolbarTitle: 'Edit Photo',
       });
       
       // Check file size (10MB limit)

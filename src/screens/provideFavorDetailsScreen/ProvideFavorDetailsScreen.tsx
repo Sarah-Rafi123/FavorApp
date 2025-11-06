@@ -191,8 +191,21 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
   const handleSubmitReview = async () => {
     if (!favor) return;
 
+    console.log('🔥 DEBUGGING: Submit Review button clicked');
+    console.log('📊 Favor status:', favor.status);
+    console.log('👤 Current user role: Provider');
+    console.log('👥 Favor requester:', favor.user.full_name, '(ID:', favor.user.id + ')');
+
+    // Check if favor is already completed
+    if (favor.status === 'completed') {
+      console.log('✅ Favor is already completed, showing review modal directly');
+      setShowReviewModal(true);
+      return;
+    }
+
+    // If favor is not completed, try to complete it first
     try {
-      console.log('🔥 DEBUGGING: Starting complete favor process');
+      console.log('🎯 Favor not yet completed, marking as completed first:', favor.id);
       
       // Check auth token before making the API call
       const token = await AsyncStorage.getItem('auth_token');
@@ -204,10 +217,6 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
         return;
       }
       
-      console.log('🎯 Marking favor as completed:', favor.id);
-      console.log('📊 Favor status before completion:', favor.status);
-      console.log('👤 Current user role: Provider');
-      console.log('👥 Favor requester:', favor.user.full_name, '(ID:', favor.user.id + ')');
       console.log('🚀 About to call completeFavorMutation.mutateAsync...');
       
       const completionResult = await completeFavorMutation.mutateAsync(favor.id);
@@ -297,21 +306,38 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
       };
 
       console.log('\n📦 === API REQUEST PAYLOAD ===');
-      console.log('📍 Endpoint: POST /favors/' + favor.id + '/user_review');
-      console.log('📤 Complete Request Data:');
+      console.log('🌐 Full API URL: POST https://api.favorapp.net/api/v1/favors/' + favor.id + '/user_review');
+      console.log('📍 Relative Endpoint: POST /favors/' + favor.id + '/user_review');
+      console.log('🏗️ Base URL: https://api.favorapp.net/api/v1 (from axiosInstance)');
+      console.log('📤 Request Headers will include Authorization: Bearer ' + (token ? token.substring(0, 20) + '...' : 'NO_TOKEN'));
+      console.log('📤 Complete Request Body:');
       console.log(JSON.stringify({
         favorId: favor.id,
         data: reviewData
       }, null, 2));
+      console.log('📋 Raw Request Data Object:');
+      console.log('  - favorId (number):', favor.id, typeof favor.id);
+      console.log('  - data.rating (number):', reviewData.rating, typeof reviewData.rating);
+      console.log('  - data.description (string):', reviewData.description, typeof reviewData.description);
+      console.log('  - data.given_to_id (number):', reviewData.given_to_id, typeof reviewData.given_to_id);
+      console.log('📊 Data Validation:');
+      console.log('  - Rating range valid:', reviewData.rating >= 1 && reviewData.rating <= 5);
+      console.log('  - Description not empty:', reviewData.description.length > 0);
+      console.log('  - given_to_id is valid number:', !isNaN(reviewData.given_to_id));
       
       console.log('\n🚀 === MAKING API CALL ===');
       console.log('⏰ API call started at:', new Date().toISOString());
-      console.log('🔗 Calling: createUserReviewMutation.mutateAsync()');
+      console.log('🔗 Function: createUserReviewMutation.mutateAsync()');
+      console.log('📡 API Handler: FavorApis.createUserReview()');
+      console.log('🎯 About to call:', 'POST /favors/' + favor.id + '/user_review');
+      console.log('⚡ Pre-flight check - Token exists:', !!token);
       
       const result = await createUserReviewMutation.mutateAsync({
         favorId: favor.id,
         data: reviewData
       });
+      
+      console.log('🎊 API call returned successfully without throwing!');
       
       console.log('\n🎉🎉🎉 === API CALL SUCCESS ===');
       console.log('⏰ API call completed at:', new Date().toISOString());
@@ -378,8 +404,13 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
       if (error.response?.status === 401 || error.message?.includes('Authentication required')) {
         console.error('\n🔐🔐🔐 === SESSION EXPIRATION DETECTED ===');
         console.error('🚨 401 Unauthorized - Session expired during review submission');
-        console.error('💡 User needs to log in again');
+        console.error('💡 User will be logged out automatically');
         console.error('🔄 Token was cleared by axios interceptor');
+        console.error('📱 App should redirect to login screen shortly');
+        
+        // Check if token was actually cleared
+        const postErrorToken = await AsyncStorage.getItem('auth_token');
+        console.error('🔍 Post-error token check:', postErrorToken ? 'Still present!' : 'Cleared as expected');
       }
       
       console.error('\n❌ === USER REVIEW SUBMISSION FAILED ===\n');

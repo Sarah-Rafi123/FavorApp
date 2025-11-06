@@ -48,16 +48,16 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
   // Accept applicant mutation
   const acceptApplicantMutation = useAcceptApplicant({
     onSuccess: () => {
-      // Refresh data after successful accept
-      handleRefresh();
+      // Refresh all tabs after successful accept
+      handleRefreshAllTabs();
     }
   });
   
   // Reassign favor mutation
   const reassignFavorMutation = useReassignFavor({
     onSuccess: () => {
-      // Refresh data after successful reassign
-      handleRefresh();
+      // Refresh all tabs after successful reassign
+      handleRefreshAllTabs();
     }
   });
 
@@ -196,6 +196,25 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
       }
     } catch (error) {
       console.error('Error refreshing:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  // Refresh all tabs - used when accepting/reassigning providers
+  const handleRefreshAllTabs = async () => {
+    setRefreshing(true);
+    try {
+      // Refresh all tabs simultaneously
+      await Promise.all([
+        refetchAllFavors(),
+        refetchActiveFavors(), 
+        refetchInProgressFavors(),
+        refetchCompletedFavors(), 
+        refetchCancelledFavors()
+      ]);
+    } catch (error) {
+      console.error('Error refreshing all tabs:', error);
     } finally {
       setRefreshing(false);
     }

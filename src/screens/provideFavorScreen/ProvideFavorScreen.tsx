@@ -677,7 +677,9 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
   };
 
   const FavorCard = ({ favor }: { favor: Favor }) => {
-    const isActiveFavor = favor.status === 'in_progress' || favor.status === 'pending';
+    // For Active tab, all favors should be cancellable since they are user's active favors
+    // For All tab, determine based on status
+    const isActiveFavor = activeTab === 'Active' || favor.status === 'in_progress' || favor.status === 'pending';
     
     if (activeTab === 'All') {
       // For "All" tab, use the exact same UI as HomeListScreen

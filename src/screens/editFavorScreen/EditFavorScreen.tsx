@@ -280,6 +280,11 @@ export function EditFavorScreen({ navigation, route }: EditFavorScreenProps) {
       cropping: true,
       mediaType: 'photo',
       compressImageQuality: 0.8,
+      // Android cropper customization for proper status bar handling
+      cropperStatusBarColor: '#71DFB1',
+      cropperToolbarColor: '#71DFB1',
+      cropperToolbarWidgetColor: '#FFFFFF',
+      cropperToolbarTitle: 'Edit Photo',
     }).then(image => {
       setSelectedImage({
         uri: image.path,
@@ -301,6 +306,11 @@ export function EditFavorScreen({ navigation, route }: EditFavorScreenProps) {
       cropping: true,
       mediaType: 'photo',
       compressImageQuality: 0.8,
+      // Android cropper customization for proper status bar handling
+      cropperStatusBarColor: '#71DFB1',
+      cropperToolbarColor: '#71DFB1',
+      cropperToolbarWidgetColor: '#FFFFFF',
+      cropperToolbarTitle: 'Edit Photo',
     }).then(image => {
       setSelectedImage({
         uri: image.path,
