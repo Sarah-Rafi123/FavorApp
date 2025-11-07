@@ -889,15 +889,6 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
         <View className="flex-row justify-between items-center mb-6">
           <Text className="text-2xl font-bold text-black">Create Favor</Text>
           <View className="flex-row gap-x-2">
-            <TouchableOpacity 
-              className="items-center justify-center w-8 h-8 bg-[#44A27B] rounded-full"
-              onPress={handleRefresh}
-              disabled={refreshing}
-            >
-              <Text className="text-white font-bold text-sm">
-                {refreshing ? '⟳' : '↻'}
-              </Text>
-            </TouchableOpacity>
             {/* <TouchableOpacity 
               className="items-center justify-center"
               onPress={() => navigation?.navigate('FilterScreen')}

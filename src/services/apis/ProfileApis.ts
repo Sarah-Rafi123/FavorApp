@@ -161,6 +161,7 @@ export interface ProviderProfileResponse {
 export interface UserReviewsParams {
   page?: number;
   per_page?: number;
+  role?: 'requester' | 'provider';
 }
 
 export interface UserReviewsResponse {
@@ -572,6 +573,7 @@ export const getUserReviews = async (
     const queryParams = new URLSearchParams();
     if (params.page) queryParams.append('page', params.page.toString());
     if (params.per_page) queryParams.append('per_page', params.per_page.toString());
+    if (params.role) queryParams.append('role', params.role);
     
     const url = `/users/${userId}/reviews${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     

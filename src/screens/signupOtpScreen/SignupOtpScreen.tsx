@@ -194,7 +194,7 @@ export function SignupOtpScreen({ onBack, onVerifySuccess, onBackToLogin, email,
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleBackWithDataClear = () => {
+  const handleBackWithDataClear = async () => {
     // Clear OTP state
     setOtp(['', '', '', '', '', '']);
     setTimer(300);
@@ -204,6 +204,9 @@ export function SignupOtpScreen({ onBack, onVerifySuccess, onBackToLogin, email,
     
     // Clear registration data from auth store
     clearRegistrationData();
+    
+    // Set flag to skip splash screen when navigating to auth
+    await AsyncStorage.setItem('skip_splash_from_signup', 'true');
     
     // Navigate back to auth screen with data clearing
     if (onClearDataAndNavigateToAuth) {
@@ -301,7 +304,11 @@ export function SignupOtpScreen({ onBack, onVerifySuccess, onBackToLogin, email,
         <View className="items-center">
           <View className="flex-row items-center">
             <Text className="text-gray-600">Already have an account? </Text>
-            <TouchableOpacity onPress={onBackToLogin}>
+            <TouchableOpacity onPress={async () => {
+              // Set flag to skip splash screen when navigating to auth
+              await AsyncStorage.setItem('skip_splash_from_signup', 'true');
+              onBackToLogin();
+            }}>
               <Text className="font-medium text-[#44A27B]">
                 Back to Login
               </Text>
@@ -318,7 +325,7 @@ export function SignupOtpScreen({ onBack, onVerifySuccess, onBackToLogin, email,
         onContinue={async () => {
           setShowSuccessModal(false);
           // Set flag to skip splash screen when navigating to auth
-          await AsyncStorage.setItem('skip_splash_from_otp', 'true');
+          await AsyncStorage.setItem('skip_splash_from_signup', 'true');
           onBackToLogin();
         }}
       />

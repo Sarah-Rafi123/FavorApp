@@ -38,7 +38,11 @@ export function ProfileScreen() {
   const { data: balanceResponse, isLoading: isBalanceLoading, error: balanceError, refetch: refetchBalance } = useStripeBalanceQuery();
   const { data: reviewsResponse, isLoading: isReviewsLoading, error: reviewsError } = useUserReviewsQuery(
     profileResponse?.data?.profile?.id || null,
-    { page: 1, per_page: 10 },
+    { 
+      page: 1, 
+      per_page: 10,
+      role: activeReviewTab === 'asked' ? 'requester' : 'provider'
+    },
     { enabled: !!profileResponse?.data?.profile?.id }
   );
   
@@ -586,7 +590,7 @@ export function ProfileScreen() {
         <View className="mx-4">
           <Text className="text-xl font-bold text-black mb-4">Review</Text>
           
-          <View className="flex-row p-2 bg-white rounded-full shadow-lg mb-4">
+           <View className="flex-row p-2 bg-white rounded-full shadow-lg mb-4">
             <TouchableOpacity 
               className={`flex-1 py-2.5 items-center ${
                 activeReviewTab === 'asked' ? 'bg-[#44A27B] rounded-full' : ''
@@ -611,7 +615,7 @@ export function ProfileScreen() {
                 Favor Provided
               </Text>
             </TouchableOpacity>
-          </View>
+          </View> 
 
 {isReviewsLoading ? (
             <View className="items-center py-8">
@@ -630,13 +634,18 @@ export function ProfileScreen() {
                 <View className="flex-row justify-between items-center">
                   <View className="items-center">
                     <Text className="text-2xl font-bold text-[#44A27B]">
-                      {reviewsResponse.data.statistics.average_rating.toFixed(1)}
+                      {(() => {
+                        const reviews = reviewsResponse.data.reviews;
+                        const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
+                        const averageRating = reviews.length > 0 ? totalRating / reviews.length : 0;
+                        return averageRating.toFixed(1);
+                      })()}
                     </Text>
                     <Text className="text-gray-600 text-xs">Average Rating</Text>
                   </View>
                   <View className="items-center">
                     <Text className="text-2xl font-bold text-[#44A27B]">
-                      {reviewsResponse.data.statistics.total_reviews}
+                      {reviewsResponse.data.meta?.total_count || reviewsResponse.data.reviews.length}
                     </Text>
                     <Text className="text-gray-600 text-xs">Total Reviews</Text>
                   </View>
@@ -644,7 +653,7 @@ export function ProfileScreen() {
               </View>
               
               {/* Reviews List */}
-              <View className="space-y-3">
+              <View className="gap-y-3">
                 {reviewsResponse.data.reviews.map((review) => (
                   <View key={review.id} className="bg-white rounded-2xl p-4 shadow-sm">
                     {/* Reviewer Info */}

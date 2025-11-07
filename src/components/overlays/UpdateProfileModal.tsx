@@ -157,7 +157,7 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
   });
 
   const [showCalendar, setShowCalendar] = useState(false);
-  const [showYearPicker, setShowYearPicker] = useState(false);
+  const [calendarView, setCalendarView] = useState<'calendar' | 'yearPicker'>('calendar');
   const [showSkillsDropdown, setShowSkillsDropdown] = useState(false);
   const [showCountryCallDropdown, setShowCountryCallDropdown] = useState(false);
   const [showCountryTextDropdown, setShowCountryTextDropdown] = useState(false);
@@ -170,7 +170,6 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
   // Generate calendar dates
   const generateCalendarDates = (year: number, month: number) => {
     const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
     const startDate = new Date(firstDay);
     startDate.setDate(startDate.getDate() - firstDay.getDay());
     
@@ -355,11 +354,15 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
     }
   };
 
-  // Generate years for year picker (current year ± 50 years)
+  // Generate years for year picker (suitable for birth dates)
   const generateYears = () => {
     const years = [];
     const currentYearNow = new Date().getFullYear();
-    for (let year = currentYearNow - 50; year <= currentYearNow + 10; year++) {
+    // Generate years from 1924 (100 years old) to current year - 18 (minimum age)
+    const minYear = 1924;
+    const maxYear = currentYearNow - 18;
+    
+    for (let year = maxYear; year >= minYear; year--) {
       years.push(year);
     }
     return years;
@@ -370,8 +373,26 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
   const handleYearSelect = (year: number) => {
     console.log(`Setting current year to: ${year}`);
     setCurrentYear(year);
-    setShowYearPicker(false);
+    setCalendarView('calendar');
   };
+  
+  // Add ref for scrolling to current year
+  const yearScrollViewRef = React.useRef<ScrollView>(null);
+  
+  // Effect to scroll to current year when year picker opens
+  React.useEffect(() => {
+    if (calendarView === 'yearPicker' && yearScrollViewRef.current) {
+      const currentIndex = availableYears.findIndex(year => year === currentYear);
+      if (currentIndex !== -1) {
+        // Scroll to show current year in view (approximate calculation)
+        const itemHeight = 50; // Approximate height of each year button
+        const scrollOffset = Math.max(0, (currentIndex - 2) * itemHeight);
+        setTimeout(() => {
+          yearScrollViewRef.current?.scrollTo({ y: scrollOffset, animated: true });
+        }, 100);
+      }
+    }
+  }, [calendarView, currentYear, availableYears]);
 
   // Validation functions
   const validateName = (name: string) => {
@@ -1158,24 +1179,35 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
         visible={showCalendar}
         transparent={true}
         animationType="fade"
-        onRequestClose={() => setShowCalendar(false)}
+        onRequestClose={() => {
+          setShowCalendar(false);
+          setCalendarView('calendar');
+        }}
         statusBarTranslucent={true}
       >
         <View className="flex-1 bg-black/50 justify-center items-center p-4" style={{ pointerEvents: 'auto' }}>
           <View className="bg-[#FBFFF0] rounded-3xl w-full max-w-sm border-4 border-[#71DFB1] p-6 shadow-lg" style={{ pointerEvents: 'auto' }}>
-            {/* Header */}
-            <View className="flex-row justify-between items-center mb-6">
+            
+            {calendarView === 'calendar' ? (
+              // Calendar View
+              <>
+                {/* Header */}
+                <View className="flex-row justify-between items-center mb-6">
               <View className="flex-row items-center">
                 <Text className="text-lg font-bold text-black mr-2">
                   {monthNames[currentMonth]}
                 </Text>
                 <TouchableOpacity 
                   onPress={() => {
-                    console.log('Year button pressed, opening year picker');
-                    setShowYearPicker(true);
+                    console.log('Year button pressed, switching to year picker');
+                    console.log('Available years:', availableYears.length, 'years');
+                    console.log('Current year:', currentYear);
+                    setCalendarView('yearPicker');
                   }}
                   className="bg-[#71DFB1] px-3 py-1 rounded-full"
                   activeOpacity={0.7}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  style={{ minWidth: 50, minHeight: 25 }}
                 >
                   <Text className="text-white font-semibold text-sm">{currentYear}</Text>
                 </TouchableOpacity>
@@ -1257,92 +1289,96 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
               })}
             </View>
 
-            {/* Action Buttons */}
-            <View className="flex-row gap-x-3">
-              <TouchableOpacity
-                onPress={() => setShowCalendar(false)}
-                className="flex-1 bg-gray-100 rounded-full py-3"
-              >
-                <Text className="text-gray-700 text-center font-semibold">Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleDateUpdate}
-                className={`flex-1 rounded-full py-3 ${
-                  selectedDate ? 'bg-[#71DFB1]' : 'bg-gray-300'
-                }`}
-                disabled={!selectedDate}
-              >
-                <Text className={`text-center font-semibold ${
-                  selectedDate ? 'text-white' : 'text-gray-500'
-                }`}>Update</Text>
-              </TouchableOpacity>
-            </View>
+                {/* Action Buttons */}
+                <View className="flex-row gap-x-3">
+                  <TouchableOpacity
+                    onPress={() => setShowCalendar(false)}
+                    className="flex-1 bg-gray-100 rounded-full py-3"
+                  >
+                    <Text className="text-gray-700 text-center font-semibold">Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={handleDateUpdate}
+                    className={`flex-1 rounded-full py-3 ${
+                      selectedDate ? 'bg-[#71DFB1]' : 'bg-gray-300'
+                    }`}
+                    disabled={!selectedDate}
+                  >
+                    <Text className={`text-center font-semibold ${
+                      selectedDate ? 'text-white' : 'text-gray-500'
+                    }`}>Update</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : (
+              // Year Picker View
+              <>
+                <View className="flex-row justify-between items-center mb-4">
+                  <TouchableOpacity 
+                    onPress={() => setCalendarView('calendar')}
+                    className="flex-row items-center"
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Text className="text-[#71DFB1] text-lg mr-2">‹</Text>
+                    <Text className="text-lg font-bold text-black">Select Year</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    onPress={() => {
+                      setShowCalendar(false);
+                      setCalendarView('calendar');
+                    }}
+                    className="w-8 h-8 bg-gray-100 rounded-full items-center justify-center"
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Text className="text-gray-600 text-lg">×</Text>
+                  </TouchableOpacity>
+                </View>
+                
+                <ScrollView 
+                  ref={yearScrollViewRef}
+                  className="max-h-64" 
+                  showsVerticalScrollIndicator={false}
+                  nestedScrollEnabled={true}
+                >
+                  <View className="flex-wrap flex-row justify-between">
+                    {availableYears.map((year) => (
+                      <TouchableOpacity
+                        key={year}
+                        onPress={() => {
+                          console.log(`Year ${year} selected`);
+                          handleYearSelect(year);
+                        }}
+                        className={`w-[30%] m-1 py-3 rounded-xl items-center ${
+                          year === currentYear 
+                            ? 'bg-[#71DFB1]' 
+                            : 'bg-white border border-gray-300'
+                        }`}
+                        hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                        activeOpacity={0.7}
+                      >
+                        <Text className={`font-semibold ${
+                          year === currentYear ? 'text-white' : 'text-black'
+                        }`}>
+                          {year}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </ScrollView>
+                
+                <TouchableOpacity
+                  onPress={() => setCalendarView('calendar')}
+                  className="mt-4 bg-gray-200 rounded-full py-3"
+                  activeOpacity={0.7}
+                >
+                  <Text className="text-gray-700 text-center font-semibold">Back to Calendar</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         </View>
       </Modal>
 
-      {/* Year Picker Modal */}
-      {showYearPicker && (
-        <Modal
-          visible={showYearPicker}
-          transparent={true}
-          animationType="slide"
-          onRequestClose={() => setShowYearPicker(false)}
-          statusBarTranslucent={true}
-        >
-          <TouchableOpacity 
-            className="flex-1 bg-black/50 justify-center items-center p-4"
-            activeOpacity={1}
-            onPress={() => setShowYearPicker(false)}
-            style={{ pointerEvents: 'auto' }}
-          >
-            <TouchableOpacity 
-              className="bg-[#FBFFF0] rounded-3xl w-full max-w-sm border-4 border-[#71DFB1] p-6 shadow-lg"
-              activeOpacity={1}
-              onPress={() => {}}
-              style={{ pointerEvents: 'auto' }}
-            >
-              <View className="flex-row justify-between items-center mb-4">
-                <Text className="text-lg font-bold text-black">Select Year</Text>
-                <TouchableOpacity 
-                  onPress={() => {
-                    console.log('Closing year picker');
-                    setShowYearPicker(false);
-                  }}
-                  className="w-8 h-8 bg-gray-100 rounded-full items-center justify-center"
-                >
-                  <Text className="text-gray-600 text-lg">×</Text>
-                </TouchableOpacity>
-              </View>
-              
-              <ScrollView className="max-h-64" showsVerticalScrollIndicator={false}>
-                <View className="flex-wrap flex-row">
-                  {availableYears.map((year) => (
-                    <TouchableOpacity
-                      key={year}
-                      onPress={() => {
-                        console.log(`Year ${year} selected`);
-                        handleYearSelect(year);
-                      }}
-                      className={`w-[30%] m-1 py-3 rounded-xl items-center ${
-                        year === currentYear 
-                          ? 'bg-[#71DFB1]' 
-                          : 'bg-white border border-gray-300'
-                      }`}
-                    >
-                      <Text className={`font-semibold ${
-                        year === currentYear ? 'text-white' : 'text-black'
-                      }`}>
-                        {year}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </ScrollView>
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </Modal>
-      )}
 
       {/* Skills Dropdown Modal */}
       <Modal

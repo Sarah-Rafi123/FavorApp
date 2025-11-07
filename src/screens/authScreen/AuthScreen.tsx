@@ -15,7 +15,7 @@ import {
 import { CarouselButton } from '../../components/buttons';
 import useAuthStore from '../../store/useAuthStore';
 import EyeSvg from '../../assets/icons/Eye';
-import { useLoginMutation } from '../../services/mutations/AuthMutations';
+import { useLoginMutation, useCheckEmailAvailabilityMutation } from '../../services/mutations/AuthMutations';
 import Toast from 'react-native-toast-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -50,6 +50,17 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
   const [savedCredentials, setSavedCredentials] = useState<Array<{email: string, password: string}>>([]);
   const [showEmailDropdown, setShowEmailDropdown] = useState(false);
   
+  // Email availability checking
+  const [emailAvailability, setEmailAvailability] = useState<{
+    isChecking: boolean;
+    isAvailable: boolean | null;
+    message: string;
+  }>({
+    isChecking: false,
+    isAvailable: null,
+    message: '',
+  });
+  
   // Refs for handling keyboard and scrolling
   const scrollViewRef = useRef<ScrollView>(null);
   const emailInputRef = useRef<TextInput>(null);
@@ -62,6 +73,10 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
   const setRegistrationData = useAuthStore((state) => state.setRegistrationData);
   const clearRegistrationData = useAuthStore((state) => state.clearRegistrationData);
   const loginMutation = useLoginMutation();
+  const emailCheckMutation = useCheckEmailAvailabilityMutation();
+  
+  // Ref for debouncing email checks
+  const emailCheckTimeout = useRef<NodeJS.Timeout | null>(null);
 
   // Load saved credentials on component mount and auto-populate if available
   useEffect(() => {
@@ -250,7 +265,11 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
     if (activeTab === 'signin') {
       return formData.email && formData.password;
     } else {
-      return formData.email && formData.password && formData.confirmPassword && formData.agreeTerms;
+      // For signup, also check that email is available (not taken)
+      const emailIsValid = formData.email && formData.password && formData.confirmPassword && formData.agreeTerms;
+      const emailIsAvailable = !emailAvailability.isChecking && emailAvailability.isAvailable !== false;
+      
+      return emailIsValid && emailIsAvailable;
     }
   };
 
@@ -332,6 +351,61 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
     }
   };
 
+  // Email availability checking function
+  const checkEmailAvailability = async (email: string) => {
+    // Don't check if email is empty or invalid
+    if (!email || !validateEmail(email)) {
+      setEmailAvailability({
+        isChecking: false,
+        isAvailable: null,
+        message: '',
+      });
+      return;
+    }
+
+    // Only check for signup tab
+    if (activeTab !== 'signup') {
+      return;
+    }
+
+    setEmailAvailability(prev => ({
+      ...prev,
+      isChecking: true,
+      message: 'Checking email availability...',
+    }));
+
+    try {
+      const response = await emailCheckMutation.mutateAsync(email);
+      
+      if (response.data.available) {
+        setEmailAvailability({
+          isChecking: false,
+          isAvailable: true,
+          message: '✓ Email is available',
+        });
+      } else {
+        setEmailAvailability({
+          isChecking: false,
+          isAvailable: false,
+          message: '✗ This email is already registered',
+        });
+        
+        // Also set form error
+        setErrors(prev => ({
+          ...prev,
+          email: 'This email is already registered. Please use a different email or sign in.',
+        }));
+      }
+    } catch (error: any) {
+      console.error('Email availability check failed:', error);
+      setEmailAvailability({
+        isChecking: false,
+        isAvailable: null,
+        message: '',
+      });
+    }
+  };
+
   const clearFormData = () => {
     setFormData({
       email: '',
@@ -348,6 +422,19 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
     // Reset password visibility to hidden state
     setShowPassword(false);
     setShowConfirmPassword(false);
+    
+    // Clear email availability state
+    setEmailAvailability({
+      isChecking: false,
+      isAvailable: null,
+      message: '',
+    });
+    
+    // Clear any pending email check timeout
+    if (emailCheckTimeout.current) {
+      clearTimeout(emailCheckTimeout.current);
+      emailCheckTimeout.current = null;
+    }
   };
 
   // Function to scroll to input when focused
@@ -384,10 +471,35 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
       if (field === 'email') {
         if (!value) {
           newErrors.email = 'Email is required';
+          // Clear email availability state when email is empty
+          setEmailAvailability({
+            isChecking: false,
+            isAvailable: null,
+            message: '',
+          });
         } else if (!validateEmail(value)) {
           newErrors.email = 'Please enter correct email';
+          // Clear email availability state for invalid emails
+          setEmailAvailability({
+            isChecking: false,
+            isAvailable: null,
+            message: '',
+          });
         } else {
           newErrors.email = '';
+          
+          // Debounced email availability check for signup tab
+          if (activeTab === 'signup') {
+            // Clear previous timeout
+            if (emailCheckTimeout.current) {
+              clearTimeout(emailCheckTimeout.current);
+            }
+            
+            // Set new timeout for debounced check
+            emailCheckTimeout.current = setTimeout(() => {
+              checkEmailAvailability(value);
+            }, 800); // Wait 800ms after user stops typing
+          }
         }
       }
       
@@ -569,6 +681,21 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
                   {errors.email ? (
                     <Text className="text-red-500 text-sm mt-1">{errors.email}</Text>
                   ) : null}
+                  
+                  {/* Email availability indicator (only for signup) */}
+                  {activeTab === 'signup' && emailAvailability.message && !errors.email && (
+                    <Text 
+                      className={`text-sm mt-1 ${
+                        emailAvailability.isChecking 
+                          ? 'text-gray-500' 
+                          : emailAvailability.isAvailable 
+                            ? 'text-green-600' 
+                            : 'text-red-500'
+                      }`}
+                    >
+                      {emailAvailability.message}
+                    </Text>
+                  )}
                 </View>
               </View>
               

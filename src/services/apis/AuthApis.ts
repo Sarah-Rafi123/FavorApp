@@ -16,6 +16,19 @@ export interface DeleteAccountResponse {
   message: string;
 }
 
+// Email Availability Check Types
+export interface EmailAvailabilityData {
+  available: boolean;
+  email: string;
+  message: string;
+}
+
+export interface EmailAvailabilityResponse {
+  success: boolean;
+  data: EmailAvailabilityData;
+  message: string;
+}
+
 export const registerUser = async (data: RegistrationData) => {
   console.log(`[INIT] => /auth/register`);
   const response = await axiosInstance.post('/auth/register', data);
@@ -77,6 +90,46 @@ export const getCurrentUser = async () => {
   const response = await axiosInstance.get('/auth/me');
   console.log(`[OK] => /auth/me`);
   return response.data;
+};
+
+export const checkEmailAvailability = async (email: string): Promise<EmailAvailabilityResponse> => {
+  try {
+    console.log(`🚀 Making Check Email Availability API call to: /auth/check_email`);
+    console.log('📤 Request Email:', email);
+    
+    const response = await axiosInstance.get('/auth/check_email', {
+      params: { email: email.trim().toLowerCase() }
+    });
+    
+    console.log('🎉 Check Email Availability API Success!');
+    console.log('📊 Response Status:', response.status);
+    console.log('📄 Full API Response:', JSON.stringify(response.data, null, 2));
+    
+    return response.data;
+  } catch (error: any) {
+    console.error('❌ Check Email Availability API Error!');
+    console.error('📄 Full API Error:', error);
+    console.error('📊 Error Response Status:', error.response?.status);
+    console.error('📄 Error Response Data:', JSON.stringify(error.response?.data, null, 2));
+    
+    // Handle specific error scenarios based on status codes
+    if (error.response?.status === 400) {
+      const errorData = error.response?.data;
+      if (errorData?.errors?.includes('Email is required')) {
+        throw new Error('Email is required');
+      } else if (errorData?.errors?.includes('Invalid email format')) {
+        throw new Error('Please enter a valid email address');
+      } else if (errorData?.message) {
+        throw new Error(errorData.message);
+      } else {
+        throw new Error('Invalid email format');
+      }
+    } else if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    } else {
+      throw new Error('Failed to check email availability. Please check your connection and try again.');
+    }
+  }
 };
 
 export const deleteAccount = async (data: DeleteAccountData): Promise<DeleteAccountResponse> => {

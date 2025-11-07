@@ -17,7 +17,7 @@ import BackSvg from '../../assets/icons/Back';
 import CancelSvg from '../../assets/icons/Cancel';
 import UserSvg from '../../assets/icons/User';
 import { useFavor, useFavorReviews } from '../../services/queries/FavorQueries';
-import { usePublicUserProfileQuery, useFavorProviderProfileQuery } from '../../services/queries/ProfileQueries';
+import { usePublicUserProfileQuery, useFavorProviderProfileQuery, useUserReviewsQuery } from '../../services/queries/ProfileQueries';
 import { useDeleteFavor, useReassignFavor, useCompleteFavor, useCancelAndRepost, useCreateReview } from '../../services/mutations/FavorMutations';
 import { Favor } from '../../services/apis/FavorApis';
 import { PublicUserProfile, ProviderProfile } from '../../services/apis/ProfileApis';
@@ -81,6 +81,20 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
   const { data: userProfileResponse, isLoading: userProfileLoading } = usePublicUserProfileQuery(
     favorResponse?.data.favor?.user?.id || null,
     { enabled: !!favorResponse?.data.favor?.user?.id && showUserProfileModal }
+  );
+
+  // Fetch user reviews to get rating statistics
+  const { data: userReviewsResponse } = useUserReviewsQuery(
+    favorResponse?.data.favor?.user?.id || null,
+    { page: 1, per_page: 1 }, // We only need statistics, not the actual reviews
+    { enabled: !!favorResponse?.data.favor?.user?.id && !isRequestMode }
+  );
+
+  // Fetch provider reviews to get rating statistics
+  const { data: providerReviewsResponse } = useUserReviewsQuery(
+    favorResponse?.data.favor?.accepted_response?.user?.id || null,
+    { page: 1, per_page: 1 }, // We only need statistics, not the actual reviews
+    { enabled: !!favorResponse?.data.favor?.accepted_response?.user?.id && isRequestMode }
   );
 
   // Delete favor mutation and Reassign favor mutation
@@ -424,13 +438,13 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
                 <View className="flex-row">
                   <Text className="text-gray-700 text-base w-20">Type</Text>
                   <Text className="text-gray-700 text-base mr-2">:</Text>
-                  <Text className="text-green-600 text-base flex-1 font-semibold">Paid Favor</Text>
+                  <Text className="text-gray-700 text-base flex-1 font-semibold">Paid Favor</Text>
                 </View>
 
                 <View className="flex-row">
                   <Text className="text-gray-700 text-base w-28">Favor Amount</Text>
                   <Text className="text-gray-700 text-base mr-2">:</Text>
-                  <Text className="text-gray-800 text-base flex-1 font-semibold">
+                  <Text className="text-gray-800 text-base flex-1">
                     ${parseFloat((favor.tip || 0).toString()).toFixed(2)}
                   </Text>
                 </View>
@@ -439,7 +453,7 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
                   <View className="flex-row">
                     <Text className="text-gray-700 text-base w-20">Tip</Text>
                     <Text className="text-gray-700 text-base mr-2">:</Text>
-                    <Text className="text-green-600 text-base flex-1 font-semibold">
+                    <Text className="text-gray-700 text-base flex-1">
                       +${parseFloat((favor.additional_tip || 0).toString()).toFixed(2)}
                     </Text>
                   </View>
@@ -448,7 +462,7 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
                 <View className="flex-row">
                   <Text className="text-gray-700 text-base w-20">Total</Text>
                   <Text className="text-gray-700 text-base mr-2">:</Text>
-                  <Text className="text-green-700 text-base flex-1 font-bold">
+                  <Text className="text-gray-700 text-base flex-1">
                     ${(
                       parseFloat((favor.tip || 0).toString()) + 
                       parseFloat((favor.additional_tip || 0).toString())
@@ -463,7 +477,7 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
               <View className="flex-row">
                 <Text className="text-gray-700 text-base w-20">Type</Text>
                 <Text className="text-gray-700 text-base mr-2">:</Text>
-                <Text className="text-blue-600 text-base flex-1 font-semibold">Free Favor</Text>
+                <Text className="text-gray-700 text-base flex-1 font-semibold">Free Favor</Text>
               </View>
             )}
 
@@ -511,8 +525,12 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
                   {favor.user.full_name}
                 </Text>
                 <View className="flex-row items-center mb-1">
-                  <Text className="text-orange-500 text-base font-medium">⭐ 4.5</Text>
-                  <Text className="text-gray-500 text-base ml-2">| 456 Reviews</Text>
+                  <Text className="text-gray-500 text-base font-medium">
+                    ⭐ {userReviewsResponse?.data?.statistics?.average_rating?.toFixed(1) || '0.0'}
+                  </Text>
+                  <Text className="text-gray-500 text-base ml-2">
+                    | {userReviewsResponse?.data?.statistics?.total_reviews || 0} Reviews
+                  </Text>
                 </View>
                 <Text className="text-gray-500 text-base mb-2">2 Mins Away</Text>
                 <TouchableOpacity onPress={() => navigation?.navigate('UserProfileScreen', { userId: favor.user.id })}>
@@ -595,8 +613,12 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
                   {favor.accepted_response.user.full_name}
                 </Text>
                 <View className="flex-row items-center mb-1">
-                  <Text className="text-orange-500 text-base font-medium">⭐ 4.5</Text>
-                  <Text className="text-gray-500 text-base ml-2">| 456 Reviews</Text>
+                  <Text className="text-gray-500 text-base font-medium">
+                    ⭐ {providerReviewsResponse?.data?.statistics?.average_rating?.toFixed(1) || providerProfile?.average_rating?.toFixed(1) || '0.0'}
+                  </Text>
+                  <Text className="text-gray-500 text-base ml-2">
+                    | {providerReviewsResponse?.data?.statistics?.total_reviews || providerProfile?.total_reviews || 0} Reviews
+                  </Text>
                 </View>
                 <Text className="text-gray-500 text-base mb-2">2 Mins Away</Text>
                 <TouchableOpacity onPress={handleViewProfile}>

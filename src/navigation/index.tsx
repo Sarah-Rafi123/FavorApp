@@ -36,7 +36,7 @@ export default function Navigator() {
   const [showCustomSplash, setShowCustomSplash] = useState(false);
   const [carouselCompleted, setCarouselCompleted] = useState(false);
   const [shouldShowSplashCarousel, setShouldShowSplashCarousel] = useState(true);
-  const [skipSplashFromOtp, setSkipSplashFromOtp] = useState(false);
+  const [skipSplashFromSignup, setSkipSplashFromSignup] = useState(false);
 
   useEffect(() => {
     const prepare = async () => {
@@ -44,13 +44,16 @@ export default function Navigator() {
         // Initialize auth tokens from storage
         await initializeAuth();
         
-        // Check if we should skip splash from OTP navigation
-        const skipFlag = await AsyncStorage.getItem('skip_splash_from_otp');
-        if (skipFlag === 'true') {
-          setSkipSplashFromOtp(true);
-          // Clear the flag after reading it
+        // Check if we should skip splash from signup/OTP navigation
+        const skipOtpFlag = await AsyncStorage.getItem('skip_splash_from_otp');
+        const skipSignupFlag = await AsyncStorage.getItem('skip_splash_from_signup');
+        
+        if (skipOtpFlag === 'true' || skipSignupFlag === 'true') {
+          setSkipSplashFromSignup(true);
+          // Clear the flags after reading them
           await AsyncStorage.removeItem('skip_splash_from_otp');
-          console.log('🔄 Skip splash flag detected from OTP verification');
+          await AsyncStorage.removeItem('skip_splash_from_signup');
+          console.log('🔄 Skip splash flag detected from signup/OTP flow');
         }
       } catch (e) {
         console.error('Failed to initialize auth:', e);
@@ -71,9 +74,9 @@ export default function Navigator() {
         setShouldShowSplashCarousel(false);
         setShowCustomSplash(false);
         setCarouselCompleted(true);
-      } else if (skipSplashFromOtp) {
-        // Skip splash and carousel when coming from OTP verification
-        console.log('🔄 Skipping splash from OTP verification - going directly to auth');
+      } else if (skipSplashFromSignup) {
+        // Skip splash and carousel when coming from signup flow
+        console.log('🔄 Skipping splash from signup flow - going directly to auth');
         setShouldShowSplashCarousel(false);
         setShowCustomSplash(false);
         setCarouselCompleted(true);
@@ -88,7 +91,7 @@ export default function Navigator() {
         }, 2000);
       }
     }
-  }, [appIsReady, user, accessToken, skipSplashFromOtp]);
+  }, [appIsReady, user, accessToken, skipSplashFromSignup]);
 
   // Immediate response to auth state changes - highest priority
   useEffect(() => {
@@ -108,8 +111,8 @@ export default function Navigator() {
     console.log('App Ready:', appIsReady);
     console.log('Should Show Splash/Carousel:', shouldShowSplashCarousel);
     console.log('Carousel Completed:', carouselCompleted);
-    console.log('Skip Splash From OTP:', skipSplashFromOtp);
-  }, [user, accessToken, appIsReady, shouldShowSplashCarousel, carouselCompleted, skipSplashFromOtp]);
+    console.log('Skip Splash From Signup:', skipSplashFromSignup);
+  }, [user, accessToken, appIsReady, shouldShowSplashCarousel, carouselCompleted, skipSplashFromSignup]);
 
   // Cleanup when component unmounts
   useEffect(()=>{

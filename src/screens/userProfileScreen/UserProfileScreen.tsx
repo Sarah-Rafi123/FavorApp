@@ -222,15 +222,17 @@ export function UserProfileScreen({ navigation, route }: UserProfileScreenProps)
               </View>
             )}
 
-            <View className="flex-row">
-              <Text className="text-gray-700 text-base w-32">Location</Text>
-              <Text className="text-gray-700 text-base mr-2">:</Text>
-              <View className="flex-1">
-                <Text className="text-gray-800 text-base" numberOfLines={2} ellipsizeMode="tail">
-                  {userProfile.address?.city}, {userProfile.address?.state}
-                </Text>
+            {(userProfile.address?.city || userProfile.address?.state) && (
+              <View className="flex-row">
+                <Text className="text-gray-700 text-base w-32">Location</Text>
+                <Text className="text-gray-700 text-base mr-2">:</Text>
+                <View className="flex-1">
+                  <Text className="text-gray-800 text-base" numberOfLines={2} ellipsizeMode="tail">
+                    {[userProfile.address?.city, userProfile.address?.state].filter(Boolean).join(', ')}
+                  </Text>
+                </View>
               </View>
-            </View>
+            )}
 
             <View className="flex-row">
               <Text className="text-gray-700 text-base w-32">Member Since</Text>

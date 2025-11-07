@@ -503,13 +503,13 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
                 <View className="flex-row">
                   <Text className="text-gray-700 text-base w-20">Type</Text>
                   <Text className="text-gray-700 text-base mr-2">:</Text>
-                  <Text className="text-green-600 text-base flex-1 font-semibold">Paid Favor</Text>
+                  <Text className="text-gray-700 text-base flex-1">Paid Favor</Text>
                 </View>
 
                 <View className="flex-row">
                   <Text className="text-gray-700 text-base w-28">Favor Amount</Text>
                   <Text className="text-gray-700 text-base mr-2">:</Text>
-                  <Text className="text-gray-800 text-base flex-1 font-semibold">
+                  <Text className="text-gray-800 text-base flex-1">
                     ${parseFloat((favor.tip || 0).toString()).toFixed(2)}
                   </Text>
                 </View>
@@ -527,7 +527,7 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
                 <View className="flex-row">
                   <Text className="text-gray-700 text-base w-20">Total</Text>
                   <Text className="text-gray-700 text-base mr-2">:</Text>
-                  <Text className="text-green-700 text-base flex-1 font-bold">
+                  <Text className="text-gray-700 text-base flex-1">
                     ${(
                       parseFloat((favor.tip || 0).toString()) + 
                       parseFloat((favor.additional_tip || 0).toString())
@@ -542,7 +542,7 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
               <View className="flex-row">
                 <Text className="text-gray-700 text-base w-20">Type</Text>
                 <Text className="text-gray-700 text-base mr-2">:</Text>
-                <Text className="text-blue-600 text-base flex-1 font-semibold">Free Favor</Text>
+                <Text className="text-gray-700 text-base flex-1 font-semibold">Free Favor</Text>
               </View>
             )}
 
