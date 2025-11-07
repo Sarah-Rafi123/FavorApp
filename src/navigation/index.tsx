@@ -6,6 +6,7 @@ import { StatusBar, View } from 'react-native';
 import { SplashScreen as CustomSplashScreen, CarouselScreen } from '../screens';
 import { MainTabs } from './tabs/MainTabs';
 import { NotificationPopupRenderer } from '../context/NotificationContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /**
  * Application Navigation Flow
@@ -35,12 +36,22 @@ export default function Navigator() {
   const [showCustomSplash, setShowCustomSplash] = useState(false);
   const [carouselCompleted, setCarouselCompleted] = useState(false);
   const [shouldShowSplashCarousel, setShouldShowSplashCarousel] = useState(true);
+  const [skipSplashFromOtp, setSkipSplashFromOtp] = useState(false);
 
   useEffect(() => {
     const prepare = async () => {
       try {
         // Initialize auth tokens from storage
         await initializeAuth();
+        
+        // Check if we should skip splash from OTP navigation
+        const skipFlag = await AsyncStorage.getItem('skip_splash_from_otp');
+        if (skipFlag === 'true') {
+          setSkipSplashFromOtp(true);
+          // Clear the flag after reading it
+          await AsyncStorage.removeItem('skip_splash_from_otp');
+          console.log('🔄 Skip splash flag detected from OTP verification');
+        }
       } catch (e) {
         console.error('Failed to initialize auth:', e);
       } finally {
@@ -60,6 +71,12 @@ export default function Navigator() {
         setShouldShowSplashCarousel(false);
         setShowCustomSplash(false);
         setCarouselCompleted(true);
+      } else if (skipSplashFromOtp) {
+        // Skip splash and carousel when coming from OTP verification
+        console.log('🔄 Skipping splash from OTP verification - going directly to auth');
+        setShouldShowSplashCarousel(false);
+        setShowCustomSplash(false);
+        setCarouselCompleted(true);
       } else {
         console.log('❌ User not logged in - showing splash and carousel');
         setShouldShowSplashCarousel(true);
@@ -71,7 +88,7 @@ export default function Navigator() {
         }, 2000);
       }
     }
-  }, [appIsReady, user, accessToken]);
+  }, [appIsReady, user, accessToken, skipSplashFromOtp]);
 
   // Immediate response to auth state changes - highest priority
   useEffect(() => {
@@ -91,7 +108,8 @@ export default function Navigator() {
     console.log('App Ready:', appIsReady);
     console.log('Should Show Splash/Carousel:', shouldShowSplashCarousel);
     console.log('Carousel Completed:', carouselCompleted);
-  }, [user, accessToken, appIsReady, shouldShowSplashCarousel, carouselCompleted]);
+    console.log('Skip Splash From OTP:', skipSplashFromOtp);
+  }, [user, accessToken, appIsReady, shouldShowSplashCarousel, carouselCompleted, skipSplashFromOtp]);
 
   // Cleanup when component unmounts
   useEffect(()=>{

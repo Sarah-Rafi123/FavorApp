@@ -13,6 +13,7 @@ import { SuccessModal } from '../../components/overlays/SuccessModal';
 import { useVerifyOtpMutation, useResendOtpMutation } from '../../services/mutations/AuthMutations';
 import useAuthStore from '../../store/useAuthStore';
 import Toast from 'react-native-toast-message';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface SignupOtpScreenProps {
   onBack: () => void;
@@ -314,8 +315,10 @@ export function SignupOtpScreen({ onBack, onVerifySuccess, onBackToLogin, email,
         visible={showSuccessModal}
         title="Success"
         message="Your email verification process is complete. You can now login with your credentials."
-        onContinue={() => {
+        onContinue={async () => {
           setShowSuccessModal(false);
+          // Set flag to skip splash screen when navigating to auth
+          await AsyncStorage.setItem('skip_splash_from_otp', 'true');
           onBackToLogin();
         }}
       />
