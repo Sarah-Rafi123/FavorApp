@@ -61,14 +61,11 @@ export default function Navigator() {
         setShowCustomSplash(false);
         setCarouselCompleted(true);
       } else {
-        console.log('❌ User not logged in - showing splash and carousel');
-        setShouldShowSplashCarousel(true);
-        setShowCustomSplash(true);
-        
-        // Show custom splash for 2 seconds then move to carousel
-        setTimeout(() => {
-          setShowCustomSplash(false);
-        }, 2000);
+        console.log('❌ User not logged in - skipping splash and carousel, going directly to auth');
+        // Skip splash and carousel, go directly to AuthScreen
+        setShouldShowSplashCarousel(false);
+        setShowCustomSplash(false);
+        setCarouselCompleted(true);
       }
     }
   }, [appIsReady, user, accessToken]);
