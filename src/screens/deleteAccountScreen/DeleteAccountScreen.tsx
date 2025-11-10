@@ -63,7 +63,7 @@ export function DeleteAccountScreen({ navigation }: DeleteAccountScreenProps) {
     }
 
     if (!password.trim()) {
-      Alert.alert('Error', 'Please enter your password to confirm account deletion');
+      Alert.alert('Error', 'Please enter your password\nto confirm account deletion');
       return;
     }
 
@@ -186,7 +186,7 @@ export function DeleteAccountScreen({ navigation }: DeleteAccountScreenProps) {
           <View className="mb-6 relative">
             <TextInput
               className="bg-transparent border border-[#D0D5DD] rounded-xl px-4 py-4 text-base text-black"
-              placeholder="Enter your password to confirm"
+              placeholder="Enter your password\nto confirm"
               placeholderTextColor="#9CA3AF"
               value={password}
               onChangeText={setPassword}

@@ -244,9 +244,11 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
   
   // Enhanced loading detection to prevent premature empty states
   const isActuallyLoading = (
-    // For "All" tab: show loading if we don't have data yet and no error, but not during refresh when we have existing data
-    activeTab === 'All' && allFavors.length === 0 && !error && !refreshing && (
-      isLoadingCurrentData || (currentPage === 1 && !currentData)
+    // For "All" tab: show loading if we don't have data yet and no error, or during initial load
+    activeTab === 'All' && (
+      (allFavors.length === 0 && !error && !refreshing && isLoadingCurrentData) ||
+      (allFavors.length === 0 && !error && currentPage === 1 && !currentData) ||
+      (refreshing && allFavors.length === 0)
     )
   ) || (
     // For Active/History tabs: only show loading during initial load or refresh, not when data is present
@@ -311,19 +313,25 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
     setHasMorePages(true);
   }, [useFilteredData]);
 
-  // Reset pagination and state when switching to All tab
+  // Reset pagination and state when switching to All tab, and trigger refetch
   React.useEffect(() => {
     if (activeTab === 'All') {
       console.log('🔄 Switching to All tab - resetting state');
       setCurrentPage(1);
       setAllFavors([]);
       setHasMorePages(true);
+      
+      // Trigger refetch to ensure data loads when switching back to All tab
+      setTimeout(() => {
+        console.log('🚀 Triggering refetch for All tab after tab switch');
+        refetchCurrentData();
+      }, 100);
     }
-  }, [activeTab]);
+  }, [activeTab, refetchCurrentData]);
 
   // Update allFavors when new data arrives (same as HomeListScreen)
   React.useEffect(() => {
-    if (currentData?.data?.favors) {
+    if (currentData?.data?.favors && activeTab === 'All') {
       console.log('🔄 Updating allFavors for currentPage:', currentPage);
       console.log('📊 Received favors count:', currentData.data.favors.length);
       console.log('📄 Total pages:', currentData.data.meta?.total_pages);
@@ -343,10 +351,10 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
         setHasMorePages(currentPage < currentData.data.meta.total_pages);
         console.log('📄 Has more pages:', currentPage < currentData.data.meta.total_pages);
       }
-    } else {
-      console.log('⚠️ No data received or data structure is unexpected:', currentData);
+    } else if (activeTab === 'All') {
+      console.log('⚠️ No data received or data structure is unexpected for All tab:', currentData);
     }
-  }, [currentData, currentPage]);
+  }, [currentData, currentPage, activeTab]);
 
   // Load more favors function (same as HomeListScreen)
   const loadMoreFavors = useCallback(() => {
@@ -1022,47 +1030,60 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
         )
       ) : (
         /* Empty State */
-        <View className="flex-1 items-center justify-center px-6">
-          <View className="items-center mb-8">
-            {activeTab === 'All' && (
-              <View style={{ transform: [{ scale: 2 }] }}>
-                <ProvideFavorSvg focused={true} />
-              </View>
-            )}
-            {activeTab === 'Active' && <PersonwithHeartSvg />}
-            {activeTab === 'History' && <TimerSvg />}
+        <ScrollView 
+          className="flex-1"
+          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              colors={['#44A27B']}
+              tintColor="#44A27B"
+            />
+          }
+        >
+          <View className="items-center">
+            <View className="items-center mb-8">
+              {activeTab === 'All' && (
+                <View style={{ transform: [{ scale: 2 }] }}>
+                  <ProvideFavorSvg focused={true} />
+                </View>
+              )}
+              {activeTab === 'Active' && <PersonwithHeartSvg />}
+              {activeTab === 'History' && <TimerSvg />}
+            </View>
+            
+            <Text className="text-2xl font-bold text-[#000000B8] mb-4 text-center">
+              {activeTab === 'All' && (hasActiveFilters() ? 'No favor found' : 'No favors available')}
+              {activeTab === 'Active' && 'No Active Favors'}
+              {activeTab === 'History' && 'No History Yet'}
+            </Text>
+            
+            <Text className="text-[#000000B] text-center mb-12 leading-6">
+              {activeTab === 'All' && (
+                hasActiveFilters() 
+                  ? 'Try adjusting your filters to see more results'
+                  : 'Check back later for new favors or pull down to refresh'
+              )}
+              {activeTab === 'Active' && "You don't have any ongoing favors right\nnow. Start helping or request a hand to see\nthem here."}
+              {activeTab === 'History' && 'Once you help someone, your favor history\nwill appear here.'}
+            </Text>
+            
+            <View className="w-full max-w-sm">
+              {activeTab === 'All' && hasActiveFilters() ? (
+                <CarouselButton
+                  title="Adjust Filters"
+                  onPress={() => navigation?.navigate('FilterScreen')}
+                />
+              ) : (
+                <CarouselButton
+                  title={activeTab === 'All' ? 'Ask Favor' : 'Explore Favors'}
+                  onPress={activeTab === 'All' ? handleAskFavor : handleExploreFavors}
+                />
+              )}
+            </View>
           </View>
-          
-          <Text className="text-2xl font-bold text-[#000000B8] mb-4 text-center">
-            {activeTab === 'All' && (hasActiveFilters() ? 'No favor found' : 'No favors available')}
-            {activeTab === 'Active' && 'No Active Favors'}
-            {activeTab === 'History' && 'No History Yet'}
-          </Text>
-          
-          <Text className="text-[#000000B] text-center mb-12 leading-6">
-            {activeTab === 'All' && (
-              hasActiveFilters() 
-                ? 'Try adjusting your filters to see more results'
-                : 'Check back later for new favors'
-            )}
-            {activeTab === 'Active' && "You don't have any ongoing favors right\nnow. Start helping or request a hand to see\nthem here."}
-            {activeTab === 'History' && 'Once you help someone, your favor history\nwill appear here.'}
-          </Text>
-          
-          <View className="w-full max-w-sm">
-            {activeTab === 'All' && hasActiveFilters() ? (
-              <CarouselButton
-                title="Adjust Filters"
-                onPress={() => navigation?.navigate('FilterScreen')}
-              />
-            ) : (
-              <CarouselButton
-                title={activeTab === 'All' ? 'Ask Favor' : 'Explore Favors'}
-                onPress={activeTab === 'All' ? handleAskFavor : handleExploreFavors}
-              />
-            )}
-          </View>
-        </View>
+        </ScrollView>
       )}
 
       {/* Category Filter Modal */}

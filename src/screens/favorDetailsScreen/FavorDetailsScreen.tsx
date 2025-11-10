@@ -54,6 +54,9 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
   const [reviewText, setReviewText] = useState('');
   const [showTipOption, setShowTipOption] = useState(false);
   const [tipAmount, setTipAmount] = useState('');
+  const [isCompletingFavor, setIsCompletingFavor] = useState(false);
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
 
   // Get favor ID from route params
   const favorId = route?.params?.favorId || route?.params?.favor?.id;
@@ -77,6 +80,18 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
     { enabled: !!favorResponse?.data.favor?.accepted_response }
   );
 
+  // Fetch user contact details immediately
+  const { data: userContactResponse } = usePublicUserProfileQuery(
+    favorResponse?.data.favor?.user?.id || null,
+    { enabled: !!favorResponse?.data.favor?.user?.id }
+  );
+
+  // Fetch provider contact details
+  const { data: providerContactResponse } = usePublicUserProfileQuery(
+    favorResponse?.data.favor?.accepted_response?.user?.id || null,
+    { enabled: !!favorResponse?.data.favor?.accepted_response?.user?.id }
+  );
+  
   // Fetch user profile data when needed (for modal)
   const { data: userProfileResponse, isLoading: userProfileLoading } = usePublicUserProfileQuery(
     favorResponse?.data.favor?.user?.id || null,
@@ -106,25 +121,49 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
 
   const favor = favorResponse?.data.favor;
   const userProfile = userProfileResponse?.data.user;
+  const userContact = userContactResponse?.data.user; // Contact details for the favor requester
   const providerProfile = providerProfileResponse?.data.user;
+  const providerContact = providerContactResponse?.data.user; // Contact details for the provider
 
   // Debug logging to check contact information
   React.useEffect(() => {
-    if (userProfile) {
-      console.log('📞 User Profile Contact Info:');
-      console.log('  - Phone Call:', userProfile.phone_no_call);
-      console.log('  - Phone Text:', userProfile.phone_no_text);
-      console.log('  - Has Call Number:', !!userProfile.phone_no_call);
-      console.log('  - Has Text Number:', !!userProfile.phone_no_text);
+    if (userContact) {
+      console.log('📞 User Contact Info:');
+      console.log('  - Phone Call:', userContact.phone_no_call);
+      console.log('  - Phone Text:', userContact.phone_no_text);
+      console.log('  - Has Call Number:', !!userContact.phone_no_call);
+      console.log('  - Has Text Number:', !!userContact.phone_no_text);
+      console.log('  - Email:', userContact.email);
+      console.log('  - Full Name:', userContact.full_name);
     }
-    if (providerProfile) {
-      console.log('📞 Provider Profile Contact Info:');
-      console.log('  - Phone Call:', providerProfile.phone_no_call);
-      console.log('  - Phone Text:', providerProfile.phone_no_text);
-      console.log('  - Has Call Number:', !!providerProfile.phone_no_call);
-      console.log('  - Has Text Number:', !!providerProfile.phone_no_text);
+    if (providerContact) {
+      console.log('📞 Provider Contact Info:');
+      console.log('  - Phone Call:', providerContact.phone_no_call);
+      console.log('  - Phone Text:', providerContact.phone_no_text);
+      console.log('  - Has Call Number:', !!providerContact.phone_no_call);
+      console.log('  - Has Text Number:', !!providerContact.phone_no_text);
+      console.log('  - Email:', providerContact.email);
+      console.log('  - Full Name:', providerContact.full_name);
     }
-  }, [userProfile, providerProfile]);
+  }, [userContact, providerContact]);
+
+  // Debug logging for reviews data
+  React.useEffect(() => {
+    if (reviewsResponse?.data?.reviews) {
+      console.log('📊 Reviews Response:');
+      console.log('  - Total reviews:', reviewsResponse.data.reviews.length);
+      reviewsResponse.data.reviews.forEach((review, index) => {
+        console.log(`  - Review ${index + 1}:`, {
+          id: review.id,
+          rating: review.rating,
+          given_by_name: review.given_by?.full_name,
+          given_by_image: review.given_by?.image_url,
+          has_image: !!review.given_by?.image_url,
+          image_url_length: review.given_by?.image_url?.length
+        });
+      });
+    }
+  }, [reviewsResponse]);
 
   // Function to get user initials from full name
   const getUserInitials = (fullName: string) => {
@@ -265,9 +304,10 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
   };
 
   const handleSubmitReview = async () => {
-    if (!favor) return;
+    if (!favor || isCompletingFavor) return;
 
     try {
+      setIsCompletingFavor(true);
       console.log('🎯 Marking favor as completed:', favor.id);
       await completeFavorMutation.mutateAsync(favor.id);
       
@@ -278,11 +318,13 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
     } catch (error: any) {
       console.error('❌ Complete favor failed:', error.message);
       // Error handling is done by the mutation's onError callback
+    } finally {
+      setIsCompletingFavor(false);
     }
   };
 
   const handleReviewSubmit = async () => {
-    if (!favor || rating === 0 || !reviewText.trim()) {
+    if (!favor || rating === 0 || !reviewText.trim() || isSubmittingReview) {
       Toast.show({
         type: 'error',
         text1: 'Incomplete Review',
@@ -293,6 +335,7 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
     }
 
     try {
+      setIsSubmittingReview(true);
       const reviewData = {
         rating,
         description: reviewText.trim(),
@@ -321,6 +364,8 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
     } catch (error: any) {
       console.error('❌ Review submission failed:', error.message);
       // Error handling is done by the mutation's onError callback
+    } finally {
+      setIsSubmittingReview(false);
     }
   };
 
@@ -373,8 +418,9 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
       <View className="pt-16 pb-6 px-6">
         <View className="flex-row items-center">
           <TouchableOpacity 
-            className="mr-4"
+            className={`mr-4 ${isCompletingFavor ? 'opacity-50' : ''}`}
             onPress={handleGoBack}
+            disabled={isCompletingFavor}
           >
             <BackSvg />
           </TouchableOpacity>
@@ -442,7 +488,7 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
                 </View>
 
                 <View className="flex-row">
-                  <Text className="text-gray-700 text-base w-28">Favor Amount</Text>
+                  <Text className="text-gray-700 text-base w-20">Favor Amount</Text>
                   <Text className="text-gray-700 text-base mr-2">:</Text>
                   <Text className="text-gray-800 text-base flex-1">
                     ${parseFloat((favor.tip || 0).toString()).toFixed(2)}
@@ -533,6 +579,37 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
                   </Text>
                 </View>
                 <Text className="text-gray-500 text-base mb-2">2 Mins Away</Text>
+                
+                {/* Contact Information within profile card */}
+                {userContact ? (
+                  <View className="mt-2 mb-2">
+                    {userContact.phone_no_call ? (
+                      <Text className="text-gray-500 text-base">
+                        📞 {userContact.phone_no_call}
+                      </Text>
+                    ) : (
+                      <Text className="text-gray-400 text-sm">
+                        📞 Call number not available
+                      </Text>
+                    )}
+                    {userContact.phone_no_text ? (
+                      <Text className="text-gray-500 text-base">
+                        💬 {userContact.phone_no_text}
+                      </Text>
+                    ) : (
+                      <Text className="text-gray-400 text-sm">
+                        💬 Text number not available
+                      </Text>
+                    )}
+                  </View>
+                ) : (
+                  <View className="mt-2 mb-2">
+                    <Text className="text-gray-400 text-sm">
+                      📞 Loading contact details...
+                    </Text>
+                  </View>
+                )}
+
                 <TouchableOpacity onPress={() => navigation?.navigate('UserProfileScreen', { userId: favor.user.id })}>
                   <Text className="text-[#44A27B] text-base font-medium underline">View Profile</Text>
                 </TouchableOpacity>
@@ -540,25 +617,25 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
             </View>
 
             {/* Contact Buttons - Only show if contact info is available */}
-            {userProfile && (userProfile.phone_no_call || userProfile.phone_no_text) && (
-              <View className="flex-row space-x-3 mt-4 mb-6">
-                {userProfile.phone_no_call && (
+            {userContact && (userContact.phone_no_call || userContact.phone_no_text) && (
+              <View className="flex-row space-x-3 mb-6">
+                {userContact.phone_no_call && (
                   <TouchableOpacity 
                     className="flex-1 bg-transparent border border-black rounded-xl py-3"
-                    onPress={() => handleCallNumber(userProfile.phone_no_call!)}
+                    onPress={() => handleCallNumber(userContact.phone_no_call!)}
                   >
                     <Text className="text-center text-gray-800 font-medium text-sm">
-                      Call: {userProfile.phone_no_call}
+                      Call: {userContact.phone_no_call}
                     </Text>
                   </TouchableOpacity>
                 )}
-                {userProfile.phone_no_text && (
+                {userContact.phone_no_text && (
                   <TouchableOpacity 
-                    className={`flex-1 bg-transparent border border-black rounded-xl py-3 ${userProfile.phone_no_call ? 'ml-3' : ''}`}
-                    onPress={() => handleTextNumber(userProfile.phone_no_text!)}
+                    className={`flex-1 bg-transparent border border-black rounded-xl py-3 ${userContact.phone_no_call ? 'ml-3' : ''}`}
+                    onPress={() => handleTextNumber(userContact.phone_no_text!)}
                   >
                     <Text className="text-center text-gray-800 font-medium text-sm">
-                      Text: {userProfile.phone_no_text}
+                      Text: {userContact.phone_no_text}
                     </Text>
                   </TouchableOpacity>
                 )}
@@ -568,10 +645,18 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
             {/* Submit Review Button for provider mode */}
             {favor.status !== 'completed' && (
               <TouchableOpacity 
-                className="bg-[#44A27B] rounded-xl py-3 mb-4"
+                className={`rounded-xl py-3 mb-4 ${isCompletingFavor ? 'bg-gray-400' : 'bg-[#44A27B]'}`}
                 onPress={handleSubmitReview}
+                disabled={isCompletingFavor}
               >
-                <Text className="text-white text-center font-medium text-base">Submit Review</Text>
+                {isCompletingFavor ? (
+                  <View className="flex-row justify-center items-center">
+                    <ActivityIndicator size="small" color="white" />
+                    <Text className="text-white text-center font-medium text-base ml-2">Completing...</Text>
+                  </View>
+                ) : (
+                  <Text className="text-white text-center font-medium text-base">Submit Review</Text>
+                )}
               </TouchableOpacity>
             )}
           </View>
@@ -620,7 +705,38 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
                     | {providerReviewsResponse?.data?.statistics?.total_reviews || providerProfile?.total_reviews || 0} Reviews
                   </Text>
                 </View>
-                <Text className="text-gray-500 text-base mb-2">2 Mins Away</Text>
+               
+                
+                {/* Contact Information within profile card */}
+                {/* {providerContact ? (
+                  <View className="mt-2 mb-2">
+                    {providerContact.phone_no_call ? (
+                      <Text className="text-gray-500 text-base">
+                        📞 {providerContact.phone_no_call}
+                      </Text>
+                    ) : (
+                      <Text className="text-gray-400 text-sm">
+                        📞 Call number not available
+                      </Text>
+                    )}
+                    {providerContact.phone_no_text ? (
+                      <Text className="text-gray-500 text-base">
+                        💬 {providerContact.phone_no_text}
+                      </Text>
+                    ) : (
+                      <Text className="text-gray-400 text-sm">
+                        💬 Text number not available
+                      </Text>
+                    )}
+                  </View>
+                ) : (
+                  <View className="mt-2 mb-2">
+                    <Text className="text-gray-400 text-sm">
+                      📞 Loading contact details...
+                    </Text>
+                  </View>
+                )} */}
+
                 <TouchableOpacity onPress={handleViewProfile}>
                   <Text className="text-[#44A27B] text-base font-medium underline">View Profile</Text>
                 </TouchableOpacity>
@@ -628,25 +744,27 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
             </View>
 
             {/* Contact Buttons - Only show if contact info is available */}
-            {providerProfile && (providerProfile.phone_no_call || providerProfile.phone_no_text) && (
-              <View className="flex-row space-x-3 mt-4 mb-6">
-                {providerProfile.phone_no_call && (
+            {providerContact && (providerContact.phone_no_call || providerContact.phone_no_text) && (
+              <View className="flex-row space-x-3 mb-6">
+                {providerContact.phone_no_call && (
                   <TouchableOpacity 
-                    className="flex-1 bg-transparent border border-black rounded-xl py-3"
-                    onPress={() => handleCallNumber(providerProfile.phone_no_call!)}
+                    className={`flex-1 bg-transparent border border-black rounded-xl py-3 ${isCompletingFavor ? 'opacity-50' : ''}`}
+                    onPress={() => handleCallNumber(providerContact.phone_no_call!)}
+                    disabled={isCompletingFavor}
                   >
                     <Text className="text-center text-gray-800 font-medium text-sm">
-                      Call: {providerProfile.phone_no_call}
+                      Call: {providerContact.phone_no_call}
                     </Text>
                   </TouchableOpacity>
                 )}
-                {providerProfile.phone_no_text && (
+                {providerContact.phone_no_text && (
                   <TouchableOpacity 
-                    className={`flex-1 bg-transparent border border-black rounded-xl py-3 ${providerProfile.phone_no_call ? 'ml-3' : ''}`}
-                    onPress={() => handleTextNumber(providerProfile.phone_no_text!)}
+                    className={`flex-1 bg-transparent border border-black rounded-xl py-3 ${providerContact.phone_no_call ? 'ml-3' : ''} ${isCompletingFavor ? 'opacity-50' : ''}`}
+                    onPress={() => handleTextNumber(providerContact.phone_no_text!)}
+                    disabled={isCompletingFavor}
                   >
                     <Text className="text-center text-gray-800 font-medium text-sm">
-                      Text: {providerProfile.phone_no_text}
+                      Text: {providerContact.phone_no_text}
                     </Text>
                   </TouchableOpacity>
                 )}
@@ -660,23 +778,33 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
                   /* Buttons for request mode (CreateFavorScreen) */
                   <View className="flex-row space-x-2">
                     <TouchableOpacity 
-                      className="flex-1 bg-transparent border border-black rounded-xl py-3 mr-2"
+                      className={`flex-1 bg-transparent border border-black rounded-xl py-3 mr-2 ${isCompletingFavor ? 'opacity-50' : ''}`}
                       onPress={handleCancelAndRepost}
+                      disabled={isCompletingFavor}
                     >
                       <Text className="text-center text-gray-800 font-medium text-sm">Cancel & Repost</Text>
                     </TouchableOpacity>
                     <TouchableOpacity 
-                      className="bg-[#44A27B] rounded-xl py-3 px-4 mr-2"
+                      className={`rounded-xl py-3 px-4 mr-2 ${isCompletingFavor ? 'bg-gray-400' : 'bg-[#44A27B]'}`}
                       onPress={handleSubmitReview}
+                      disabled={isCompletingFavor}
                     >
-                      <Text className="text-white text-center font-medium text-sm">Mark as Completed</Text>
+                      {isCompletingFavor ? (
+                        <View className="flex-row justify-center items-center">
+                          <ActivityIndicator size="small" color="white" />
+                          <Text className="text-white text-center font-medium text-sm ml-1">Completing...</Text>
+                        </View>
+                      ) : (
+                        <Text className="text-white text-center font-medium text-sm">Mark as Completed</Text>
+                      )}
                     </TouchableOpacity>
                     <TouchableOpacity 
-                      className="bg-transparent border border-black rounded-xl py-3 px-4"
+                      className={`bg-transparent border border-black rounded-xl py-3 px-4 ${isCompletingFavor ? 'opacity-50' : ''}`}
                       onPress={() => {
                         // Cancel functionality
                         console.log('Cancel');
                       }}
+                      disabled={isCompletingFavor}
                     >
                       <Text className="text-center text-gray-800 font-medium text-sm">Cancel</Text>
                     </TouchableOpacity>
@@ -684,10 +812,18 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
                 ) : (
                   /* Button for provider mode (ProvideFavorScreen) */
                   <TouchableOpacity 
-                    className="bg-[#44A27B] rounded-xl py-3 mb-4"
+                    className={`rounded-xl py-3 mb-4 ${isCompletingFavor ? 'bg-gray-400' : 'bg-[#44A27B]'}`}
                     onPress={handleSubmitReview}
+                    disabled={isCompletingFavor}
                   >
-                    <Text className="text-white text-center font-medium text-base">Mark as Completed</Text>
+                    {isCompletingFavor ? (
+                      <View className="flex-row justify-center items-center">
+                        <ActivityIndicator size="small" color="white" />
+                        <Text className="text-white text-center font-medium text-base ml-2">Completing...</Text>
+                      </View>
+                    ) : (
+                      <Text className="text-white text-center font-medium text-base">Mark as Completed</Text>
+                    )}
                   </TouchableOpacity>
                 )}
               </>
@@ -706,14 +842,37 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
               <View key={index} className="bg-white rounded-2xl p-4 mb-3 border border-gray-300">
                 {/* Reviewer Info */}
                 <View className="flex-row items-center mb-3">
-                  <View className="w-10 h-10 bg-gray-200 rounded-full overflow-hidden">
-                    <Image
-                      source={{ 
-                        uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face' 
-                      }}
-                      className="w-full h-full"
-                      resizeMode="cover"
-                    />
+                  <View className="w-10 h-10 bg-[#44A27B] rounded-full overflow-hidden items-center justify-center">
+                    {review.given_by?.image_url && 
+                     review.given_by.image_url.trim() !== '' && 
+                     !failedImages.has(review.given_by.image_url) ? (
+                      <Image
+                        source={{ 
+                          uri: review.given_by.image_url,
+                          cache: 'force-cache'
+                        }}
+                        className="w-full h-full"
+                        resizeMode="cover"
+                        onError={(error) => {
+                          console.log('❌ Failed to load review image for', review.given_by?.full_name, ':', review.given_by.image_url);
+                          console.log('Error details:', error.nativeEvent?.error);
+                          if (review.given_by?.image_url) {
+                            setFailedImages(prev => new Set(prev).add(review.given_by.image_url!));
+                          }
+                        }}
+                        onLoad={() => {
+                          console.log('✅ Successfully loaded review image for', review.given_by?.full_name);
+                        }}
+                        style={{ width: '100%', height: '100%' }}
+                      />
+                    ) : (
+                      <Text className="text-white font-bold text-sm">
+                        {review.given_by?.full_name 
+                          ? review.given_by.full_name.split(' ').map(name => name[0]).join('').toUpperCase()
+                          : 'A'
+                        }
+                      </Text>
+                    )}
                   </View>
                   <View className="ml-3 flex-1">
                     <Text className="text-base font-semibold text-gray-800">
@@ -808,15 +967,16 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
           <View className="bg-white rounded-3xl p-6 max-w-sm w-full border-4 border-green-400 relative">
             {/* Close Button */}
             <TouchableOpacity 
-              className="absolute top-4 right-4 w-8 h-8 bg-black rounded-full items-center justify-center"
+              className={`absolute top-4 right-4 w-8 h-8 bg-black rounded-full items-center justify-center ${isSubmittingReview ? 'opacity-50' : ''}`}
               onPress={handleReviewModalClose}
+              disabled={isSubmittingReview}
             >
               <Text className="text-white font-bold text-lg">×</Text>
             </TouchableOpacity>
 
             {/* Modal Title */}
             <Text className="text-gray-800 text-lg font-semibold text-center mb-6 mt-4">
-              Give "{favor.user.full_name}" Feedback
+              Give "{favor.accepted_response?.user?.full_name || 'Provider'}" Feedback
             </Text>
 
             {/* Star Rating */}
@@ -825,6 +985,7 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
                 <TouchableOpacity
                   key={star}
                   onPress={() => {
+                    if (isSubmittingReview) return;
                     if (rating === star) {
                       // If clicking on the same star, decrease by 1
                       setRating(star - 1);
@@ -833,7 +994,8 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
                       setRating(star);
                     }
                   }}
-                  className="mx-1"
+                  className={`mx-1 ${isSubmittingReview ? 'opacity-50' : ''}`}
+                  disabled={isSubmittingReview}
                 >
                   <Svg width="28" height="28" viewBox="0 0 28 28" fill="none">
                     <Path
@@ -852,21 +1014,23 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
             <View className="mb-4">
               <Text className="text-gray-700 text-base font-medium mb-2">Write Review</Text>
               <TextInput
-                className="border border-gray-300 rounded-xl p-4 h-24 text-base"
+                className={`border border-gray-300 rounded-xl p-4 h-24 text-base ${isSubmittingReview ? 'opacity-50 bg-gray-100' : ''}`}
                 placeholder="Share your experience..."
                 placeholderTextColor="#9CA3AF"
                 multiline
                 textAlignVertical="top"
                 value={reviewText}
                 onChangeText={setReviewText}
+                editable={!isSubmittingReview}
               />
             </View>
 
             {/* Tip Option */}
             <View className="mb-6">
               <TouchableOpacity 
-                className="flex-row items-center mb-3"
-                onPress={() => setShowTipOption(!showTipOption)}
+                className={`flex-row items-center mb-3 ${isSubmittingReview ? 'opacity-50' : ''}`}
+                onPress={() => !isSubmittingReview && setShowTipOption(!showTipOption)}
+                disabled={isSubmittingReview}
               >
                 <View className={`w-5 h-5 rounded border-2 mr-3 items-center justify-center ${showTipOption ? 'border-green-500 bg-green-500' : 'border-gray-300'}`}>
                   {showTipOption && (
@@ -880,12 +1044,13 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
                 <View className="ml-8">
                   <Text className="text-gray-600 text-sm mb-2">Tip amount ($)</Text>
                   <TextInput
-                    className="border border-gray-300 rounded-xl p-3 text-base"
+                    className={`border border-gray-300 rounded-xl p-3 text-base ${isSubmittingReview ? 'opacity-50 bg-gray-100' : ''}`}
                     placeholder="0.00"
                     placeholderTextColor="#9CA3AF"
                     value={tipAmount}
                     onChangeText={setTipAmount}
                     keyboardType="decimal-pad"
+                    editable={!isSubmittingReview}
                   />
                 </View>
               )}
@@ -893,10 +1058,18 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
 
             {/* Submit Button */}
             <TouchableOpacity 
-              className="bg-green-500 rounded-full py-4"
+              className={`rounded-full py-4 ${isSubmittingReview ? 'bg-gray-400' : 'bg-green-500'}`}
               onPress={handleReviewSubmit}
+              disabled={isSubmittingReview}
             >
-              <Text className="text-white text-center font-semibold text-lg">Submit Review</Text>
+              {isSubmittingReview ? (
+                <View className="flex-row justify-center items-center">
+                  <ActivityIndicator size="small" color="white" />
+                  <Text className="text-white text-center font-semibold text-lg ml-2">Submitting...</Text>
+                </View>
+              ) : (
+                <Text className="text-white text-center font-semibold text-lg">Submit Review</Text>
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -960,18 +1133,18 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
                     </View>
                   )}
 
-                  {providerProfile.has_contact_info && providerProfile.phone_no_call && (
+                  {providerContact && providerContact.phone_no_call && (
                     <View className="mb-3">
                       <Text className="text-gray-700 text-base">
-                        Call : <Text className="text-gray-500">{providerProfile.phone_no_call}</Text>
+                        Call : <Text className="text-gray-500">{providerContact.phone_no_call}</Text>
                       </Text>
                     </View>
                   )}
 
-                  {providerProfile.has_contact_info && providerProfile.phone_no_text && (
+                  {providerContact && providerContact.phone_no_text && (
                     <View className="mb-3">
                       <Text className="text-gray-700 text-base">
-                        Text : <Text className="text-gray-500">{providerProfile.phone_no_text}</Text>
+                        Text : <Text className="text-gray-500">{providerContact.phone_no_text}</Text>
                       </Text>
                     </View>
                   )}
@@ -1014,24 +1187,24 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
                 </View>
 
                 {/* Call and Text Buttons - Only show if contact info is available */}
-                {providerProfile.has_contact_info && (
+                {providerContact && (providerContact.phone_no_call || providerContact.phone_no_text) && (
                   <View className="flex-row space-x-4">
-                    {providerProfile.phone_no_call && (
+                    {providerContact.phone_no_call && (
                       <TouchableOpacity 
                         className="flex-1 bg-[#44A27B] rounded-xl py-3"
                         onPress={() => {
-                          handleCallNumber(providerProfile.phone_no_call!);
+                          handleCallNumber(providerContact.phone_no_call!);
                           setShowUserProfileModal(false);
                         }}
                       >
                         <Text className="text-white text-center font-semibold">Call</Text>
                       </TouchableOpacity>
                     )}
-                    {providerProfile.phone_no_text && (
+                    {providerContact.phone_no_text && (
                       <TouchableOpacity 
                         className="flex-1 border-2 border-[#44A27B] rounded-xl py-3"
                         onPress={() => {
-                          handleTextNumber(providerProfile.phone_no_text!);
+                          handleTextNumber(providerContact.phone_no_text!);
                           setShowUserProfileModal(false);
                         }}
                       >

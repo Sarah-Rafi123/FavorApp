@@ -319,14 +319,21 @@ export function UserProfileScreen({ navigation, route }: UserProfileScreenProps)
               <View key={index} className="bg-white rounded-2xl p-4 mb-3 border border-gray-300">
                 {/* Reviewer Info */}
                 <View className="flex-row items-center mb-3">
-                  <View className="w-10 h-10 bg-gray-200 rounded-full overflow-hidden">
-                    <Image
-                      source={{ 
-                        uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face' 
-                      }}
-                      className="w-full h-full"
-                      resizeMode="cover"
-                    />
+                  <View className="w-10 h-10 bg-[#44A27B] rounded-full overflow-hidden items-center justify-center">
+                    {review.given_by?.image_url ? (
+                      <Image
+                        source={{ uri: review.given_by.image_url }}
+                        className="w-full h-full"
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <Text className="text-white font-bold text-sm">
+                        {review.given_by?.full_name 
+                          ? review.given_by.full_name.split(' ').map(name => name[0]).join('').toUpperCase()
+                          : 'A'
+                        }
+                      </Text>
+                    )}
                   </View>
                   <View className="ml-3 flex-1">
                     <Text className="text-base font-semibold text-gray-800">

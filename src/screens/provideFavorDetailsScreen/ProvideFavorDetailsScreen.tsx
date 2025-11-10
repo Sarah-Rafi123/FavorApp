@@ -24,6 +24,7 @@ import { PublicUserProfile } from '../../services/apis/ProfileApis';
 import { Linking } from 'react-native';
 import Toast from 'react-native-toast-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import useAuthStore from '../../store/useAuthStore';
 
 interface ProvideFavorDetailsScreenProps {
   navigation?: any;
@@ -53,9 +54,12 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
   const [reviewText, setReviewText] = useState('');
   const [showTipOption, setShowTipOption] = useState(false);
   const [tipAmount, setTipAmount] = useState('');
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
 
   // Get favor ID from route params
   const favorId = route?.params?.favorId || route?.params?.favor?.id;
+  const isHistoryView = route?.params?.isHistoryView || false; // Flag to indicate viewing from history tab
   
   // Debug token status on screen load
   React.useEffect(() => {
@@ -77,7 +81,6 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
     
     checkTokenOnLoad();
   }, [favorId]);
-  
   // Fetch favor data using the API
   const { data: favorResponse, isLoading, error } = useFavor(favorId, {
     enabled: !!favorId
@@ -99,8 +102,35 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
   const completeFavorMutation = useCompleteFavor();
   const createUserReviewMutation = useCreateUserReview();
 
+  // Debug logging for reviews data
+  React.useEffect(() => {
+    if (reviewsResponse?.data?.reviews) {
+      console.log('📊 ProvideFavorDetailsScreen Reviews Response:');
+      console.log('  - Total reviews:', reviewsResponse.data.reviews.length);
+      reviewsResponse.data.reviews.forEach((review, index) => {
+        console.log(`  - Review ${index + 1}:`, {
+          id: review.id,
+          rating: review.rating,
+          given_by_name: review.given_by?.full_name,
+          given_by_image: review.given_by?.image_url,
+          has_image: !!review.given_by?.image_url,
+          image_url_length: review.given_by?.image_url?.length
+        });
+      });
+    }
+  }, [reviewsResponse]);
+
   const favor = favorResponse?.data.favor;
   const userProfile = userProfileResponse?.data.user;
+  const currentUser = useAuthStore((state) => state.user);
+
+  // Check if current user has already reviewed this favor
+  const userHasReviewed = React.useMemo(() => {
+    if (!reviewsResponse?.data?.reviews || !currentUser?.id) return false;
+    return reviewsResponse.data.reviews.some(review => 
+      review.given_by?.id === currentUser.id
+    );
+  }, [reviewsResponse, currentUser]);
 
   const handleGoBack = () => {
     navigation?.goBack();
@@ -195,6 +225,8 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
     console.log('📊 Favor status:', favor.status);
     console.log('👤 Current user role: Provider');
     console.log('👥 Favor requester:', favor.user.full_name, '(ID:', favor.user.id + ')');
+    console.log('📚 Is history view:', isHistoryView);
+    console.log('✅ User has already reviewed:', userHasReviewed);
 
     // Check if favor is already completed
     if (favor.status === 'completed') {
@@ -251,7 +283,7 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
     console.log('🎯 Function: handleReviewSubmit()');
     console.log('📍 Location: ProvideFavorDetailsScreen.tsx');
     
-    if (!favor || rating === 0 || !reviewText.trim()) {
+    if (!favor || rating === 0 || !reviewText.trim() || isSubmittingReview) {
       console.log('❌ Validation failed:');
       console.log('  - Favor exists:', !!favor);
       console.log('  - Rating provided:', rating);
@@ -268,6 +300,7 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
     }
 
     try {
+      setIsSubmittingReview(true);
       console.log('\n🔐 === AUTHENTICATION CHECK ===');
       
       // Check auth token before making the API call
@@ -415,6 +448,8 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
       
       console.error('\n❌ === USER REVIEW SUBMISSION FAILED ===\n');
       // Error handling is done by the mutation's onError callback
+    } finally {
+      setIsSubmittingReview(false);
     }
   };
 
@@ -507,7 +542,7 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
                 </View>
 
                 <View className="flex-row">
-                  <Text className="text-gray-700 text-base w-28">Favor Amount</Text>
+                  <Text className="text-gray-700 text-base w-20">Favor Amount</Text>
                   <Text className="text-gray-700 text-base mr-2">:</Text>
                   <Text className="text-gray-800 text-base flex-1">
                     ${parseFloat((favor.tip || 0).toString()).toFixed(2)}
@@ -606,14 +641,54 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
                   <Text className="text-gray-600 text-sm">{userProfile.years_of_experience} years experience</Text>
                 )}
              
+             
+                {/* {(userProfile?.phone_no_call || userProfile?.phone_no_text) && (
+                  <View 
+                    className="mt-2 mb-2"
+                    style={{
+                      opacity: favor.status === 'pending' ? 0.3 : 1,
+                    }}
+                  >
+                    {userProfile?.phone_no_call && (
+                      <Text 
+                        className="text-gray-600 text-sm"
+                        style={{
+                          textShadowColor: favor.status === 'pending' ? 'rgba(0,0,0,0.5)' : 'transparent',
+                          textShadowOffset: favor.status === 'pending' ? { width: 0, height: 0 } : { width: 0, height: 0 },
+                          textShadowRadius: favor.status === 'pending' ? 3 : 0,
+                        }}
+                      >
+                        📞 {favor.status === 'pending' ? '●●●●●●●●●●●●' : userProfile.phone_no_call}
+                      </Text>
+                    )}
+                    {userProfile?.phone_no_text && (
+                      <Text 
+                        className="text-gray-600 text-sm"
+                        style={{
+                          textShadowColor: favor.status === 'pending' ? 'rgba(0,0,0,0.5)' : 'transparent',
+                          textShadowOffset: favor.status === 'pending' ? { width: 0, height: 0 } : { width: 0, height: 0 },
+                          textShadowRadius: favor.status === 'pending' ? 3 : 0,
+                        }}
+                      >
+                        💬 {favor.status === 'pending' ? '●●●●●●●●●●●●' : userProfile.phone_no_text}
+                      </Text>
+                    )}
+                    {favor.status === 'pending' && (
+                      <Text className="text-gray-500 text-xs mt-1 italic">
+                        Contact details available after favor acceptance
+                      </Text>
+                    )}
+                  </View>
+                )} */}
+
                 <TouchableOpacity onPress={() => navigation?.navigate('UserProfileScreen', { userId: favor.user.id })}>
                   <Text className="text-[#44A27B] text-sm font-medium">View Profile</Text>
                 </TouchableOpacity>
               </View>
             </View>
 
-            {/* Contact Buttons */}
-            {/* {(userProfile?.phone_no_call || userProfile?.phone_no_text) && (
+            {/* Contact Buttons - Only show if favor is not pending */}
+            {(userProfile?.phone_no_call || userProfile?.phone_no_text) && favor.status !== 'pending' && (
               <View className="flex-row mb-4">
                 {userProfile?.phone_no_call && (
                   <TouchableOpacity 
@@ -640,16 +715,31 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
                   </TouchableOpacity>
                 )}
               </View>
-            )} */}
+            )}
 
             {/* Submit Review Button */}
-            {favor.status === 'completed' && (
+            {favor.status === 'completed' && !userHasReviewed && (
               <TouchableOpacity 
-                className="bg-[#44A27B] rounded-xl py-3 mb-4"
+                className={`rounded-xl py-3 mb-4 ${isSubmittingReview ? 'bg-gray-400' : 'bg-[#44A27B]'}`}
                 onPress={handleSubmitReview}
+                disabled={isSubmittingReview}
               >
-                <Text className="text-white text-center font-medium text-base">Submit Review</Text>
+                {isSubmittingReview ? (
+                  <View className="flex-row justify-center items-center">
+                    <ActivityIndicator size="small" color="white" />
+                    <Text className="text-white text-center font-medium text-base ml-2">Loading...</Text>
+                  </View>
+                ) : (
+                  <Text className="text-white text-center font-medium text-base">Submit Review</Text>
+                )}
               </TouchableOpacity>
+            )}
+            
+            {/* Review Status Message */}
+            {favor.status === 'completed' && userHasReviewed && (
+              <View className="bg-gray-100 rounded-xl py-3 mb-4">
+                <Text className="text-gray-600 text-center font-medium text-base">✓ You have already reviewed this favor</Text>
+              </View>
             )}
           </View>
         )}
@@ -666,7 +756,36 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
                 {/* Reviewer Info */}
                 <View className="flex-row items-center mb-3">
                   <View className="w-10 h-10 bg-[#44A27B] rounded-full overflow-hidden items-center justify-center">
-                    <UserSvg focused={false} />
+                    {review.given_by?.image_url && 
+                     review.given_by.image_url.trim() !== '' && 
+                     !failedImages.has(review.given_by.image_url) ? (
+                      <Image
+                        source={{ 
+                          uri: review.given_by.image_url,
+                          cache: 'force-cache'
+                        }}
+                        className="w-full h-full"
+                        resizeMode="cover"
+                        onError={(error) => {
+                          console.log('❌ Failed to load review image for', review.given_by?.full_name, ':', review.given_by.image_url);
+                          console.log('Error details:', error.nativeEvent?.error);
+                          if (review.given_by?.image_url) {
+                            setFailedImages(prev => new Set(prev).add(review.given_by.image_url!));
+                          }
+                        }}
+                        onLoad={() => {
+                          console.log('✅ Successfully loaded review image for', review.given_by?.full_name);
+                        }}
+                        style={{ width: '100%', height: '100%' }}
+                      />
+                    ) : (
+                      <Text className="text-white font-bold text-sm">
+                        {review.given_by?.full_name 
+                          ? review.given_by.full_name.split(' ').map(name => name[0]).join('').toUpperCase()
+                          : 'A'
+                        }
+                      </Text>
+                    )}
                   </View>
                   <View className="ml-3 flex-1">
                     <Text className="text-base font-semibold text-gray-800">
@@ -768,10 +887,18 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
 
             {/* Submit Button */}
             <TouchableOpacity 
-              className="bg-green-500 rounded-full py-4 mt-6"
+              className={`rounded-full py-4 mt-6 ${isSubmittingReview ? 'bg-gray-400' : 'bg-green-500'}`}
               onPress={handleReviewSubmit}
+              disabled={isSubmittingReview}
             >
-              <Text className="text-white text-center font-semibold text-lg">Submit Review</Text>
+              {isSubmittingReview ? (
+                <View className="flex-row justify-center items-center">
+                  <ActivityIndicator size="small" color="white" />
+                  <Text className="text-white text-center font-semibold text-lg ml-2">Submitting...</Text>
+                </View>
+              ) : (
+                <Text className="text-white text-center font-semibold text-lg">Submit Review</Text>
+              )}
             </TouchableOpacity>
           </View>
         </View>

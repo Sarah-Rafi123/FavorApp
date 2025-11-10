@@ -67,6 +67,19 @@ export interface UpdatePasswordResponse {
   message: string;
 }
 
+// Validate Current Password Types
+export interface ValidateCurrentPasswordData {
+  current_password: string;
+}
+
+export interface ValidateCurrentPasswordResponse {
+  success: boolean;
+  data: {
+    valid: boolean;
+  };
+  message: string;
+}
+
 // Upload Image Types
 export interface UploadImageResponse {
   success: boolean;
@@ -384,6 +397,52 @@ export const updatePassword = async (data: UpdatePasswordData): Promise<UpdatePa
       throw new Error(error.response.data.message);
     } else {
       throw new Error('Failed to update password. Please check your connection and try again.');
+    }
+  }
+};
+
+export const validateCurrentPassword = async (data: ValidateCurrentPasswordData): Promise<ValidateCurrentPasswordResponse> => {
+  try {
+    console.log(`🚀 Making Validate Current Password API call to: /profile/validate_current_password`);
+    
+    const response = await axiosInstance.post('/profile/validate_current_password', data, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    console.log('🎉 Validate Current Password API Success!');
+    console.log('📊 Response Status:', response.status);
+    console.log('📄 Full API Response:', JSON.stringify(response.data, null, 2));
+    
+    return response.data;
+  } catch (error: any) {
+    console.error('❌ Validate Current Password API Error!');
+    console.error('📄 Full API Error:', error);
+    console.error('📊 Error Response Status:', error.response?.status);
+    console.error('📄 Error Response Data:', JSON.stringify(error.response?.data, null, 2));
+    
+    // Handle specific error scenarios based on status codes
+    if (error.response?.status === 401) {
+      const errorData = error.response?.data;
+      if (errorData?.errors?.includes('Current password is incorrect')) {
+        throw new Error('Current password is incorrect');
+      } else {
+        throw new Error('Authentication failed. Please try again.');
+      }
+    } else if (error.response?.status === 400) {
+      const errorData = error.response?.data;
+      if (errorData?.errors?.includes('current_password is required')) {
+        throw new Error('Please enter your current password');
+      } else if (errorData?.errors && Array.isArray(errorData.errors)) {
+        throw new Error(errorData.errors.join(', '));
+      } else {
+        throw new Error('Validation failed. Please check your input.');
+      }
+    } else if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    } else {
+      throw new Error('Failed to validate password. Please check your connection and try again.');
     }
   }
 };

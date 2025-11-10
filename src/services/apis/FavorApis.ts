@@ -121,6 +121,7 @@ export interface ReviewUser {
   last_name: string;
   full_name: string;
   is_certified: boolean;
+  image_url: string | null;
 }
 
 export interface Review {

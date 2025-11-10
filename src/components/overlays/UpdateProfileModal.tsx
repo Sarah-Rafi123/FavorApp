@@ -126,6 +126,49 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
         formatted: formattedDate
       });
       
+      // Separate predefined skills from custom skills
+      const allSkills = profile.skills || [];
+      const predefinedSkills = allSkills.filter(skill => skillsOptions.includes(skill));
+      const unlistedSkills = allSkills.filter(skill => !skillsOptions.includes(skill));
+      
+      // Combine existing other_skills with any unlisted skills found in the skills array
+      const existingOtherSkills = profile.other_skills || '';
+      const unlistedSkillsText = unlistedSkills.join(', ');
+      
+      // Combine both other skills sources, avoiding duplication
+      let combinedOtherSkills = '';
+      if (existingOtherSkills && unlistedSkillsText) {
+        // Check if unlisted skills are already in other_skills to avoid duplication
+        const existingSkillsLower = existingOtherSkills.toLowerCase();
+        const newUnlistedSkills = unlistedSkills.filter(skill => 
+          !existingSkillsLower.includes(skill.toLowerCase())
+        );
+        if (newUnlistedSkills.length > 0) {
+          combinedOtherSkills = `${existingOtherSkills}, ${newUnlistedSkills.join(', ')}`;
+        } else {
+          combinedOtherSkills = existingOtherSkills;
+        }
+      } else if (existingOtherSkills) {
+        combinedOtherSkills = existingOtherSkills;
+      } else if (unlistedSkillsText) {
+        combinedOtherSkills = unlistedSkillsText;
+      }
+      
+      // Auto-check "Others" if there are any unlisted skills or existing other_skills
+      const finalSkills = [...predefinedSkills];
+      if (combinedOtherSkills) {
+        finalSkills.push('Others');
+      }
+      
+      console.log('🔧 Skills processing:', {
+        allSkills,
+        predefinedSkills,
+        unlistedSkills,
+        existingOtherSkills,
+        combinedOtherSkills,
+        finalSkills
+      });
+      
       setProfileData({
         firstName: profile.first_name || '',
         lastName: profile.last_name || '',
@@ -136,8 +179,8 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
         phoneText: formatPhoneForForm(profile.phone_no_text || '', getCountryFromPhone(profile.phone_no_text || '')) || '',
         yearsOfExperience: profile.years_of_experience || 0,
         aboutMe: profile.about_me || '',
-        skills: profile.skills || [],
-        otherSkills: profile.other_skills || '',
+        skills: finalSkills,
+        otherSkills: combinedOtherSkills,
         city: profile.address?.city || '',
         state: profile.address?.state || '',
       });
@@ -235,7 +278,17 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
     const updatedSkills = currentSkills.includes(skill)
       ? currentSkills.filter(s => s !== skill)
       : [...currentSkills, skill];
-    updateField('skills', updatedSkills);
+    
+    // If user unchecks "Others", clear the other skills field
+    if (skill === 'Others' && currentSkills.includes(skill)) {
+      setProfileData(prev => ({
+        ...prev,
+        skills: updatedSkills,
+        otherSkills: '' // Clear other skills when unchecking Others
+      }));
+    } else {
+      updateField('skills', updatedSkills);
+    }
   };
 
   // Get country from phone number
@@ -598,6 +651,23 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
         console.log('🔄 Date Parts Debug:', { month, day, year, convertedDate });
       }
       
+      // Prepare skills data - ensure other skills are only in other_skills field
+      const cleanedSkills = (profileData.skills || []).filter(skill => 
+        skillsOptions.includes(skill) && skill !== 'Others' // Keep only predefined skills except 'Others'
+      );
+      
+      // Add 'Others' back if user has other skills
+      if (profileData.otherSkills && profileData.otherSkills.trim()) {
+        cleanedSkills.push('Others');
+      }
+      
+      console.log('💾 Save skills processing:', {
+        originalSkills: profileData.skills,
+        cleanedSkills,
+        otherSkills: profileData.otherSkills,
+        hasOthers: profileData.otherSkills && profileData.otherSkills.trim()
+      });
+      
       const updateData = {
         profile: {
           first_name: profileData.firstName,
@@ -608,7 +678,7 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
           age: calculatedAge,
           years_of_experience: profileData.yearsOfExperience || 0,
           about_me: profileData.aboutMe || '',
-          skills: profileData.skills || [],
+          skills: cleanedSkills,
           other_skills: profileData.otherSkills || '',
           address_attributes: {
             full_address: profileData.address || '',
@@ -1126,7 +1196,16 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
                 >
                   <Text className="text-black" style={{ fontSize: 16, lineHeight: 20 }}>
                     {profileData.skills && profileData.skills.length > 0 
-                      ? profileData.skills.join(', ')
+                      ? (() => {
+                          // Show standard skills first, then 'Others' if selected
+                          const standardSkills = profileData.skills.filter(skill => skill !== 'Others');
+                          const hasOthers = profileData.skills.includes('Others');
+                          const displaySkills = [...standardSkills];
+                          if (hasOthers) {
+                            displaySkills.push('Others');
+                          }
+                          return displaySkills.join(', ');
+                        })()
                       : 'Select skills'
                     }
                   </Text>

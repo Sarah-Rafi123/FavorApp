@@ -312,7 +312,7 @@ export function NewPasswordScreen({ onPasswordReset, email, resetToken }: NewPas
       <SuccessModal
         visible={showSuccessModal}
         title="Success"
-        message="Your password has been reset successfully."
+        message="Your password has been\nreset successfully."
         onContinue={() => {
           setShowSuccessModal(false);
           onPasswordReset();

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, Image, TouchableOpacity, StatusBar, ImageBackground, ActivityIndicator, Alert, Platform, Modal } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { CarouselButton } from '../../components/buttons';
@@ -14,6 +14,8 @@ import { PDFViewerModal } from '../../components/overlays/PDFViewerModal';
 import EditSvg from '../../assets/icons/Edit';
 import FilterSvg from '../../assets/icons/Filter';
 import { NotificationBell } from '../../components/notifications/NotificationBell';
+import useAuthStore from '../../store/useAuthStore';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface ProfileData {
   firstName: string;
@@ -26,6 +28,11 @@ interface ProfileData {
 
 export function ProfileScreen() {
   const navigation = useNavigation();
+  const queryClient = useQueryClient();
+  
+  // Get current user from auth store
+  const { user, accessToken } = useAuthStore();
+  
   const [activeReviewTab, setActiveReviewTab] = useState<'asked' | 'provided'>('asked');
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
@@ -34,8 +41,13 @@ export function ProfileScreen() {
   const [downloadProgress, setDownloadProgress] = useState('');
   const [showPDFViewer, setShowPDFViewer] = useState(false);
   const [pdfUri, setPdfUri] = useState('');
-  const { data: profileResponse, isLoading, error } = useProfileQuery();
-  const { data: balanceResponse, isLoading: isBalanceLoading, error: balanceError, refetch: refetchBalance } = useStripeBalanceQuery();
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+  
+  // Profile query that depends on auth state
+  const { data: profileResponse, isLoading, error, refetch: refetchProfile } = useProfileQuery();
+  const { data: balanceResponse, isLoading: isBalanceLoading, error: balanceError, refetch: refetchBalance } = useStripeBalanceQuery({
+    enabled: !!user && !!accessToken
+  });
   const { data: reviewsResponse, isLoading: isReviewsLoading, error: reviewsError } = useUserReviewsQuery(
     profileResponse?.data?.profile?.id || null,
     { 
@@ -43,23 +55,72 @@ export function ProfileScreen() {
       per_page: 10,
       role: activeReviewTab === 'asked' ? 'requester' : 'provider'
     },
-    { enabled: !!profileResponse?.data?.profile?.id }
+    { enabled: !!profileResponse?.data?.profile?.id && !!user && !!accessToken }
   );
   
+  // Clear fallback profile data - use only API data
   const [profileData, setProfileData] = useState<ProfileData>({
-    firstName: 'Kathryn',
-    lastName: 'Murphy',
-    dateOfBirth: '8/2/2001',
-    address: '4140 Parker Rd, Allentown, New Mexico 31134',
-    phoneCall: '(303) 555-0105',
-    phoneText: '(209) 555-0104',
+    firstName: '',
+    lastName: '',
+    dateOfBirth: '',
+    address: '',
+    phoneCall: '',
+    phoneText: '',
   });
   
   const profile = profileResponse?.data?.profile;
   const balance = balanceResponse?.data;
 
+  // Effect to handle user changes and cache invalidation
+  useEffect(() => {
+    console.log('👤 ProfileScreen: User state changed', { 
+      hasUser: !!user, 
+      userId: user?.id, 
+      hasToken: !!accessToken 
+    });
+
+    if (user && accessToken) {
+      // User logged in or switched - refetch profile data immediately
+      console.log('🔄 User authenticated, refetching profile data');
+      refetchProfile();
+    } else {
+      // User logged out - clear all profile-related cache
+      console.log('🧹 User logged out, clearing profile cache');
+      queryClient.removeQueries({ queryKey: ['profile'] });
+      queryClient.removeQueries({ queryKey: ['stripeBalance'] });
+      queryClient.removeQueries({ queryKey: ['userReviews'] });
+      
+      // Reset local state
+      setProfileData({
+        firstName: '',
+        lastName: '',
+        dateOfBirth: '',
+        address: '',
+        phoneCall: '',
+        phoneText: '',
+      });
+      setActiveReviewTab('asked');
+      setPdfUri('');
+      setShowPDFViewer(false);
+    }
+  }, [user?.id, accessToken, refetchProfile, queryClient]);
+
+  // Effect to handle user ID changes specifically (for user switching)
+  useEffect(() => {
+    if (user?.id && accessToken) {
+      console.log('🔄 User ID changed, invalidating and refetching profile cache for user:', user.id);
+      
+      // Invalidate all profile-related queries to ensure fresh data
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
+      queryClient.invalidateQueries({ queryKey: ['stripeBalance'] });
+      queryClient.invalidateQueries({ queryKey: ['userReviews'] });
+    }
+  }, [user?.id, accessToken, queryClient]);
+
   const handleUpdateProfile = (newProfileData: ProfileData) => {
     setProfileData(newProfileData);
+    // Also refetch profile data to sync with server
+    refetchProfile();
   };
 
   const handleShowExportModal = () => {
@@ -385,6 +446,17 @@ export function ProfileScreen() {
     }
   };
 
+  // Check if user is authenticated first
+  if (!user || !accessToken) {
+    return (
+      <View className="flex-1 justify-center items-center bg-white px-6">
+        <ActivityIndicator size="large" color="#44A27B" />
+        <Text className="mt-4 text-gray-600 text-center">Authenticating...</Text>
+        <Text className="mt-2 text-gray-500 text-center text-sm">Please wait while we verify your session</Text>
+      </View>
+    );
+  }
+
   if (isLoading) {
     return (
       <View className="flex-1 justify-center items-center bg-white">
@@ -398,7 +470,13 @@ export function ProfileScreen() {
     return (
       <View className="flex-1 justify-center items-center bg-white px-6">
         <Text className="text-red-500 text-center mb-4">Failed to load profile</Text>
-        <Text className="text-gray-600 text-center">Please check your connection and try again.</Text>
+        <Text className="text-gray-600 text-center mb-6">Please check your connection and try again.</Text>
+        <TouchableOpacity 
+          className="bg-[#44A27B] rounded-full py-3 px-6"
+          onPress={() => refetchProfile()}
+        >
+          <Text className="text-white font-semibold">Retry</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -453,24 +531,24 @@ export function ProfileScreen() {
               ) : (
                 <View className="w-full h-full bg-[#44A27B] items-center justify-center">
                   <Text className="text-white text-2xl font-bold">
-                    {profile?.first_name?.[0]?.toUpperCase() || profileData.firstName[0]?.toUpperCase()}
-                    {profile?.last_name?.[0]?.toUpperCase() || profileData.lastName[0]?.toUpperCase()}
+                    {profile?.first_name?.[0]?.toUpperCase() || user?.firstName?.[0]?.toUpperCase() || 'U'}
+                    {profile?.last_name?.[0]?.toUpperCase() || user?.firstName?.[1]?.toUpperCase() || ''}
                   </Text>
                 </View>
               )}
             </View>
-            <Text className="text-xl font-bold text-black mb-1">{profile?.full_name || `${profileData.firstName} ${profileData.lastName}`}</Text>
+            <Text className="text-xl font-bold text-black mb-1">{profile?.full_name || `${user.firstName || 'User'}`}</Text>
           </View>
 
           {/* Personal Details */}
           <View className="mb-6">
             <View className="space-y-2">
-              <Text className="text-black font-bold text-lg">Email: <Text className="text-black font-normal text-lg">{profile?.email || 'kathrynmurphy@gmail.com'}</Text></Text>
-              <Text className="text-black font-bold text-lg">Age: <Text className="text-black font-normal text-lg">{profile?.age || '26'}</Text></Text>
-              <Text className="text-black font-bold text-lg">Call: <Text className="text-black font-normal text-lg">{profile?.phone_no_call || profileData.phoneCall}</Text></Text>
-              <Text className="text-black font-bold text-lg">Text: <Text className="text-black font-normal text-lg">{profile?.phone_no_text || profileData.phoneText}</Text></Text>
+              <Text className="text-black font-bold text-lg">Email: <Text className="text-black font-normal text-lg">{profile?.email || user?.email || 'Not specified'}</Text></Text>
+              <Text className="text-black font-bold text-lg">Age: <Text className="text-black font-normal text-lg">{profile?.age || 'Not specified'}</Text></Text>
+              <Text className="text-black font-bold text-lg">Call: <Text className="text-black font-normal text-lg">{profile?.phone_no_call || 'Not specified'}</Text></Text>
+              <Text className="text-black font-bold text-lg">Text: <Text className="text-black font-normal text-lg">{profile?.phone_no_text || 'Not specified'}</Text></Text>
               <Text className="text-black font-bold text-lg">Experience: <Text className="text-black font-normal text-lg">{profile?.years_of_experience ? `${profile.years_of_experience} year${profile.years_of_experience !== 1 ? 's' : ''}` : 'Not specified'}</Text></Text>
-              <Text className="text-black font-bold text-lg">Since: <Text className="text-black font-normal text-lg">{profile?.member_since || 'March 2025'}</Text></Text>
+              <Text className="text-black font-bold text-lg">Since: <Text className="text-black font-normal text-lg">{profile?.member_since || 'Not specified'}</Text></Text>
               {profile?.address && (
                 <Text className="text-black font-bold text-lg">Location: <Text className="text-black font-normal text-lg">{profile.address.city}, {profile.address.state}</Text></Text>
               )}
@@ -493,11 +571,29 @@ export function ProfileScreen() {
             <View className="mb-6">
               <Text className="text-lg font-bold text-black mb-3">Skills</Text>
               <View className="flex-row flex-wrap gap-2">
-                {profile.skills.map((skill, index) => (
-                  <View key={index} className="bg-[#E8F5E8] px-3 py-1.5 rounded-full">
-                    <Text className="text-[#44A27B] text-lg font-normal">{skill}</Text>
-                  </View>
-                ))}
+                {profile.skills
+                  .filter(skill => {
+                    // Define predefined skills list (same as in UpdateProfileModal)
+                    const skillsOptions = [
+                      'Manual Labor',
+                      'General Repairs', 
+                      'Mechanical',
+                      'Technical',
+                      'Dump Runs/Removals',
+                      'Pets',
+                      'Furniture Assembly',
+                      'Handyman',
+                      'Contractor',
+                      'Volunteer'
+                    ];
+                    // Only show predefined skills in green boxes, exclude 'Others' and any custom skills
+                    return skillsOptions.includes(skill);
+                  })
+                  .map((skill, index) => (
+                    <View key={index} className="bg-[#E8F5E8] px-3 py-1.5 rounded-full">
+                      <Text className="text-[#44A27B] text-lg font-normal">{skill}</Text>
+                    </View>
+                  ))}
               </View>
               {profile.other_skills && (
                 <View className="mt-2">
@@ -658,10 +754,34 @@ export function ProfileScreen() {
                   <View key={review.id} className="bg-white rounded-2xl p-4 shadow-sm">
                     {/* Reviewer Info */}
                     <View className="flex-row items-center mb-3">
-                      <View className="w-10 h-10 bg-[#44A27B] rounded-full items-center justify-center">
-                        <Text className="text-white text-sm font-bold">
-                          {review.given_by.first_name[0]}{review.given_by.last_name[0]}
-                        </Text>
+                      <View className="w-10 h-10 bg-[#44A27B] rounded-full overflow-hidden items-center justify-center">
+                        {review.given_by?.image_url && 
+                         review.given_by.image_url.trim() !== '' && 
+                         !failedImages.has(review.given_by.image_url) ? (
+                          <Image
+                            source={{ 
+                              uri: review.given_by.image_url,
+                              cache: 'force-cache'
+                            }}
+                            className="w-full h-full"
+                            resizeMode="cover"
+                            onError={(error) => {
+                              console.log('❌ Failed to load review image for', review.given_by?.full_name, ':', review.given_by.image_url);
+                              console.log('Error details:', error.nativeEvent?.error);
+                              if (review.given_by?.image_url) {
+                                setFailedImages(prev => new Set(prev).add(review.given_by.image_url!));
+                              }
+                            }}
+                            onLoad={() => {
+                              console.log('✅ Successfully loaded review image for', review.given_by?.full_name);
+                            }}
+                            style={{ width: '100%', height: '100%' }}
+                          />
+                        ) : (
+                          <Text className="text-white text-sm font-bold">
+                            {review.given_by.first_name?.[0] || ''}{review.given_by.last_name?.[0] || ''}
+                          </Text>
+                        )}
                       </View>
                       <View className="flex-1 ml-3">
                         <View className="flex-row items-center justify-between">

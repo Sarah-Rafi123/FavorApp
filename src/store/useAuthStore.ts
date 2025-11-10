@@ -4,6 +4,7 @@ import { User } from '../types';
 import { getCurrentUser } from '../services/apis/AuthApis';
 import { authErrorHandler } from '../services/authErrorHandler';
 import Toast from 'react-native-toast-message';
+import { QueryClient } from '@tanstack/react-query';
 
 /**
  * Authentication store manages the user's authentication state.
@@ -33,6 +34,7 @@ interface AuthStore {
     password: string;
     termsAccepted: boolean;
   } | null;
+  queryClient: QueryClient | null;
   setUser: (user: User) => void;
   setTokens: (accessToken: string, refreshToken?: string) => Promise<void>;
   setUserAndTokens: (user: User, accessToken: string, refreshToken?: string) => Promise<void>;
@@ -41,6 +43,7 @@ interface AuthStore {
   clearRegistrationData: () => void;
   initializeAuth: () => Promise<void>;
   handleAuthError: () => Promise<void>;
+  setQueryClient: (queryClient: QueryClient) => void;
 }
 
 const useAuthStore = create<AuthStore>((set, get) => ({
@@ -48,6 +51,7 @@ const useAuthStore = create<AuthStore>((set, get) => ({
   accessToken: null,
   refreshToken: null,
   registrationData: null,
+  queryClient: null,
   
   setUser: (user) => set({ user }),
   
@@ -104,11 +108,32 @@ const useAuthStore = create<AuthStore>((set, get) => ({
   
   removeUser: async () => {
     try {
+      console.log('🚪 Logging out user - clearing all data');
+      
+      // Clear from AsyncStorage
       await AsyncStorage.removeItem('auth_token');
       await AsyncStorage.removeItem('refresh_token');
-      set({ user: null, accessToken: null, refreshToken: null });
+      
+      // Clear React Query cache for user-specific data
+      const { queryClient } = get();
+      if (queryClient) {
+        console.log('🧹 Clearing React Query cache');
+        queryClient.removeQueries({ queryKey: ['profile'] });
+        queryClient.removeQueries({ queryKey: ['stripeBalance'] });
+        queryClient.removeQueries({ queryKey: ['userReviews'] });
+        queryClient.removeQueries({ queryKey: ['myFavors'] });
+        queryClient.removeQueries({ queryKey: ['favors'] });
+        queryClient.removeQueries({ queryKey: ['browseFavors'] });
+        // Clear all user-specific queries
+        queryClient.clear();
+        console.log('✅ React Query cache cleared');
+      }
+      
+      // Clear auth state
+      set({ user: null, accessToken: null, refreshToken: null, registrationData: null });
+      console.log('✅ Auth state cleared');
     } catch (error) {
-      console.error('Failed to remove tokens:', error);
+      console.error('❌ Failed to remove user data:', error);
     }
   },
   
@@ -174,6 +199,14 @@ const useAuthStore = create<AuthStore>((set, get) => ({
       await AsyncStorage.removeItem('auth_token');
       await AsyncStorage.removeItem('refresh_token');
       
+      // Clear React Query cache for user-specific data
+      const { queryClient } = get();
+      if (queryClient) {
+        console.log('🧹 Clearing React Query cache due to auth error');
+        queryClient.clear();
+        console.log('✅ React Query cache cleared');
+      }
+      
       // Clear auth state
       set({ user: null, accessToken: null, refreshToken: null, registrationData: null });
       
@@ -190,6 +223,8 @@ const useAuthStore = create<AuthStore>((set, get) => ({
       console.error('❌ Failed to clear auth data during error handling:', error);
     }
   },
+
+  setQueryClient: (queryClient: QueryClient) => set({ queryClient }),
 }));
 
 // Set up global authentication error handler
