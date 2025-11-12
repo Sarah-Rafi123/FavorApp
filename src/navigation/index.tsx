@@ -37,6 +37,7 @@ export default function Navigator() {
   const [carouselCompleted, setCarouselCompleted] = useState(false);
   const [shouldShowSplashCarousel, setShouldShowSplashCarousel] = useState(true);
   const [skipSplashFromSignup, setSkipSplashFromSignup] = useState(false);
+  const [hasEverBeenAuthenticated, setHasEverBeenAuthenticated] = useState(false);
 
   useEffect(() => {
     const prepare = async () => {
@@ -54,6 +55,13 @@ export default function Navigator() {
           await AsyncStorage.removeItem('skip_splash_from_otp');
           await AsyncStorage.removeItem('skip_splash_from_signup');
           console.log('🔄 Skip splash flag detected from signup/OTP flow');
+        }
+
+        // Check if user was previously authenticated (to handle logout scenarios)
+        const wasAuthenticated = await AsyncStorage.getItem('was_ever_authenticated');
+        if (wasAuthenticated === 'true') {
+          setHasEverBeenAuthenticated(true);
+          console.log('🔍 User was previously authenticated');
         }
       } catch (e) {
         console.error('Failed to initialize auth:', e);
@@ -100,8 +108,19 @@ export default function Navigator() {
       setShouldShowSplashCarousel(false);
       setShowCustomSplash(false);
       setCarouselCompleted(true);
+      setHasEverBeenAuthenticated(true);
+      
+      // Store the flag that user has been authenticated
+      AsyncStorage.setItem('was_ever_authenticated', 'true');
+    } else if (hasEverBeenAuthenticated) {
+      // User was authenticated before but now is not (logout scenario)
+      // Skip splash and carousel, go directly to auth screen
+      console.log('🚪 User logged out - skipping splash/carousel, going to auth screen');
+      setShouldShowSplashCarousel(false);
+      setShowCustomSplash(false);
+      setCarouselCompleted(true);
     }
-  }, [user, accessToken]);
+  }, [user, accessToken, hasEverBeenAuthenticated]);
 
   // Debug auth state
   useEffect(() => {
@@ -112,7 +131,8 @@ export default function Navigator() {
     console.log('Should Show Splash/Carousel:', shouldShowSplashCarousel);
     console.log('Carousel Completed:', carouselCompleted);
     console.log('Skip Splash From Signup:', skipSplashFromSignup);
-  }, [user, accessToken, appIsReady, shouldShowSplashCarousel, carouselCompleted, skipSplashFromSignup]);
+    console.log('Has Ever Been Authenticated:', hasEverBeenAuthenticated);
+  }, [user, accessToken, appIsReady, shouldShowSplashCarousel, carouselCompleted, skipSplashFromSignup, hasEverBeenAuthenticated]);
 
   // Cleanup when component unmounts
   useEffect(()=>{

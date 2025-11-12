@@ -11,6 +11,8 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import BackSvg from '../../assets/icons/Back';
@@ -283,19 +285,44 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
     console.log('🎯 Function: handleReviewSubmit()');
     console.log('📍 Location: ProvideFavorDetailsScreen.tsx');
     
+    // Enhanced validation
     if (!favor || rating === 0 || !reviewText.trim() || isSubmittingReview) {
       console.log('❌ Validation failed:');
       console.log('  - Favor exists:', !!favor);
       console.log('  - Rating provided:', rating);
       console.log('  - Review text provided:', !!reviewText.trim());
+      console.log('  - Review text length:', reviewText.trim().length);
+      
+      let errorMessage = 'Please provide ';
+      const missingFields = [];
+      
+      if (rating === 0) missingFields.push('a rating');
+      if (!reviewText.trim()) missingFields.push('review text');
+      
+      if (missingFields.length === 2) {
+        errorMessage += 'both a rating and review text.';
+      } else if (missingFields.length === 1) {
+        errorMessage += missingFields[0] + '.';
+      }
       
       Toast.show({
         type: 'error',
         text1: 'Incomplete Review',
-        text2: 'Please provide a rating\nand review text.',
+        text2: errorMessage,
         visibilityTime: 3000,
       });
 
+      return;
+    }
+    
+    // Check character limit
+    if (reviewText.trim().length > 200) {
+      Toast.show({
+        type: 'error',
+        text1: 'Review Too Long',
+        text2: 'Review must be 200 characters or less.',
+        visibilityTime: 3000,
+      });
       return;
     }
 
@@ -681,14 +708,14 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
                   </View>
                 )} */}
 
-                <TouchableOpacity onPress={() => navigation?.navigate('UserProfileScreen', { userId: favor.user.id })}>
+                <TouchableOpacity onPress={() => navigation?.navigate('UserProfileScreen', { userId: favor.user.id, favorStatus: favor.status })}>
                   <Text className="text-[#44A27B] text-sm font-medium">View Profile</Text>
                 </TouchableOpacity>
               </View>
             </View>
 
-            {/* Contact Buttons - Only show if favor is not pending */}
-            {(userProfile?.phone_no_call || userProfile?.phone_no_text) && favor.status !== 'pending' && (
+            {/* Contact Buttons - Only show if favor is in progress */}
+            {(userProfile?.phone_no_call || userProfile?.phone_no_text) && favor.status === 'in_progress' && (
               <View className="flex-row mb-4">
                 {userProfile?.phone_no_call && (
                   <TouchableOpacity 
@@ -826,82 +853,116 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
         animationType="fade"
         onRequestClose={handleReviewModalClose}
       >
-        <View className="flex-1 bg-black/50 justify-center items-center px-6">
-          <View className="bg-white rounded-3xl p-6 max-w-sm w-full border-4 border-green-400 relative">
-            {/* Close Button */}
-            <TouchableOpacity 
-              className="absolute top-4 right-4 w-8 h-8 bg-black rounded-full items-center justify-center"
-              onPress={handleReviewModalClose}
+        <KeyboardAvoidingView 
+          className="flex-1" 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        >
+          <View className="flex-1 bg-black/50 justify-center items-center px-6">
+            <ScrollView
+              contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center' }}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
             >
-              <Text className="text-white font-bold text-lg">×</Text>
-            </TouchableOpacity>
-
-            {/* Modal Title */}
-            <Text className="text-gray-800 text-lg font-semibold text-center mb-6 mt-4">
-              Give "{favor.user.full_name}" Feedback
-            </Text>
-
-            {/* Star Rating */}
-            <View className="flex-row justify-center mb-6">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <TouchableOpacity
-                  key={star}
-                  onPress={() => {
-                    if (rating === star) {
-                      // If clicking on the same star, decrease by 1
-                      setRating(star - 1);
-                    } else {
-                      // If clicking on a different star, set to that rating
-                      setRating(star);
-                    }
-                  }}
-                  className="mx-1"
+              <View className="bg-white rounded-3xl p-6 max-w-sm w-full border-4 border-green-400 relative my-4">
+                {/* Close Button */}
+                <TouchableOpacity 
+                  className="absolute top-4 right-4 w-8 h-8 bg-black rounded-full items-center justify-center z-10"
+                  onPress={handleReviewModalClose}
                 >
-                  <Svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-                    <Path
-                      d="M14 2L17.09 8.26L24 9.27L19 14.14L20.18 21.02L14 17.77L7.82 21.02L9 14.14L4 9.27L10.91 8.26L14 2Z"
-                      fill={rating >= star ? "#FCD34D" : "none"}
-                      stroke="#D1D5DB"
-                      strokeWidth="1.5"
-                      strokeLinejoin="round"
-                    />
-                  </Svg>
+                  <Text className="text-white font-bold text-lg">×</Text>
                 </TouchableOpacity>
-              ))}
-            </View>
+
+                {/* Modal Title */}
+                <Text className="text-gray-800 text-lg font-semibold text-center mb-6 mt-4">
+                  Give "{favor.user.full_name}" Feedback
+                </Text>
+
+                {/* Star Rating */}
+                <View className="mb-4">
+                  <Text className="text-gray-700 text-base font-medium mb-2 text-center">Rating *</Text>
+                  <View className="flex-row justify-center mb-6">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <TouchableOpacity
+                        key={star}
+                        onPress={() => {
+                          if (rating === star) {
+                            // If clicking on the same star, decrease by 1
+                            setRating(star - 1);
+                          } else {
+                            // If clicking on a different star, set to that rating
+                            setRating(star);
+                          }
+                        }}
+                        className="mx-1"
+                      >
+                        <Svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+                          <Path
+                            d="M14 2L17.09 8.26L24 9.27L19 14.14L20.18 21.02L14 17.77L7.82 21.02L9 14.14L4 9.27L10.91 8.26L14 2Z"
+                            fill={rating >= star ? "#FCD34D" : "none"}
+                            stroke="#D1D5DB"
+                            strokeWidth="1.5"
+                            strokeLinejoin="round"
+                          />
+                        </Svg>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  {rating === 0 && (
+                    <Text className="text-red-500 text-sm text-center mt-1">Please select a rating</Text>
+                  )}
+                </View>
 
             {/* Review Text Input */}
             <View className="mb-4">
-              <Text className="text-gray-700 text-base font-medium mb-2">Write Review</Text>
+              <View className="flex-row justify-between items-center mb-2">
+                <Text className="text-gray-700 text-base font-medium">Write Review *</Text>
+                <Text className={`text-sm ${
+                  reviewText.length > 200 ? 'text-red-500' : 
+                  reviewText.length > 180 ? 'text-yellow-500' : 'text-gray-500'
+                }`}>
+                  {reviewText.length}/200
+                </Text>
+              </View>
               <TextInput
-                className="border border-gray-300 rounded-xl p-4 h-24 text-base"
+                className={`border rounded-xl p-4 h-24 text-base ${
+                  reviewText.length > 200 ? 'border-red-500' : 'border-gray-300'
+                }`}
                 placeholder="Share your experience..."
                 placeholderTextColor="#9CA3AF"
                 multiline
                 textAlignVertical="top"
                 value={reviewText}
                 onChangeText={setReviewText}
+                maxLength={250} // Allow slight overage for better UX
               />
+              {reviewText.length > 200 && (
+                <Text className="text-red-500 text-sm mt-1">
+                  Review exceeds 200 character limit
+                </Text>
+              )}
             </View>
 
 
-            {/* Submit Button */}
-            <TouchableOpacity 
-              className={`rounded-full py-4 mt-6 ${isSubmittingReview ? 'bg-gray-400' : 'bg-green-500'}`}
-              onPress={handleReviewSubmit}
-              disabled={isSubmittingReview}
-            >
-              {isSubmittingReview ? (
-                <View className="flex-row justify-center items-center">
-                  <ActivityIndicator size="small" color="white" />
-                  <Text className="text-white text-center font-semibold text-lg ml-2">Submitting...</Text>
-                </View>
-              ) : (
-                <Text className="text-white text-center font-semibold text-lg">Submit Review</Text>
-              )}
-            </TouchableOpacity>
+                {/* Submit Button */}
+                <TouchableOpacity 
+                  className={`rounded-full py-4 mt-6 ${isSubmittingReview || rating === 0 || !reviewText.trim() || reviewText.length > 200 ? 'bg-gray-400' : 'bg-green-500'}`}
+                  onPress={handleReviewSubmit}
+                  disabled={isSubmittingReview || rating === 0 || !reviewText.trim() || reviewText.length > 200}
+                >
+                  {isSubmittingReview ? (
+                    <View className="flex-row justify-center items-center">
+                      <ActivityIndicator size="small" color="white" />
+                      <Text className="text-white text-center font-semibold text-lg ml-2">Submitting...</Text>
+                    </View>
+                  ) : (
+                    <Text className="text-white text-center font-semibold text-lg">Submit Review</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </ImageBackground>
   );

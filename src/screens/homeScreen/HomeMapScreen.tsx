@@ -12,7 +12,7 @@ import {
 import MapView, { Marker, Circle } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
-import { ProfileModal } from '../../components/overlays';
+import { FavorMapPreviewModal } from '../../components/overlays';
 import FilterSvg from '../../assets/icons/Filter';
 import { NotificationBell } from '../../components/notifications/NotificationBell';
 import useFilterStore from '../../store/useFilterStore';
@@ -33,8 +33,8 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
   
   // Get filter store state
   const { getFilterCount, hasActiveFilters, toBrowseParams } = useFilterStore();
-  const [selectedProfile, setSelectedProfile] = useState<any>(null);
-  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [selectedFavor, setSelectedFavor] = useState<Favor | null>(null);
+  const [showFavorModal, setShowFavorModal] = useState(false);
   const [showLocationPermissionModal, setShowLocationPermissionModal] = useState(false);
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [currentAddress, setCurrentAddress] = useState('Getting location...');
@@ -198,21 +198,8 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
   };
 
   const handleMarkerPress = useCallback((favor: Favor) => {
-    // Convert Favor to profile format for modal
-    const profile = {
-      id: favor.user.id,
-      name: favor.user.full_name,
-      email: favor.user.email,
-      age: undefined, // Not available in Favor interface
-      phone: undefined, // Not available in Favor interface
-      textNumber: undefined, // Not available in Favor interface
-      since: favor.created_at,
-      image: favor.user.image_url,
-      askedHours: undefined, // Not available in Favor interface
-      providedHours: undefined, // Not available in Favor interface
-    };
-    setSelectedProfile(profile);
-    setShowProfileModal(true);
+    setSelectedFavor(favor);
+    setShowFavorModal(true);
   }, []);
 
 
@@ -497,15 +484,15 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
       )}
 
 
-      {/* Profile Modal */}
-      {selectedProfile && (
-        <ProfileModal
-          visible={showProfileModal}
+      {/* Favor Preview Modal */}
+      {selectedFavor && (
+        <FavorMapPreviewModal
+          visible={showFavorModal}
           onClose={() => {
-            setShowProfileModal(false);
-            setSelectedProfile(null);
+            setShowFavorModal(false);
+            setSelectedFavor(null);
           }}
-          user={selectedProfile}
+          favor={selectedFavor}
         />
       )}
 

@@ -347,6 +347,12 @@ export const useApplyToFavor = () => {
         toastType = 'info';
         title = 'Cannot Apply';
         message = 'You cannot apply to your own favor';
+      } else if (error.message.toLowerCase().includes('no longer available') || 
+                 error.message.toLowerCase().includes('not available') ||
+                 error.message.toLowerCase().includes('favor not available')) {
+        toastType = 'info';
+        title = 'Favor Unavailable';
+        message = 'This favor is no longer accepting applications. Please check for newer postings.';
       }
       
       Toast.show({

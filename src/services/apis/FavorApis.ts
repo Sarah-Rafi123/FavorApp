@@ -253,6 +253,8 @@ export interface MyFavorsParams {
   category?: string[];
   page?: number;
   per_page?: number;
+  sort_by?: 'created_at' | 'updated_at';
+  sort_order?: 'asc' | 'desc';
 }
 
 export interface FavorApplication {
@@ -318,6 +320,14 @@ export const FavorApis = {
     queryParams.append('tab', params.tab || 'active');
     queryParams.append('page', (params.page || 1).toString());
     queryParams.append('per_page', (params.per_page || 10).toString());
+    
+    // Add sorting parameters if provided
+    if (params.sort_by) {
+      queryParams.append('sort_by', params.sort_by);
+    }
+    if (params.sort_order) {
+      queryParams.append('sort_order', params.sort_order);
+    }
     
     // Add category filters if provided
     if (params.category) {

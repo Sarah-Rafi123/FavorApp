@@ -113,6 +113,7 @@ const useAuthStore = create<AuthStore>((set, get) => ({
       // Clear from AsyncStorage
       await AsyncStorage.removeItem('auth_token');
       await AsyncStorage.removeItem('refresh_token');
+      await AsyncStorage.removeItem('was_ever_authenticated');
       
       // Clear React Query cache for user-specific data
       const { queryClient } = get();
@@ -198,6 +199,7 @@ const useAuthStore = create<AuthStore>((set, get) => ({
       // Clear all auth data from AsyncStorage
       await AsyncStorage.removeItem('auth_token');
       await AsyncStorage.removeItem('refresh_token');
+      await AsyncStorage.removeItem('was_ever_authenticated');
       
       // Clear React Query cache for user-specific data
       const { queryClient } = get();

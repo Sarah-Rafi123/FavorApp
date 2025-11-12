@@ -11,6 +11,8 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import BackSvg from '../../assets/icons/Back';
@@ -99,18 +101,43 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
   );
 
   // Fetch user reviews to get rating statistics
-  const { data: userReviewsResponse } = useUserReviewsQuery(
+  const { data: userReviewsResponse, isLoading: userReviewsLoading, error: userReviewsError } = useUserReviewsQuery(
     favorResponse?.data.favor?.user?.id || null,
     { page: 1, per_page: 1 }, // We only need statistics, not the actual reviews
     { enabled: !!favorResponse?.data.favor?.user?.id && !isRequestMode }
   );
 
   // Fetch provider reviews to get rating statistics
-  const { data: providerReviewsResponse } = useUserReviewsQuery(
+  const { data: providerReviewsResponse, isLoading: providerReviewsLoading, error: providerReviewsError } = useUserReviewsQuery(
     favorResponse?.data.favor?.accepted_response?.user?.id || null,
     { page: 1, per_page: 1 }, // We only need statistics, not the actual reviews
     { enabled: !!favorResponse?.data.favor?.accepted_response?.user?.id && isRequestMode }
   );
+
+  // Debug logging for review statistics
+  React.useEffect(() => {
+    const userId = isRequestMode 
+      ? favorResponse?.data.favor?.accepted_response?.user?.id 
+      : favorResponse?.data.favor?.user?.id;
+    
+    const userName = isRequestMode 
+      ? favorResponse?.data.favor?.accepted_response?.user?.full_name 
+      : favorResponse?.data.favor?.user?.full_name;
+
+    const reviewsData = isRequestMode ? providerReviewsResponse : userReviewsResponse;
+    const isLoading = isRequestMode ? providerReviewsLoading : userReviewsLoading;
+    const error = isRequestMode ? providerReviewsError : userReviewsError;
+
+    if (userId && userName) {
+      console.log(`📊 FavorDetailsScreen Review Statistics for ${userName} (ID: ${userId}):`, {
+        isRequestMode,
+        isLoading,
+        error: error?.message,
+        hasResponse: !!reviewsData,
+        statistics: reviewsData?.data?.statistics
+      });
+    }
+  }, [userReviewsResponse, providerReviewsResponse, userReviewsLoading, providerReviewsLoading, userReviewsError, providerReviewsError, isRequestMode, favorResponse]);
 
   // Delete favor mutation and Reassign favor mutation
   const deleteFavorMutation = useDeleteFavor();
@@ -293,12 +320,26 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
 
   const handleViewProfile = () => {
     if (favor?.accepted_response?.user?.id) {
+      console.log('🔄 Navigating to UserProfileScreen from FavorDetailsScreen:', {
+        userId: favor.accepted_response.user.id,
+        favorStatus: favor.status,
+        userType: 'provider',
+        userName: favor.accepted_response.user.full_name
+      });
       navigation?.navigate('UserProfileScreen', { 
-        userId: favor.accepted_response.user.id 
+        userId: favor.accepted_response.user.id,
+        favorStatus: favor.status
       });
     } else if (favor?.user?.id) {
+      console.log('🔄 Navigating to UserProfileScreen from FavorDetailsScreen:', {
+        userId: favor.user.id,
+        favorStatus: favor.status,
+        userType: 'requester',
+        userName: favor.user.full_name
+      });
       navigation?.navigate('UserProfileScreen', { 
-        userId: favor.user.id 
+        userId: favor.user.id,
+        favorStatus: favor.status
       });
     }
   };
@@ -324,11 +365,35 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
   };
 
   const handleReviewSubmit = async () => {
+    // Enhanced validation
     if (!favor || rating === 0 || !reviewText.trim() || isSubmittingReview) {
+      let errorMessage = 'Please provide ';
+      const missingFields = [];
+      
+      if (rating === 0) missingFields.push('a rating');
+      if (!reviewText.trim()) missingFields.push('review text');
+      
+      if (missingFields.length === 2) {
+        errorMessage += 'both a rating and review text.';
+      } else if (missingFields.length === 1) {
+        errorMessage += missingFields[0] + '.';
+      }
+      
       Toast.show({
         type: 'error',
         text1: 'Incomplete Review',
-        text2: 'Please provide a\nrating and review text.',
+        text2: errorMessage,
+        visibilityTime: 3000,
+      });
+      return;
+    }
+    
+    // Check character limit
+    if (reviewText.trim().length > 200) {
+      Toast.show({
+        type: 'error',
+        text1: 'Review Too Long',
+        text2: 'Review must be 200 characters or less.',
         visibilityTime: 3000,
       });
       return;
@@ -572,10 +637,18 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
                 </Text>
                 <View className="flex-row items-center mb-1">
                   <Text className="text-gray-500 text-base font-medium">
-                    ⭐ {userReviewsResponse?.data?.statistics?.average_rating?.toFixed(1) || '0.0'}
+                    ⭐ {(() => {
+                      const apiRating = userReviewsResponse?.data?.statistics?.average_rating;
+                      console.log(`🔍 User Rating display - API: ${apiRating}`);
+                      return apiRating?.toFixed(1) || '0.0';
+                    })()}
                   </Text>
                   <Text className="text-gray-500 text-base ml-2">
-                    | {userReviewsResponse?.data?.statistics?.total_reviews || 0} Reviews
+                    | {(() => {
+                      const apiCount = userReviewsResponse?.data?.statistics?.total_reviews;
+                      console.log(`🔍 User Review count display - API: ${apiCount}`);
+                      return apiCount || 0;
+                    })()} Reviews
                   </Text>
                 </View>
                 <Text className="text-gray-500 text-base mb-2">2 Mins Away</Text>
@@ -610,7 +683,16 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
                   </View>
                 )}
 
-                <TouchableOpacity onPress={() => navigation?.navigate('UserProfileScreen', { userId: favor.user.id })}>
+                <TouchableOpacity onPress={() => {
+                  console.log('🔄 Navigating to UserProfileScreen from FavorDetailsScreen (inline):', {
+                    userId: favor.user.id,
+                    favorStatus: favor.status,
+                    userType: 'requester',
+                    userName: favor.user.full_name,
+                    source: 'inline_view_profile'
+                  });
+                  navigation?.navigate('UserProfileScreen', { userId: favor.user.id, favorStatus: favor.status });
+                }}>
                   <Text className="text-[#44A27B] text-base font-medium underline">View Profile</Text>
                 </TouchableOpacity>
               </View>
@@ -672,9 +754,9 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
             <View className="flex-row items-center bg-white border rounded-2xl border-gray-300 p-4 border-1 mb-4">
               <View className="relative">
                 <View className="w-16 h-16 rounded-full overflow-hidden items-center justify-center">
-                  {providerProfile?.image_url ? (
+                  {(providerProfile?.image_url || providerContact?.image_url) ? (
                     <Image
-                      source={{ uri: providerProfile.image_url }}
+                      source={{ uri: providerProfile?.image_url || providerContact?.image_url }}
                       className="w-full h-full"
                       resizeMode="cover"
                     />
@@ -699,10 +781,20 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
                 </Text>
                 <View className="flex-row items-center mb-1">
                   <Text className="text-gray-500 text-base font-medium">
-                    ⭐ {providerReviewsResponse?.data?.statistics?.average_rating?.toFixed(1) || providerProfile?.average_rating?.toFixed(1) || '0.0'}
+                    ⭐ {(() => {
+                      const apiRating = providerReviewsResponse?.data?.statistics?.average_rating;
+                      const fallbackRating = providerProfile?.average_rating;
+                      console.log(`🔍 Rating display - API: ${apiRating}, Fallback: ${fallbackRating}`);
+                      return apiRating?.toFixed(1) || fallbackRating?.toFixed(1) || '0.0';
+                    })()}
                   </Text>
                   <Text className="text-gray-500 text-base ml-2">
-                    | {providerReviewsResponse?.data?.statistics?.total_reviews || providerProfile?.total_reviews || 0} Reviews
+                    | {(() => {
+                      const apiCount = providerReviewsResponse?.data?.statistics?.total_reviews;
+                      const fallbackCount = providerProfile?.total_reviews;
+                      console.log(`🔍 Review count display - API: ${apiCount}, Fallback: ${fallbackCount}`);
+                      return apiCount || fallbackCount || 0;
+                    })()} Reviews
                   </Text>
                 </View>
                
@@ -737,7 +829,16 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
                   </View>
                 )} */}
 
-                <TouchableOpacity onPress={handleViewProfile}>
+                <TouchableOpacity onPress={() => {
+                  console.log('🔄 Navigating to UserProfileScreen from FavorDetailsScreen (provider):', {
+                    userId: favor.accepted_response?.user?.id || favor.user.id,
+                    favorStatus: favor.status,
+                    userType: favor.accepted_response?.user?.id ? 'provider' : 'requester',
+                    userName: favor.accepted_response?.user?.full_name || favor.user.full_name,
+                    source: 'provider_view_profile'
+                  });
+                  handleViewProfile();
+                }}>
                   <Text className="text-[#44A27B] text-base font-medium underline">View Profile</Text>
                 </TouchableOpacity>
               </View>
@@ -800,10 +901,7 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
                     </TouchableOpacity>
                     <TouchableOpacity 
                       className={`bg-transparent border border-black rounded-xl py-3 px-4 ${isCompletingFavor ? 'opacity-50' : ''}`}
-                      onPress={() => {
-                        // Cancel functionality
-                        console.log('Cancel');
-                      }}
+                      onPress={handleCancelFavor}
                       disabled={isCompletingFavor}
                     >
                       <Text className="text-center text-gray-800 font-medium text-sm">Cancel</Text>
@@ -963,67 +1061,99 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
         animationType="fade"
         onRequestClose={handleReviewModalClose}
       >
-        <View className="flex-1 bg-black/50 justify-center items-center px-6">
-          <View className="bg-white rounded-3xl p-6 max-w-sm w-full border-4 border-green-400 relative">
-            {/* Close Button */}
-            <TouchableOpacity 
-              className={`absolute top-4 right-4 w-8 h-8 bg-black rounded-full items-center justify-center ${isSubmittingReview ? 'opacity-50' : ''}`}
-              onPress={handleReviewModalClose}
-              disabled={isSubmittingReview}
+        <KeyboardAvoidingView 
+          className="flex-1" 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        >
+          <View className="flex-1 bg-black/50 justify-center items-center px-6">
+            <ScrollView
+              contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center' }}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
             >
-              <Text className="text-white font-bold text-lg">×</Text>
-            </TouchableOpacity>
-
-            {/* Modal Title */}
-            <Text className="text-gray-800 text-lg font-semibold text-center mb-6 mt-4">
-              Give "{favor.accepted_response?.user?.full_name || 'Provider'}" Feedback
-            </Text>
-
-            {/* Star Rating */}
-            <View className="flex-row justify-center mb-6">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <TouchableOpacity
-                  key={star}
-                  onPress={() => {
-                    if (isSubmittingReview) return;
-                    if (rating === star) {
-                      // If clicking on the same star, decrease by 1
-                      setRating(star - 1);
-                    } else {
-                      // If clicking on a different star, set to that rating
-                      setRating(star);
-                    }
-                  }}
-                  className={`mx-1 ${isSubmittingReview ? 'opacity-50' : ''}`}
+              <View className="bg-white rounded-3xl p-6 max-w-sm w-full border-4 border-green-400 relative my-4">
+                {/* Close Button */}
+                <TouchableOpacity 
+                  className={`absolute top-4 right-4 w-8 h-8 bg-black rounded-full items-center justify-center z-10 ${isSubmittingReview ? 'opacity-50' : ''}`}
+                  onPress={handleReviewModalClose}
                   disabled={isSubmittingReview}
                 >
-                  <Svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-                    <Path
-                      d="M14 2L17.09 8.26L24 9.27L19 14.14L20.18 21.02L14 17.77L7.82 21.02L9 14.14L4 9.27L10.91 8.26L14 2Z"
-                      fill={rating >= star ? "#FCD34D" : "none"}
-                      stroke="#D1D5DB"
-                      strokeWidth="1.5"
-                      strokeLinejoin="round"
-                    />
-                  </Svg>
+                  <Text className="text-white font-bold text-lg">×</Text>
                 </TouchableOpacity>
-              ))}
-            </View>
 
-            {/* Review Text Input */}
-            <View className="mb-4">
-              <Text className="text-gray-700 text-base font-medium mb-2">Write Review</Text>
-              <TextInput
-                className={`border border-gray-300 rounded-xl p-4 h-24 text-base ${isSubmittingReview ? 'opacity-50 bg-gray-100' : ''}`}
-                placeholder="Share your experience..."
-                placeholderTextColor="#9CA3AF"
-                multiline
-                textAlignVertical="top"
-                value={reviewText}
-                onChangeText={setReviewText}
-                editable={!isSubmittingReview}
-              />
-            </View>
+                {/* Modal Title */}
+                <Text className="text-gray-800 text-lg font-semibold text-center mb-6 mt-4">
+                  Give "{favor.accepted_response?.user?.full_name || 'Provider'}" Feedback
+                </Text>
+
+                {/* Star Rating */}
+                <View className="mb-4">
+                  <Text className="text-gray-700 text-base font-medium mb-2 text-center">Rating *</Text>
+                  <View className="flex-row justify-center mb-6">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <TouchableOpacity
+                        key={star}
+                        onPress={() => {
+                          if (isSubmittingReview) return;
+                          if (rating === star) {
+                            // If clicking on the same star, decrease by 1
+                            setRating(star - 1);
+                          } else {
+                            // If clicking on a different star, set to that rating
+                            setRating(star);
+                          }
+                        }}
+                        className={`mx-1 ${isSubmittingReview ? 'opacity-50' : ''}`}
+                        disabled={isSubmittingReview}
+                      >
+                        <Svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+                          <Path
+                            d="M14 2L17.09 8.26L24 9.27L19 14.14L20.18 21.02L14 17.77L7.82 21.02L9 14.14L4 9.27L10.91 8.26L14 2Z"
+                            fill={rating >= star ? "#FCD34D" : "none"}
+                            stroke="#D1D5DB"
+                            strokeWidth="1.5"
+                            strokeLinejoin="round"
+                          />
+                        </Svg>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  {rating === 0 && (
+                    <Text className="text-red-500 text-sm text-center mt-1">Please select a rating</Text>
+                  )}
+                </View>
+
+                {/* Review Text Input */}
+                <View className="mb-4">
+                  <View className="flex-row justify-between items-center mb-2">
+                    <Text className="text-gray-700 text-base font-medium">Write Review *</Text>
+                    <Text className={`text-sm ${
+                      reviewText.length > 200 ? 'text-red-500' : 
+                      reviewText.length > 180 ? 'text-yellow-500' : 'text-gray-500'
+                    }`}>
+                      {reviewText.length}/200
+                    </Text>
+                  </View>
+                  <TextInput
+                    className={`border rounded-xl p-4 h-24 text-base ${
+                      reviewText.length > 200 ? 'border-red-500' : 'border-gray-300'
+                    } ${isSubmittingReview ? 'opacity-50 bg-gray-100' : ''}`}
+                    placeholder="Share your experience..."
+                    placeholderTextColor="#9CA3AF"
+                    multiline
+                    textAlignVertical="top"
+                    value={reviewText}
+                    onChangeText={setReviewText}
+                    editable={!isSubmittingReview}
+                    maxLength={250} // Allow slight overage for better UX
+                  />
+                  {reviewText.length > 200 && (
+                    <Text className="text-red-500 text-sm mt-1">
+                      Review exceeds 200 character limit
+                    </Text>
+                  )}
+                </View>
 
             {/* Tip Option */}
             <View className="mb-6">
@@ -1056,23 +1186,25 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
               )}
             </View>
 
-            {/* Submit Button */}
-            <TouchableOpacity 
-              className={`rounded-full py-4 ${isSubmittingReview ? 'bg-gray-400' : 'bg-green-500'}`}
-              onPress={handleReviewSubmit}
-              disabled={isSubmittingReview}
-            >
-              {isSubmittingReview ? (
-                <View className="flex-row justify-center items-center">
-                  <ActivityIndicator size="small" color="white" />
-                  <Text className="text-white text-center font-semibold text-lg ml-2">Submitting...</Text>
-                </View>
-              ) : (
-                <Text className="text-white text-center font-semibold text-lg">Submit Review</Text>
-              )}
-            </TouchableOpacity>
+                {/* Submit Button */}
+                <TouchableOpacity 
+                  className={`rounded-full py-4 ${isSubmittingReview || rating === 0 || !reviewText.trim() || reviewText.length > 200 ? 'bg-gray-400' : 'bg-green-500'}`}
+                  onPress={handleReviewSubmit}
+                  disabled={isSubmittingReview || rating === 0 || !reviewText.trim() || reviewText.length > 200}
+                >
+                  {isSubmittingReview ? (
+                    <View className="flex-row justify-center items-center">
+                      <ActivityIndicator size="small" color="white" />
+                      <Text className="text-white text-center font-semibold text-lg ml-2">Submitting...</Text>
+                    </View>
+                  ) : (
+                    <Text className="text-white text-center font-semibold text-lg">Submit Review</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* User Profile Modal */}
@@ -1167,7 +1299,19 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
 
                   <View className="mb-3">
                     <Text className="text-gray-700 text-base">
-                      Rating : <Text className="font-semibold">⭐ {providerProfile.average_rating} ({providerProfile.total_reviews} reviews)</Text>
+                      Rating : <Text className="font-semibold">⭐ {(() => {
+                        const apiRating = providerReviewsResponse?.data?.statistics?.average_rating;
+                        const apiCount = providerReviewsResponse?.data?.statistics?.total_reviews;
+                        const fallbackRating = providerProfile.average_rating;
+                        const fallbackCount = providerProfile.total_reviews;
+                        
+                        const finalRating = apiRating || fallbackRating;
+                        const finalCount = apiCount || fallbackCount;
+                        
+                        console.log(`🔍 Provider Rating section - API: ${apiRating}/${apiCount}, Fallback: ${fallbackRating}/${fallbackCount}, Final: ${finalRating}/${finalCount}`);
+                        
+                        return `${finalRating} (${finalCount} reviews)`;
+                      })()}</Text>
                     </Text>
                   </View>
 

@@ -26,6 +26,7 @@ import EditSvg from '../../assets/icons/Edit';
 import { useMyFavors, useFavorApplicants } from '../../services/queries/FavorQueries';
 import { useDeleteFavor, useAcceptApplicant, useReassignFavor } from '../../services/mutations/FavorMutations';
 import { Favor, FavorApplicant } from '../../services/apis/FavorApis';
+import { useUserReviewsQuery } from '../../services/queries/ProfileQueries';
 import useAuthStore from '../../store/useAuthStore';
 
 interface CreateFavorScreenProps {
@@ -40,6 +41,11 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [favorToCancel, setFavorToCancel] = useState<Favor | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0); // Used to reset carousel states
+  
+  // Sort filter states
+  const [sortBy, setSortBy] = useState<'created_at' | 'updated_at'>('updated_at');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [showSortModal, setShowSortModal] = useState(false);
 
   // Get auth store state
   const { user, accessToken } = useAuthStore();
@@ -71,7 +77,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
     error: allFavorsError,
     refetch: refetchAllFavors,
   } = useMyFavors(
-    { type: 'requested', tab: 'active', page, per_page },
+    { type: 'requested', tab: 'active', page, per_page, sort_by: sortBy, sort_order: sortOrder },
     { enabled: activeTab === 'All' && !!user && !!accessToken }
   );
 
@@ -82,7 +88,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
     error: activeFavorsError,
     refetch: refetchActiveFavors,
   } = useMyFavors(
-    { type: 'requested', tab: 'active', page, per_page },
+    { type: 'requested', tab: 'active', page, per_page, sort_by: sortBy, sort_order: sortOrder },
     { enabled: activeTab === 'Active' && !!user && !!accessToken }
   );
 
@@ -92,7 +98,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
     error: inProgressFavorsError,
     refetch: refetchInProgressFavors,
   } = useMyFavors(
-    { type: 'requested', tab: 'in-progress', page, per_page },
+    { type: 'requested', tab: 'in-progress', page, per_page, sort_by: sortBy, sort_order: sortOrder },
     { enabled: activeTab === 'Active' && !!user && !!accessToken }
   );
 
@@ -103,7 +109,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
     error: completedFavorsError,
     refetch: refetchCompletedFavors,
   } = useMyFavors(
-    { type: 'requested', tab: 'completed', page, per_page },
+    { type: 'requested', tab: 'completed', page, per_page, sort_by: sortBy, sort_order: sortOrder },
     { enabled: activeTab === 'History' && !!user && !!accessToken }
   );
 
@@ -113,7 +119,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
     error: cancelledFavorsError,
     refetch: refetchCancelledFavors,
   } = useMyFavors(
-    { type: 'requested', tab: 'cancelled', page, per_page },
+    { type: 'requested', tab: 'cancelled', page, per_page, sort_by: sortBy, sort_order: sortOrder },
     { enabled: activeTab === 'History' && !!user && !!accessToken }
   );
 
@@ -295,6 +301,37 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
 
 
   // Component for individual request cards showing applicant details
+  const ApplicantReviewInfo = ({ applicant }: { applicant: FavorApplicant }) => {
+    const { data: reviewsResponse, isLoading, error } = useUserReviewsQuery(
+      applicant.user.id,
+      { page: 1, per_page: 1 }, // We only need statistics
+      { enabled: !!applicant.user.id }
+    );
+
+    // Debug logging
+    React.useEffect(() => {
+      if (applicant.user.id) {
+        console.log(`📊 Review data for ${applicant.user.full_name} (ID: ${applicant.user.id}):`, {
+          isLoading,
+          error: error?.message,
+          hasResponse: !!reviewsResponse,
+          statistics: reviewsResponse?.data?.statistics,
+          fallbackRating: applicant.user.rating
+        });
+      }
+    }, [reviewsResponse, isLoading, error, applicant.user.id, applicant.user.full_name, applicant.user.rating]);
+
+    const rating = reviewsResponse?.data?.statistics?.average_rating || applicant.user.rating || 0;
+    const reviewCount = reviewsResponse?.data?.statistics?.total_reviews || 0;
+
+    return (
+      <View className="flex-row items-center mb-2">
+        <Text className="text-gray-600 text-sm mr-2">⭐ {rating.toFixed(1)}</Text>
+        <Text className="text-gray-600 text-sm">| {reviewCount} Review{reviewCount !== 1 ? 's' : ''}</Text>
+      </View>
+    );
+  };
+
   const IndividualRequestCard = ({ favor, applicant }: { favor: Favor; applicant: FavorApplicant }) => {
     return (
       <TouchableOpacity 
@@ -386,16 +423,18 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
 
     return (
       <View className="bg-[#F7FBF5] rounded-2xl p-4 mb-4 mx-4 shadow-sm border-2 border-b-4 border-b-[#44A27B] border-[#44A27B66]">
-        {/* Edit Icon - Top Right */}
-        <View className="absolute top-4 right-4 z-10">
-          <TouchableOpacity 
-            onPress={() => navigation?.navigate('EditFavorScreen', { favorId: favor.id })}
-            className="bg-transparent p-2 "
-            activeOpacity={0.7}
-          >
-            <EditSvg />
-          </TouchableOpacity>
-        </View>
+        {/* Edit Icon - Top Right - Hide when status is in_progress */}
+        {favor.status !== 'in_progress' && (
+          <View className="absolute top-4 right-4 z-10">
+            <TouchableOpacity 
+              onPress={() => navigation?.navigate('EditFavorScreen', { favorId: favor.id })}
+              className="bg-transparent p-2 "
+              activeOpacity={0.7}
+            >
+              <EditSvg />
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Header with favor details */}
         <TouchableOpacity 
@@ -479,11 +518,8 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
                     <Text className="text-gray-800 font-bold text-xl mb-1">
                       {applicant.user.full_name || `${applicant.user.first_name} ${applicant.user.last_name}`}
                     </Text>
-                    <View className="flex-row items-center mb-2">
-                      <Text className="text-gray-600 text-sm mr-2">⭐ {applicant.user.rating || 0}</Text>
-                      <Text className="text-gray-600 text-sm">| 0 Reviews</Text>
-                    </View>
-                    <TouchableOpacity onPress={() => navigation?.navigate('UserProfileScreen', { userId: applicant.user.id })}>
+                    <ApplicantReviewInfo applicant={applicant} />
+                    <TouchableOpacity onPress={() => navigation?.navigate('UserProfileScreen', { userId: applicant.user.id, favorStatus: favor.status })}>
                       <Text className="text-[#44A27B] text-base font-medium">View Profile</Text>
                     </TouchableOpacity>
                   </View>
@@ -615,11 +651,8 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
               <Text className="text-gray-800 font-bold text-xl mb-1">
                 {applicant.user.full_name || `${applicant.user.first_name} ${applicant.user.last_name}`}
               </Text>
-              <View className="flex-row items-center mb-2">
-                <Text className="text-gray-600 text-sm mr-2">⭐ {applicant.user.rating || 0}</Text>
-                <Text className="text-gray-600 text-sm">| 0 Reviews</Text>
-              </View>
-              <TouchableOpacity onPress={() => navigation?.navigate('UserProfileScreen', { userId: applicant.user.id })}>
+              <ApplicantReviewInfo applicant={applicant} />
+              <TouchableOpacity onPress={() => navigation?.navigate('UserProfileScreen', { userId: applicant.user.id, favorStatus: favor.status })}>
                 <Text className="text-[#44A27B] text-base font-medium">View Profile</Text>
               </TouchableOpacity>
             </View>
@@ -716,18 +749,23 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
   const FavorWithApplicants = ({ favor, navigation }: { favor: Favor; navigation: any }) => {
     const { data: applicantsData, isLoading, error } = useFavorApplicants(favor.id);
     
-    // If there are applicants, show carousel with all applicants
-    if (applicantsData?.data?.applicants && applicantsData.data.applicants.length > 0) {
+    // Filter to only show pending applicants (hide accepted ones for All tab too)
+    const pendingApplicants = applicantsData?.data?.applicants?.filter(
+      applicant => applicant.status === 'pending'
+    ) || [];
+    
+    // If there are pending applicants, show carousel with pending applicants
+    if (pendingApplicants.length > 0) {
       return (
         <ActiveRequestCardWithCarousel 
           favor={favor} 
-          applicants={applicantsData.data.applicants} 
+          applicants={pendingApplicants} 
           navigation={navigation}
         />
       );
     }
     
-    // If no applicants, show the summary card
+    // If no pending applicants, show the summary card
     return <FavorSummaryCard favor={favor} />;
   };
 
@@ -735,18 +773,29 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
   const ActiveFavorWithApplicants = ({ favor, navigation }: { favor: Favor; navigation: any }) => {
     const { data: applicantsData, isLoading, error } = useFavorApplicants(favor.id);
     
-    // If there are applicants, show carousel with all applicants
-    if (applicantsData?.data?.applicants && applicantsData.data.applicants.length > 0) {
+    // Filter to only show pending applicants (hide accepted ones)
+    const pendingApplicants = applicantsData?.data?.applicants?.filter(
+      applicant => applicant.status === 'pending'
+    ) || [];
+
+    console.log(`🔍 Active favor ${favor.id} applicants:`, {
+      total: applicantsData?.data?.applicants?.length || 0,
+      pending: pendingApplicants.length,
+      allStatuses: applicantsData?.data?.applicants?.map(a => ({ id: a.user.id, name: a.user.full_name, status: a.status })) || []
+    });
+    
+    // If there are pending applicants, show carousel
+    if (pendingApplicants.length > 0) {
       return (
         <ActiveRequestCardWithCarousel 
           favor={favor} 
-          applicants={applicantsData.data.applicants} 
+          applicants={pendingApplicants} 
           navigation={navigation}
         />
       );
     }
     
-    // If no applicants, return null or show regular active card
+    // If no pending applicants, return null (will show regular active card)
     return null;
   };
 
@@ -759,16 +808,18 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
     // If no pending reviews, show regular active card
     return (
       <View className="bg-[#F7FBF5] rounded-2xl p-4 mb-4 mx-4 shadow-sm border-2 border-b-4 border-b-[#44A27B] border-[#44A27B66]">
-        {/* Edit Icon - Top Right */}
-        <View className="absolute top-4 right-4 z-10">
-          <TouchableOpacity 
-            onPress={() => navigation?.navigate('EditFavorScreen', { favorId: favor.id })}
-            className="bg-transparent p-2"
-            activeOpacity={0.7}
-          >
-            <EditSvg />
-          </TouchableOpacity>
-        </View>
+        {/* Edit Icon - Top Right - Hide when status is in_progress */}
+        {favor.status !== 'in_progress' && (
+          <View className="absolute top-4 right-4 z-10">
+            <TouchableOpacity 
+              onPress={() => navigation?.navigate('EditFavorScreen', { favorId: favor.id })}
+              className="bg-transparent p-2"
+              activeOpacity={0.7}
+            >
+              <EditSvg />
+            </TouchableOpacity>
+          </View>
+        )}
 
         <TouchableOpacity 
           onPress={() => navigation?.navigate('FavorDetailsScreen', { favorId: favor.id, source: 'CreateFavorScreen' })}
@@ -918,6 +969,18 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
           />
         </View>
 
+        {/* Sort Filter Button */}
+        <View className="flex-row mb-4 justify-end">
+          <TouchableOpacity
+            className="bg-green-500 rounded-full px-4 py-2"
+            onPress={() => setShowSortModal(true)}
+          >
+            <Text className="text-white font-medium">
+              Sort
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Ask Favor Button - only show when there are favors in the list */}
         {currentFavors.length > 0 && (
           <View className="px-4">
@@ -954,7 +1017,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
         <ScrollView 
           className="flex-1"
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingTop: 16, paddingBottom: 120 }}
+          contentContainerStyle={{ paddingTop: 8, paddingBottom: 120 }}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -1053,6 +1116,125 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
                 onPress={handleConfirmCancel}
               >
                 <Text className="text-[#44A27B] text-center font-semibold text-lg">Yes</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Sort Filter Modal */}
+      <Modal
+        visible={showSortModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowSortModal(false)}
+      >
+        <View className="flex-1 bg-black/50 justify-center items-center px-6">
+          <View className="bg-white rounded-3xl p-6 max-w-sm w-full">
+            {/* Close Button */}
+            <TouchableOpacity
+              className="absolute top-4 right-4 w-8 h-8 bg-gray-200 rounded-full items-center justify-center"
+              onPress={() => setShowSortModal(false)}
+            >
+              <Text className="text-gray-600 font-bold text-lg">×</Text>
+            </TouchableOpacity>
+
+            <Text className="text-xl font-bold text-gray-800 mb-6 text-center">Sort Options</Text>
+
+            {/* Sort By Section */}
+            <Text className="text-lg font-semibold text-gray-700 mb-3">Sort By:</Text>
+            <View className="mb-6">
+              <TouchableOpacity
+                className={`flex-row items-center p-3 rounded-lg mb-2 ${
+                  sortBy === 'created_at' ? 'bg-[#44A27B] bg-opacity-20' : 'bg-gray-50'
+                }`}
+                onPress={() => setSortBy('created_at')}
+              >
+                <View className={`w-4 h-4 rounded-full border-2 mr-3 ${
+                  sortBy === 'created_at' ? 'border-[#44A27B] bg-[#44A27B]' : 'border-gray-400'
+                }`}>
+                  {sortBy === 'created_at' && <View className="w-2 h-2 bg-white rounded-full mx-auto mt-0.5" />}
+                </View>
+                <Text className={`font-medium ${
+                  sortBy === 'created_at' ? 'text-[#44A27B]' : 'text-gray-700'
+                }`}>Created Date</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                className={`flex-row items-center p-3 rounded-lg ${
+                  sortBy === 'updated_at' ? 'bg-[#44A27B] bg-opacity-20' : 'bg-gray-50'
+                }`}
+                onPress={() => setSortBy('updated_at')}
+              >
+                <View className={`w-4 h-4 rounded-full border-2 mr-3 ${
+                  sortBy === 'updated_at' ? 'border-[#44A27B] bg-[#44A27B]' : 'border-gray-400'
+                }`}>
+                  {sortBy === 'updated_at' && <View className="w-2 h-2 bg-white rounded-full mx-auto mt-0.5" />}
+                </View>
+                <Text className={`font-medium ${
+                  sortBy === 'updated_at' ? 'text-[#44A27B]' : 'text-gray-700'
+                }`}>Updated Date</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Sort Order Section */}
+            <Text className="text-lg font-semibold text-gray-700 mb-3">Order:</Text>
+            <View className="mb-6">
+              <TouchableOpacity
+                className={`flex-row items-center p-3 rounded-lg mb-2 ${
+                  sortOrder === 'desc' ? 'bg-[#44A27B] bg-opacity-20' : 'bg-gray-50'
+                }`}
+                onPress={() => setSortOrder('desc')}
+              >
+                <View className={`w-4 h-4 rounded-full border-2 mr-3 ${
+                  sortOrder === 'desc' ? 'border-[#44A27B] bg-[#44A27B]' : 'border-gray-400'
+                }`}>
+                  {sortOrder === 'desc' && <View className="w-2 h-2 bg-white rounded-full mx-auto mt-0.5" />}
+                </View>
+                <Text className={`font-medium ${
+                  sortOrder === 'desc' ? 'text-[#44A27B]' : 'text-gray-700'
+                }`}>Newest First</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                className={`flex-row items-center p-3 rounded-lg ${
+                  sortOrder === 'asc' ? 'bg-[#44A27B] bg-opacity-20' : 'bg-gray-50'
+                }`}
+                onPress={() => setSortOrder('asc')}
+              >
+                <View className={`w-4 h-4 rounded-full border-2 mr-3 ${
+                  sortOrder === 'asc' ? 'border-[#44A27B] bg-[#44A27B]' : 'border-gray-400'
+                }`}>
+                  {sortOrder === 'asc' && <View className="w-2 h-2 bg-white rounded-full mx-auto mt-0.5" />}
+                </View>
+                <Text className={`font-medium ${
+                  sortOrder === 'asc' ? 'text-[#44A27B]' : 'text-gray-700'
+                }`}>Oldest First</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Buttons */}
+            <View className="flex-row gap-x-4">
+              <TouchableOpacity
+                className="flex-1 bg-gray-200 rounded-full py-4"
+                onPress={() => {
+                  setSortBy('updated_at');
+                  setSortOrder('asc');
+                  setShowSortModal(false);
+                  handleRefresh(); // Refresh data with default sort parameters
+                }}
+              >
+                <Text className="text-gray-700 text-center font-semibold text-lg">Remove Filter</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                className="flex-1 bg-[#44A27B] rounded-full py-4"
+                onPress={() => {
+                  setShowSortModal(false);
+                  handleRefresh(); // Refresh data with new sort parameters
+                }}
+              >
+                <Text className="text-white text-center font-semibold text-lg">Apply Sort</Text>
               </TouchableOpacity>
             </View>
           </View>

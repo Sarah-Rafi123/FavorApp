@@ -16,7 +16,7 @@ import Svg, { Path } from 'react-native-svg';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import { usePaymentMethods } from '../../services/queries/PaymentMethodQueries';
 import { useUpdateFavor, useUpdateFavorWithImage } from '../../services/mutations/FavorMutations';
-import ImagePicker from 'react-native-image-crop-picker';
+import { ImagePickerUtils } from '../../utils/ImagePickerUtils';
 import BackSvg from '../../assets/icons/Back';
 import { Favor, UpdateFavorRequest } from '../../services/apis/FavorApis';
 import { useFavor } from '../../services/queries/FavorQueries';
@@ -295,56 +295,40 @@ export function EditFavorScreen({ navigation, route }: EditFavorScreenProps) {
     setShowImageOptions(true);
   };
 
-  const selectImageFromGallery = () => {
-    ImagePicker.openPicker({
-      width: 800,
-      height: 600,
-      cropping: true,
-      mediaType: 'photo',
-      compressImageQuality: 0.8,
-      // Android cropper customization for proper status bar handling
-      cropperStatusBarColor: '#71DFB1',
-      cropperToolbarColor: '#71DFB1',
-      cropperToolbarWidgetColor: '#FFFFFF',
-      cropperToolbarTitle: 'Edit Photo',
-    }).then(image => {
-      setSelectedImage({
-        uri: image.path,
-        type: image.mime,
-        name: `favor_image_${Date.now()}.jpg`,
-        fileSize: image.size,
-      });
+  const selectImageFromGallery = async () => {
+    try {
+      const result = await ImagePickerUtils.openImageLibrary();
+      if (result) {
+        setSelectedImage({
+          uri: result.uri,
+          type: result.type,
+          name: result.name,
+          fileSize: result.fileSize,
+        });
+      }
       setShowImageOptions(false);
-    }).catch(error => {
+    } catch (error) {
       console.log('Image picker error:', error);
       setShowImageOptions(false);
-    });
+    }
   };
 
-  const takePhoto = () => {
-    ImagePicker.openCamera({
-      width: 800,
-      height: 600,
-      cropping: true,
-      mediaType: 'photo',
-      compressImageQuality: 0.8,
-      // Android cropper customization for proper status bar handling
-      cropperStatusBarColor: '#71DFB1',
-      cropperToolbarColor: '#71DFB1',
-      cropperToolbarWidgetColor: '#FFFFFF',
-      cropperToolbarTitle: 'Edit Photo',
-    }).then(image => {
-      setSelectedImage({
-        uri: image.path,
-        type: image.mime,
-        name: `favor_image_${Date.now()}.jpg`,
-        fileSize: image.size,
-      });
+  const takePhoto = async () => {
+    try {
+      const result = await ImagePickerUtils.openCamera();
+      if (result) {
+        setSelectedImage({
+          uri: result.uri,
+          type: result.type,
+          name: result.name,
+          fileSize: result.fileSize,
+        });
+      }
       setShowImageOptions(false);
-    }).catch(error => {
+    } catch (error) {
       console.log('Camera error:', error);
       setShowImageOptions(false);
-    });
+    }
   };
 
   if (favorLoading) {

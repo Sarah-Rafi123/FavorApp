@@ -16,7 +16,7 @@ import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplet
 import { useCreateFavor, useCreateFavorWithImage, buildFavorFormData } from '../../services/mutations/FavorMutations';
 import { CreateFavorRequest } from '../../services/apis/FavorApis';
 import { usePaymentMethods } from '../../services/queries/PaymentMethodQueries';
-import ImagePicker from 'react-native-image-crop-picker';
+import { ImagePickerUtils } from '../../utils/ImagePickerUtils';
 import BackSvg from '../../assets/icons/Back';
 
 interface AskFavorScreenProps {
@@ -172,9 +172,9 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
     try {
       console.log('📷 Browse File button clicked');
       
-      // Check if ImagePicker is available
-      if (!ImagePicker) {
-        console.error('❌ ImagePicker not available');
+      // Check if ImagePickerUtils is available
+      if (!ImagePickerUtils) {
+        console.error('❌ ImagePickerUtils not available');
         Alert.alert(
           'Feature Not Available',
           'Image picker is not available on this device.'
@@ -202,37 +202,19 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
       // Add a small delay to ensure modal is fully closed
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      const image = await ImagePicker.openPicker({
-        width: 800,
-        height: 600,
-        cropping: true,
-        compressImageQuality: 0.8,
-        mediaType: 'photo',
-        includeBase64: false,
-        // Android cropper customization for proper status bar handling
-        cropperStatusBarColor: '#71DFB1',
-        cropperToolbarColor: '#71DFB1',
-        cropperToolbarWidgetColor: '#FFFFFF',
-        cropperToolbarTitle: 'Edit Photo',
-      });
+      const result = await ImagePickerUtils.openImageLibrary();
       
-      // Check file size (10MB limit)
-      if (image.size && image.size > 10 * 1024 * 1024) {
-        Alert.alert('Error', 'Image file is too large. Please choose an image smaller than 10MB.');
-        return;
+      if (result) {
+        // Set the selected image
+        setSelectedImage({
+          uri: result.uri,
+          type: result.type,
+          name: result.name,
+          fileSize: result.fileSize,
+        });
       }
-
-      // Set the selected image
-      setSelectedImage({
-        uri: image.path,
-        type: image.mime || 'image/jpeg',
-        name: image.filename || `photo_${Date.now()}.jpg`,
-        fileSize: image.size,
-      });
     } catch (error: any) {
-      if (error.code !== 'E_PICKER_CANCELLED') {
-        Alert.alert('Error', 'Failed to select image. Please try again.');
-      }
+      Alert.alert('Error', 'Failed to select image. Please try again.');
     } finally {
       // Ensure modal is definitely closed
       setShowImageOptions(false);
@@ -246,37 +228,19 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
       // Add a small delay to ensure modal is fully closed
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      const image = await ImagePicker.openCamera({
-        width: 800,
-        height: 800,
-        cropping: true,
-        compressImageQuality: 0.8,
-        mediaType: 'photo',
-        includeBase64: false,
-        // Android cropper customization for proper status bar handling
-        cropperStatusBarColor: '#71DFB1',
-        cropperToolbarColor: '#71DFB1',
-        cropperToolbarWidgetColor: '#FFFFFF',
-        cropperToolbarTitle: 'Edit Photo',
-      });
+      const result = await ImagePickerUtils.openCamera();
       
-      // Check file size (10MB limit)
-      if (image.size && image.size > 10 * 1024 * 1024) {
-        Alert.alert('Error', 'Image file is too large. Please choose an image smaller than 10MB.');
-        return;
+      if (result) {
+        // Set the selected image
+        setSelectedImage({
+          uri: result.uri,
+          type: result.type,
+          name: result.name,
+          fileSize: result.fileSize,
+        });
       }
-
-      // Set the selected image
-      setSelectedImage({
-        uri: image.path,
-        type: image.mime || 'image/jpeg',
-        name: `camera_${Date.now()}.jpg`,
-        fileSize: image.size,
-      });
     } catch (error: any) {
-      if (error.code !== 'E_PICKER_CANCELLED') {
-        Alert.alert('Error', 'Failed to take photo. Please try again.');
-      }
+      Alert.alert('Error', 'Failed to take photo. Please try again.');
     } finally {
       // Ensure modal is definitely closed
       setShowImageOptions(false);

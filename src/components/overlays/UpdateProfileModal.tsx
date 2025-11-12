@@ -4,7 +4,7 @@ import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplet
 import { CustomButton } from '../buttons/CustomButton';
 import { useProfileQuery } from '../../services/queries/ProfileQueries';
 import { useUpdateProfileMutation, useUploadProfileImageMutation, useRemoveProfileImageMutation } from '../../services/mutations/ProfileMutations';
-import ImagePicker from 'react-native-image-crop-picker';
+import { ImagePickerUtils } from '../../utils/ImagePickerUtils';
 import CalendarSvg from '../../assets/icons/Calender';
 import PhoneSvg from '../../assets/icons/Phone';
 import ChatSvg from '../../assets/icons/Chat';
@@ -804,31 +804,14 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
       // Add a small delay to ensure any modals are closed
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      const image = await ImagePicker.openCamera({
-        width: 800,
-        height: 800,
-        cropping: true,
-        compressImageQuality: 0.8,
-        mediaType: 'photo',
-        includeBase64: false,
-        // Android cropper customization for proper status bar handling
-        cropperStatusBarColor: '#71DFB1',
-        cropperToolbarColor: '#71DFB1',
-        cropperToolbarWidgetColor: '#FFFFFF',
-        cropperToolbarTitle: 'Edit Photo',
-      });
-
-      // Check file size (10MB limit)
-      if (image.size && image.size > 10 * 1024 * 1024) {
-        Alert.alert('Error', 'Image file is too large. Please choose an image smaller than 10MB.');
-        return;
+      const result = await ImagePickerUtils.openCamera();
+      
+      if (result) {
+        await handleImageUpload(result);
       }
-
-      await handleImageUpload(image);
     } catch (error: any) {
-      if (error.code !== 'E_PICKER_CANCELLED') {
-        Alert.alert('Error', 'Failed to take photo. Please try again.');
-      }
+      console.error('Camera launch error:', error);
+      Alert.alert('Error', 'Failed to take photo. Please try again.');
     }
   };
 
@@ -837,39 +820,22 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
       // Add a small delay to ensure any modals are closed
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      const image = await ImagePicker.openPicker({
-        width: 800,
-        height: 800,
-        cropping: true,
-        compressImageQuality: 0.8,
-        mediaType: 'photo',
-        includeBase64: false,
-        // Android cropper customization for proper status bar handling
-        cropperStatusBarColor: '#71DFB1',
-        cropperToolbarColor: '#71DFB1',
-        cropperToolbarWidgetColor: '#FFFFFF',
-        cropperToolbarTitle: 'Edit Photo',
-      });
-
-      // Check file size (10MB limit)
-      if (image.size && image.size > 10 * 1024 * 1024) {
-        Alert.alert('Error', 'Image file is too large. Please choose an image smaller than 10MB.');
-        return;
+      const result = await ImagePickerUtils.openImageLibrary();
+      
+      if (result) {
+        await handleImageUpload(result);
       }
-
-      await handleImageUpload(image);
     } catch (error: any) {
-      if (error.code !== 'E_PICKER_CANCELLED') {
-        Alert.alert('Error', 'Failed to select image. Please try again.');
-      }
+      console.error('Image library launch error:', error);
+      Alert.alert('Error', 'Failed to select image. Please try again.');
     }
   };
 
   const handleImageUpload = async (image: any) => {
     const imageFile = {
-      uri: image.path,
-      type: image.mime,
-      name: image.filename || `profile_image_${Date.now()}.jpg`,
+      uri: image.uri,
+      type: image.type,
+      name: image.name || `profile_image_${Date.now()}.jpg`,
     };
 
     uploadImageMutation.mutate(imageFile);
