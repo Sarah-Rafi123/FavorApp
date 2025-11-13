@@ -21,13 +21,20 @@ interface SignupOtpScreenProps {
   onBackToLogin: () => void;
   email: string;
   onClearDataAndNavigateToAuth?: () => void;
+  userData?: any;
 }
 
-export function SignupOtpScreen({ onBack, onVerifySuccess, onBackToLogin, email, onClearDataAndNavigateToAuth }: SignupOtpScreenProps) {
+export function SignupOtpScreen({ onBack, onVerifySuccess, onBackToLogin, email, onClearDataAndNavigateToAuth, userData }: SignupOtpScreenProps) {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [timer, setTimer] = useState(300); // 5 minutes = 300 seconds
   const [canResend, setCanResend] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  
+  // Log received parameters for debugging
+  useEffect(() => {
+    console.log('📧 SignupOtpScreen initialized with email:', email);
+    console.log('📦 SignupOtpScreen received userData:', userData);
+  }, [email, userData]);
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
   const inputRefs = useRef<TextInput[]>([]);
   

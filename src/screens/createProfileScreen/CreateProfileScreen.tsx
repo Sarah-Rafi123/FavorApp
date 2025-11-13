@@ -385,16 +385,47 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
     }
 
     setErrors(newErrors);
+    
+    // Show popup with validation errors if there are any
+    if (!isValid) {
+      showValidationErrorsPopup(newErrors);
+    }
+    
     return isValid;
+  };
+
+  const showValidationErrorsPopup = (validationErrors: typeof errors) => {
+    const errorMessages = Object.entries(validationErrors)
+      .filter(([_, error]) => error)
+      .map(([field, error]) => {
+        const fieldLabels: Record<string, string> = {
+          firstName: 'First Name',
+          lastName: 'Last Name',
+          dateOfBirth: 'Date of Birth',
+          fullAddress: 'Full Address',
+          phoneCall: 'Phone Number (Call)',
+          phoneText: 'Phone Number (Text)',
+          yearsOfExperience: 'Years of Experience',
+          aboutMe: 'About Me',
+          otherSkills: 'Other Skills',
+          ageConsent: 'Age Consent',
+        };
+        return `• ${fieldLabels[field] || field}: ${error}`;
+      });
+    
+    if (errorMessages.length > 0) {
+      Toast.show({
+        type: 'error',
+        text1: 'Please fix the following errors:',
+        text2: errorMessages.slice(0, 4).join('\n') + (errorMessages.length > 4 ? '\n• And more...' : ''),
+        visibilityTime: 6000,
+      });
+    }
   };
 
   const handleSubmit = async () => {
     if (!validateForm() || !registrationData) {
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: 'Please fill in all\nrequired fields'
-      });
+      // Validation popup is already shown by validateForm()
       return;
     }
 

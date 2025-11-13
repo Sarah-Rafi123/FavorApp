@@ -15,7 +15,7 @@ import {
 import { CarouselButton } from '../../components/buttons';
 import useAuthStore from '../../store/useAuthStore';
 import EyeSvg from '../../assets/icons/Eye';
-import { useLoginMutation, useCheckEmailAvailabilityMutation } from '../../services/mutations/AuthMutations';
+import { useLoginMutation, useCheckEmailAvailabilityMutation, useResendOtpMutation } from '../../services/mutations/AuthMutations';
 import Toast from 'react-native-toast-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -24,10 +24,11 @@ interface AuthScreenProps {
   onForgotPassword?: () => void;
   onSignup?: (email: string) => void;
   onCreateProfile?: () => void;
+  onSignupOTP?: (email: string, userData?: any) => void;
   clearDataOnMount?: boolean;
 }
 
-export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfile, clearDataOnMount }: AuthScreenProps) {
+export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfile, onSignupOTP, clearDataOnMount }: AuthScreenProps) {
   const [activeTab, setActiveTab] = useState<'signin' | 'signup'>('signin');
   const [formData, setFormData] = useState({
     email: '',
@@ -47,6 +48,8 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showCompleteAccountModal, setShowCompleteAccountModal] = useState(false);
   const [showInvalidCredentialsModal, setShowInvalidCredentialsModal] = useState(false);
+  const [showOtpVerificationModal, setShowOtpVerificationModal] = useState(false);
+  const [otpResponseData, setOtpResponseData] = useState<any>(null);
   const [savedCredentials, setSavedCredentials] = useState<Array<{email: string, password: string}>>([]);
   const [showEmailDropdown, setShowEmailDropdown] = useState(false);
   
@@ -74,6 +77,7 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
   const clearRegistrationData = useAuthStore((state) => state.clearRegistrationData);
   const loginMutation = useLoginMutation();
   const emailCheckMutation = useCheckEmailAvailabilityMutation();
+  const resendOtpMutation = useResendOtpMutation();
   
   // Ref for debouncing email checks
   const emailCheckTimeout = useRef<NodeJS.Timeout | null>(null);
@@ -124,6 +128,8 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
       setShowPrivacyModal(false);
       setShowCompleteAccountModal(false);
       setShowInvalidCredentialsModal(false);
+      setShowOtpVerificationModal(false);
+      setOtpResponseData(null);
       setShowEmailDropdown(false);
       
       // Clear registration data from auth store
@@ -288,6 +294,34 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
           console.log('🔍 Token from response:', response.data?.token);
           console.log('🔍 Refresh token from response:', response.data?.refresh_token);
           console.log('🔍 User from response:', response.data?.user);
+          console.log('🔍 Requires OTP verification:', response.data?.requires_otp_verification);
+          
+          // Check if OTP verification is required
+          if (response.data?.requires_otp_verification && response.data?.otp_sent) {
+            console.log('🔐 OTP verification required, navigating to OTP screen...');
+            try {
+              // Call resend OTP API to ensure fresh OTP is sent
+              console.log('📧 Resending OTP to:', formData.email);
+              await resendOtpMutation.mutateAsync({ email: formData.email });
+              console.log('✅ OTP resent successfully');
+              
+              // Navigate directly to SignupOTPScreen
+              onSignupOTP?.(formData.email, response.data);
+              
+              // Clear form data after navigation
+              clearFormData();
+              
+              return;
+            } catch (error: any) {
+              console.error('❌ Failed to resend OTP:', error);
+              Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: 'Failed to resend OTP. Please try again.'
+              });
+              return;
+            }
+          }
           
           // Store tokens and user data atomically (API returns 'token' not 'access_token')
           if (response.data?.token) {
@@ -348,6 +382,37 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
         
         onCreateProfile?.();
       }
+    }
+  };
+
+  // Handle OTP verification modal actions
+  const handleOtpVerificationModalClose = () => {
+    setShowOtpVerificationModal(false);
+    setOtpResponseData(null);
+  };
+
+  const handleProceedToOtpVerification = async () => {
+    try {
+      // Call resend OTP API to ensure fresh OTP is sent
+      console.log('📧 Resending OTP to:', formData.email);
+      await resendOtpMutation.mutateAsync({ email: formData.email });
+      console.log('✅ OTP resent successfully');
+      
+      // Close modal
+      setShowOtpVerificationModal(false);
+      
+      // Navigate to SignupOTPScreen
+      onSignupOTP?.(formData.email, otpResponseData);
+      
+      // Clear OTP response data
+      setOtpResponseData(null);
+    } catch (error: any) {
+      console.error('❌ Failed to resend OTP:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to resend OTP. Please try again.'
+      });
     }
   };
 
@@ -1136,6 +1201,75 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
                   Try Again
                 </Text>
               </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* OTP Verification Required Modal */}
+      <Modal
+        visible={showOtpVerificationModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={handleOtpVerificationModalClose}
+      >
+        <View className="flex-1 bg-black/50 justify-center items-center">
+          <View className="bg-white rounded-3xl w-full max-w-sm mx-4 border-4 border-[#71DFB1]">
+            <View className="p-6">
+              <View className="flex-row justify-between items-center mb-6">
+                <Text className="text-xl font-bold text-black">Account Verification Required</Text>
+                <TouchableOpacity 
+                  onPress={handleOtpVerificationModalClose}
+                  className="w-6 h-6 bg-black rounded-full items-center justify-center"
+                >
+                  <Text className="text-white text-sm">×</Text>
+                </TouchableOpacity>
+              </View>
+              
+              {/* Icon */}
+              <View className="items-center mb-6">
+                <View className="w-16 h-16 bg-blue-100 rounded-full items-center justify-center mb-4">
+                  <Text className="text-3xl">📧</Text>
+                </View>
+                <Text className="text-lg font-semibold text-gray-800 text-center mb-3">
+                  Email Verification Needed
+                </Text>
+                <Text className="text-sm text-gray-600 text-center leading-5">
+                  {otpResponseData?.note || "Your account is not verified yet. We've sent a new verification code to your email."}
+                </Text>
+              </View>
+
+              {/* Email info */}
+              <View className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+                <Text className="text-sm text-blue-800 font-medium mb-1">
+                  ✉️ Verification Code Sent
+                </Text>
+                <Text className="text-xs text-blue-700">
+                  Check your email "{formData.email}" for the verification code.
+                </Text>
+              </View>
+
+              {/* Action Buttons */}
+              <View className="gap-y-3">
+                <TouchableOpacity
+                  className="bg-[#44A27B] rounded-full py-4"
+                  onPress={handleProceedToOtpVerification}
+                  disabled={resendOtpMutation.isPending}
+                >
+                  <Text className="text-white text-center font-semibold text-base">
+                    {resendOtpMutation.isPending ? 'Sending...' : 'Verify Account'}
+                  </Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  className="bg-gray-100 rounded-full py-4 border border-gray-300"
+                  onPress={handleOtpVerificationModalClose}
+                >
+                  <Text className="text-gray-700 text-center font-semibold text-base">
+                    Cancel
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </View>

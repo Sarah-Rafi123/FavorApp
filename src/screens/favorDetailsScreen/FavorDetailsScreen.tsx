@@ -1072,14 +1072,14 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
             >
-              <View className="bg-white rounded-3xl p-6 max-w-sm w-full border-4 border-green-400 relative my-4">
+              <View className="bg-[#FBFFF0] rounded-3xl p-6 max-w-screen-2xl w-full border-4 border-[#71DFB1] relative my-4">
                 {/* Close Button */}
                 <TouchableOpacity 
-                  className={`absolute top-4 right-4 w-8 h-8 bg-black rounded-full items-center justify-center z-10 ${isSubmittingReview ? 'opacity-50' : ''}`}
+                  className={`absolute top-4 right-4 w-6 h-6 bg-black rounded-full items-center justify-center z-10 ${isSubmittingReview ? 'opacity-50' : ''}`}
                   onPress={handleReviewModalClose}
                   disabled={isSubmittingReview}
                 >
-                  <Text className="text-white font-bold text-lg">×</Text>
+                  <Text className="text-white font-bold text-base">×</Text>
                 </TouchableOpacity>
 
                 {/* Modal Title */}
@@ -1089,7 +1089,7 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
 
                 {/* Star Rating */}
                 <View className="mb-4">
-                  <Text className="text-gray-700 text-base font-medium mb-2 text-center">Rating *</Text>
+                 
                   <View className="flex-row justify-center mb-6">
                     {[1, 2, 3, 4, 5].map((star) => (
                       <TouchableOpacity
@@ -1119,9 +1119,6 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
                       </TouchableOpacity>
                     ))}
                   </View>
-                  {rating === 0 && (
-                    <Text className="text-red-500 text-sm text-center mt-1">Please select a rating</Text>
-                  )}
                 </View>
 
                 {/* Review Text Input */}

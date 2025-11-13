@@ -19,8 +19,8 @@ import BackSvg from '../../assets/icons/Back';
 import CancelSvg from '../../assets/icons/Cancel';
 import UserSvg from '../../assets/icons/User';
 import { useFavor, useFavorReviews } from '../../services/queries/FavorQueries';
-import { usePublicUserProfileQuery } from '../../services/queries/ProfileQueries';
-import { useDeleteFavor, useCompleteFavor, useCreateUserReview } from '../../services/mutations/FavorMutations';
+import { usePublicUserProfileQuery, useUserReviewStatisticsQuery } from '../../services/queries/ProfileQueries';
+import { useDeleteFavor, useCompleteFavor, useCreateUserReview, useCancelRequest } from '../../services/mutations/FavorMutations';
 import { Favor } from '../../services/apis/FavorApis';
 import { PublicUserProfile } from '../../services/apis/ProfileApis';
 import { Linking } from 'react-native';
@@ -99,10 +99,17 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
     { enabled: !!favorResponse?.data.favor?.user?.id }
   );
 
+  // Fetch user review statistics for the requester
+  const { data: reviewStatisticsResponse, isLoading: reviewStatisticsLoading } = useUserReviewStatisticsQuery(
+    favorResponse?.data.favor?.user?.id || null,
+    { enabled: !!favorResponse?.data.favor?.user?.id }
+  );
+
   // Mutations
   const deleteFavorMutation = useDeleteFavor();
   const completeFavorMutation = useCompleteFavor();
   const createUserReviewMutation = useCreateUserReview();
+  const cancelRequestMutation = useCancelRequest();
 
   // Debug logging for reviews data
   React.useEffect(() => {
@@ -122,9 +129,38 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
     }
   }, [reviewsResponse]);
 
+  // Debug logging for review statistics
+  React.useEffect(() => {
+    if (reviewStatisticsResponse?.data) {
+      console.log('📈 ProvideFavorDetailsScreen Review Statistics Response:');
+      console.log('  - User:', reviewStatisticsResponse.data.user);
+      console.log('  - Reviews as provider:', reviewStatisticsResponse.data.reviews_as_provider);
+      console.log('  - Reviews as requester:', reviewStatisticsResponse.data.reviews_as_requester);
+      console.log('  - Total:', reviewStatisticsResponse.data.total);
+      console.log('  - Total count displayed:', reviewStatisticsResponse.data.total.count);
+      console.log('  - Average rating displayed:', reviewStatisticsResponse.data.total.average_rating?.toFixed(1));
+    }
+  }, [reviewStatisticsResponse]);
+
   const favor = favorResponse?.data.favor;
   const userProfile = userProfileResponse?.data.user;
   const currentUser = useAuthStore((state) => state.user);
+
+  // Debug: Log contact details availability
+  React.useEffect(() => {
+    if (favor && userProfile) {
+      console.log('🔍 ProvideFavorDetailsScreen Debug:');
+      console.log('📞 User Profile ID:', userProfile.id);
+      console.log('📞 User Profile Full Name:', userProfile.full_name);
+      console.log('📞 Phone Call:', userProfile.phone_no_call);
+      console.log('📞 Phone Text:', userProfile.phone_no_text);
+      console.log('📊 Favor Status:', favor.status);
+      console.log('🎯 Should Show Contact:', 
+        !!(userProfile?.phone_no_call || userProfile?.phone_no_text) && favor.status === 'in_progress'
+      );
+      console.log('📋 All User Profile Fields:', Object.keys(userProfile));
+    }
+  }, [favor, userProfile]);
 
   // Check if current user has already reviewed this favor
   const userHasReviewed = React.useMemo(() => {
@@ -488,6 +524,35 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
     setTipAmount('');
   };
 
+  const handleCancelFavor = async () => {
+    if (!favor) return;
+
+    Alert.alert(
+      'Cancel Favor',
+      `Are you sure you want to cancel this favor request? This action cannot be undone.`,
+      [
+        { text: 'Keep Request', style: 'cancel' },
+        { 
+          text: 'Cancel Request',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              console.log('🚫 Canceling favor request:', favor.id);
+              await cancelRequestMutation.mutateAsync(favor.id);
+              console.log('✅ Favor request cancelled successfully');
+              
+              // Navigate back after successful cancellation
+              navigation?.goBack();
+            } catch (error: any) {
+              console.error('❌ Cancel favor request failed:', error);
+              // Error handling is done by the mutation's onError callback
+            }
+          }
+        }
+      ]
+    );
+  };
+
   return (
     <ImageBackground
       source={require('../../assets/images/Wallpaper.png')}
@@ -515,7 +580,7 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
         contentContainerStyle={{ paddingBottom: 120 }}
       >
         {/* Favor Details Card */}
-        <View className="mx-4 mb-6 bg-white rounded-3xl p-6 border-4 border-[#71DFB1]">
+        <View className="mx-4 mb-6 bg-transparent rounded-3xl p-6 border-4 border-[#71DFB1]">
           {/* Favor Image */}
           <View className="items-center mb-6">
             <View className="w-32 h-24 rounded-2xl overflow-hidden items-center justify-center">
@@ -614,6 +679,18 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
               <Text className="text-gray-800 text-base flex-1">{favor.description}</Text>
             </View>
           </View>
+
+          {/* Cancel Favor Button - Show inside details card for pending or in-progress status */}
+          {(favor.status === 'pending' || favor.status === 'in_progress') && (
+            <TouchableOpacity 
+              className="bg-green-500 rounded-full py-3 mt-4"
+              onPress={handleCancelFavor}
+            >
+              <Text className="text-white text-center font-medium text-base">
+                $0 | Cancel Favor
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Show requester information - "You helped" section */}
@@ -623,7 +700,7 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
               You are helping
             </Text>
             
-            <View className="flex-row items-center bg-white border rounded-2xl border-gray-300 p-4 border-1 mb-4">
+            <View className="flex-row items-center bg-transparent border rounded-2xl border-gray-300 p-4 border-1 mb-4">
               <View className="relative">
                 <View className="w-20 h-16 bg-[#44A27B] rounded-xl overflow-hidden items-center justify-center">
                   {userProfile?.image_url ? (
@@ -656,57 +733,39 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
                 <Text className="text-lg font-semibold text-black">
                   {favor.user.full_name}
                 </Text>
-                {favor.user.rating && (
-                  <View className="flex-row items-center">
-                    <Text className="text-gray-600 text-sm">⭐ {favor.user.rating.toFixed(1)} | </Text>
-                    <Text className="text-gray-600 text-sm">
-                      {reviewsResponse?.data?.reviews?.length || 0} Reviews
-                    </Text>
-                  </View>
-                )}
+                <View className="flex-row items-center">
+                  <Text className="text-gray-600 text-sm">
+                    ⭐ {reviewStatisticsResponse?.data?.total?.average_rating?.toFixed(1) || '0.0'} | {reviewStatisticsResponse?.data?.total?.count || 0} Reviews
+                  </Text>
+                </View>
                 {userProfile?.years_of_experience && (
                   <Text className="text-gray-600 text-sm">{userProfile.years_of_experience} years experience</Text>
                 )}
-             
-             
-                {/* {(userProfile?.phone_no_call || userProfile?.phone_no_text) && (
-                  <View 
-                    className="mt-2 mb-2"
-                    style={{
-                      opacity: favor.status === 'pending' ? 0.3 : 1,
-                    }}
-                  >
-                    {userProfile?.phone_no_call && (
-                      <Text 
-                        className="text-gray-600 text-sm"
-                        style={{
-                          textShadowColor: favor.status === 'pending' ? 'rgba(0,0,0,0.5)' : 'transparent',
-                          textShadowOffset: favor.status === 'pending' ? { width: 0, height: 0 } : { width: 0, height: 0 },
-                          textShadowRadius: favor.status === 'pending' ? 3 : 0,
-                        }}
-                      >
-                        📞 {favor.status === 'pending' ? '●●●●●●●●●●●●' : userProfile.phone_no_call}
+                
+                {/* Contact Details - Show for in_progress status */}
+                {favor.status === 'in_progress' && userProfile?.phone_no_call && (
+                  <View className="flex-row mt-2">
+                    <Text className="text-gray-600 text-sm w-20">Call Phone</Text>
+                    <Text className="text-gray-600 text-sm mr-2">:</Text>
+                    <TouchableOpacity onPress={() => handleCallNumber(userProfile.phone_no_call)}>
+                      <Text className="text-blue-600 text-sm underline">
+                        {userProfile.phone_no_call}
                       </Text>
-                    )}
-                    {userProfile?.phone_no_text && (
-                      <Text 
-                        className="text-gray-600 text-sm"
-                        style={{
-                          textShadowColor: favor.status === 'pending' ? 'rgba(0,0,0,0.5)' : 'transparent',
-                          textShadowOffset: favor.status === 'pending' ? { width: 0, height: 0 } : { width: 0, height: 0 },
-                          textShadowRadius: favor.status === 'pending' ? 3 : 0,
-                        }}
-                      >
-                        💬 {favor.status === 'pending' ? '●●●●●●●●●●●●' : userProfile.phone_no_text}
-                      </Text>
-                    )}
-                    {favor.status === 'pending' && (
-                      <Text className="text-gray-500 text-xs mt-1 italic">
-                        Contact details available after favor acceptance
-                      </Text>
-                    )}
+                    </TouchableOpacity>
                   </View>
-                )} */}
+                )}
+
+                {favor.status === 'in_progress' && userProfile?.phone_no_text && (
+                  <View className="flex-row mt-1">
+                    <Text className="text-gray-600 text-sm w-20">Text Phone</Text>
+                    <Text className="text-gray-600 text-sm mr-2">:</Text>
+                    <TouchableOpacity onPress={() => handleTextNumber(userProfile.phone_no_text)}>
+                      <Text className="text-blue-600 text-sm underline">
+                        {userProfile.phone_no_text}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
 
                 <TouchableOpacity onPress={() => navigation?.navigate('UserProfileScreen', { userId: favor.user.id, favorStatus: favor.status })}>
                   <Text className="text-[#44A27B] text-sm font-medium">View Profile</Text>
@@ -714,35 +773,6 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
               </View>
             </View>
 
-            {/* Contact Buttons - Only show if favor is in progress */}
-            {(userProfile?.phone_no_call || userProfile?.phone_no_text) && favor.status === 'in_progress' && (
-              <View className="flex-row mb-4">
-                {userProfile?.phone_no_call && (
-                  <TouchableOpacity 
-                    className={`flex-1 bg-transparent border border-black rounded-xl py-3 px-2 ${
-                      userProfile?.phone_no_text ? 'mr-2' : ''
-                    }`}
-                    onPress={() => handleCallNumber(userProfile.phone_no_call)}
-                  >
-                    <Text className="text-center text-gray-800 font-medium text-sm">
-                      Call: {userProfile.phone_no_call}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-                {userProfile?.phone_no_text && (
-                  <TouchableOpacity 
-                    className={`flex-1 bg-transparent border border-black rounded-xl py-3 px-2 ${
-                      userProfile?.phone_no_call ? 'ml-2' : ''
-                    }`}
-                    onPress={() => handleTextNumber(userProfile.phone_no_text)}
-                  >
-                    <Text className="text-center text-gray-800 font-medium text-sm">
-                      Text: {userProfile.phone_no_text}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
 
             {/* Submit Review Button */}
             {favor.status === 'completed' && !userHasReviewed && (
@@ -779,7 +809,7 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
             </Text>
             
             {reviewsResponse.data.reviews.map((review, index) => (
-              <View key={index} className="bg-white rounded-2xl p-4 mb-3 border border-gray-300">
+              <View key={index} className="bg-transparent rounded-2xl p-4 mb-3 border border-gray-300">
                 {/* Reviewer Info */}
                 <View className="flex-row items-center mb-3">
                   <View className="w-10 h-10 bg-[#44A27B] rounded-full overflow-hidden items-center justify-center">
@@ -864,13 +894,13 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
             >
-              <View className="bg-white rounded-3xl p-6 max-w-sm w-full border-4 border-green-400 relative my-4">
+              <View className="bg-[#FBFFF0] rounded-3xl p-6 max-w-screen-2xl w-full border-4 border-[#71DFB1] relative my-4">
                 {/* Close Button */}
                 <TouchableOpacity 
-                  className="absolute top-4 right-4 w-8 h-8 bg-black rounded-full items-center justify-center z-10"
+                  className="absolute top-4 right-4 w-6 h-6 bg-black rounded-full items-center justify-center z-10"
                   onPress={handleReviewModalClose}
                 >
-                  <Text className="text-white font-bold text-lg">×</Text>
+                  <Text className="text-white font-bold text-base">×</Text>
                 </TouchableOpacity>
 
                 {/* Modal Title */}
@@ -880,7 +910,7 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
 
                 {/* Star Rating */}
                 <View className="mb-4">
-                  <Text className="text-gray-700 text-base font-medium mb-2 text-center">Rating *</Text>
+                
                   <View className="flex-row justify-center mb-6">
                     {[1, 2, 3, 4, 5].map((star) => (
                       <TouchableOpacity
@@ -908,9 +938,6 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
                       </TouchableOpacity>
                     ))}
                   </View>
-                  {rating === 0 && (
-                    <Text className="text-red-500 text-sm text-center mt-1">Please select a rating</Text>
-                  )}
                 </View>
 
             {/* Review Text Input */}

@@ -203,6 +203,34 @@ export interface UserReviewsResponse {
   };
 }
 
+// User Review Statistics Types
+export interface UserReviewStatistics {
+  user: {
+    id: number;
+    first_name: string;
+    last_name: string;
+    full_name: string;
+  };
+  reviews_as_provider: {
+    count: number;
+    average_rating: number;
+  };
+  reviews_as_requester: {
+    count: number;
+    average_rating: number;
+  };
+  total: {
+    count: number;
+    average_rating: number;
+  };
+}
+
+export interface UserReviewStatisticsResponse {
+  success: boolean;
+  data: UserReviewStatistics;
+  message?: string;
+}
+
 // Export Profile Types
 export interface ExportProfileParams {
   start_date?: string; // YYYY-MM-DD format
@@ -658,6 +686,36 @@ export const getUserReviews = async (
       throw new Error(error.response.data.message);
     } else {
       throw new Error('Failed to load user reviews. Please check your connection and try again.');
+    }
+  }
+};
+
+export const getUserReviewStatistics = async (userId: number): Promise<UserReviewStatisticsResponse> => {
+  try {
+    console.log(`🚀 Making Get User Review Statistics API call to: /users/${userId}/review_statistics`);
+    
+    const response = await axiosInstance.get(`/users/${userId}/review_statistics`);
+    
+    console.log('🎉 Get User Review Statistics API Success!');
+    console.log('📊 Response Status:', response.status);
+    console.log('📄 Full API Response:', JSON.stringify(response.data, null, 2));
+    
+    return response.data;
+  } catch (error: any) {
+    console.error('❌ Get User Review Statistics API Error!');
+    console.error('📄 Full API Error:', error);
+    console.error('📊 Error Response Status:', error.response?.status);
+    console.error('📄 Error Response Data:', JSON.stringify(error.response?.data, null, 2));
+    
+    // Handle specific error scenarios based on status codes
+    if (error.response?.status === 404) {
+      throw new Error('User not found');
+    } else if (error.response?.status === 401) {
+      throw new Error('Authentication required');
+    } else if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    } else {
+      throw new Error('Failed to load user review statistics. Please check your connection and try again.');
     }
   }
 };

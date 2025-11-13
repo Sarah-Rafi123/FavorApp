@@ -189,7 +189,7 @@ export function UserProfileScreen({ navigation, route }: UserProfileScreenProps)
         contentContainerStyle={{ paddingBottom: 120 }}
       >
         {/* Profile Header */}
-        <View className="mx-4 mb-6 bg-white rounded-3xl p-6 border-4 border-[#71DFB1]">
+        <View className="mx-4 mb-6 bg-[#FBFFF0] rounded-3xl p-6 border-4 border-[#71DFB1]">
           {/* Profile Photo */}
           <View className="items-center mb-6">
             <View className="relative">
@@ -294,8 +294,8 @@ export function UserProfileScreen({ navigation, route }: UserProfileScreenProps)
                 <View className="flex-1">
                   <View className="flex-row flex-wrap" style={{ gap: 4 }}>
                     {userProfile.skills.map((skill, index) => (
-                      <View key={index} className="bg-gray-100 rounded-full px-3 py-1 mb-2" style={{ marginRight: 4 }}>
-                        <Text className="text-gray-800 text-sm" numberOfLines={1} ellipsizeMode="tail">
+                      <View key={index} className="bg-[#DCFBCC] rounded-full px-3 py-1 mb-2" style={{ marginRight: 4 }}>
+                        <Text className="text-green-500 text-sm" numberOfLines={1} ellipsizeMode="tail">
                           {skill}
                         </Text>
                       </View>
@@ -336,7 +336,7 @@ export function UserProfileScreen({ navigation, route }: UserProfileScreenProps)
                 <Text className="text-gray-700 text-base mr-2">:</Text>
                 <View className="flex-1">
                   <TouchableOpacity onPress={() => handleCallNumber(userProfile.phone_no_call)}>
-                    <Text className="text-blue-600 text-base underline" numberOfLines={1} ellipsizeMode="tail">
+                    <Text className="text-gray-700 text-base underline" numberOfLines={1} ellipsizeMode="tail">
                       {userProfile.phone_no_call}
                     </Text>
                   </TouchableOpacity>
@@ -350,7 +350,7 @@ export function UserProfileScreen({ navigation, route }: UserProfileScreenProps)
                 <Text className="text-gray-700 text-base mr-2">:</Text>
                 <View className="flex-1">
                   <TouchableOpacity onPress={() => handleTextNumber(userProfile.phone_no_text)}>
-                    <Text className="text-blue-600 text-base underline" numberOfLines={1} ellipsizeMode="tail">
+                    <Text className="text-gray-700 text-base underline" numberOfLines={1} ellipsizeMode="tail">
                       {userProfile.phone_no_text}
                     </Text>
                   </TouchableOpacity>
@@ -527,9 +527,9 @@ export function UserProfileScreen({ navigation, route }: UserProfileScreenProps)
 
         {/* No Reviews State */}
         {!reviewsLoading && reviews.length === 0 && (
-          <View className="mx-4 mb-6 bg-white rounded-2xl p-6 border border-gray-300">
+          <View className="mx-4 mb-6 bg-transparent rounded-2xl p-6">
             <Text className="text-center text-gray-600 text-base">
-              No reviews yet
+              No reviews found
             </Text>
           </View>
         )}

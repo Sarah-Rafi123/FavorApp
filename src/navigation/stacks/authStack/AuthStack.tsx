@@ -26,6 +26,10 @@ export function AuthStack() {
             onForgotPassword={() => navigation.navigate('forgot-password-screen')}
             onSignup={(email: string) => navigation.navigate('signup-otp-screen', { email })}
             onCreateProfile={() => navigation.navigate('create-profile-screen')}
+            onSignupOTP={(email: string, userData?: any) => {
+              console.log('🚀 Navigating to signup-otp-screen with email:', email, 'userData:', userData);
+              navigation.navigate('signup-otp-screen', { email, userData });
+            }}
           />
         )}
       </Stack.Screen>
@@ -91,6 +95,7 @@ export function AuthStack() {
             onVerifySuccess={handleLogin}
             onBackToLogin={() => navigation.navigate('auth-screen')}
             email={(route.params as any)?.email || 'user@example.com'}
+            userData={(route.params as any)?.userData}
           />
         )}
       </Stack.Screen>

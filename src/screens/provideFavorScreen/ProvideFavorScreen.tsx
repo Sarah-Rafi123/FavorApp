@@ -25,7 +25,6 @@ import { NotificationBell } from '../../components/notifications/NotificationBel
 import CancelSvg from '../../assets/icons/Cancel';
 import { useMyFavors, useFavorSubjects, useBrowseFavors, useFavors } from '../../services/queries/FavorQueries';
 import { useApplyToFavor, useCancelRequest, useCompleteFavor } from '../../services/mutations/FavorMutations';
-import { usePublicUserProfileQuery } from '../../services/queries/ProfileQueries';
 import { StripeConnectManager } from '../../services/StripeConnectManager';
 import { Favor } from '../../services/apis/FavorApis';
 import { FavorSubject } from '../../services/apis/FavorSubjectApis';
@@ -52,10 +51,6 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
   const [stripeOnboardingUrl, setStripeOnboardingUrl] = useState<string>('');
   const [pendingFavorAction, setPendingFavorAction] = useState<(() => void) | null>(null);
   
-  // Sort filter states
-  const [sortBy, setSortBy] = useState<'created_at' | 'updated_at'>('updated_at');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [showSortModal, setShowSortModal] = useState(false);
   
   // Pagination state (same as HomeListScreen)
   const [currentPage, setCurrentPage] = useState(1);
@@ -115,8 +110,8 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
       page: 1, 
       per_page: 10,
       category: selectedCategories.length > 0 ? selectedCategories : undefined,
-      sort_by: sortBy,
-      sort_order: sortOrder
+      sort_by: 'updated_at',
+      sort_order: 'asc'
     },
     { enabled: activeTab === 'Active' }
   );
@@ -133,8 +128,8 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
       page: 1, 
       per_page: 10,
       category: selectedCategories.length > 0 ? selectedCategories : undefined,
-      sort_by: sortBy,
-      sort_order: sortOrder
+      sort_by: 'updated_at',
+      sort_order: 'asc'
     },
     { enabled: activeTab === 'Active' }
   );
@@ -151,8 +146,8 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
       page: 1, 
       per_page: 10,
       category: selectedCategories.length > 0 ? selectedCategories : undefined,
-      sort_by: sortBy,
-      sort_order: sortOrder
+      sort_by: 'updated_at',
+      sort_order: 'asc'
     },
     { enabled: true } // Always enabled to prevent re-fetching when switching tabs
   );
@@ -169,8 +164,8 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
       page: 1, 
       per_page: 10,
       category: selectedCategories.length > 0 ? selectedCategories : undefined,
-      sort_by: sortBy,
-      sort_order: sortOrder
+      sort_by: 'updated_at',
+      sort_order: 'asc'
     },
     { enabled: true } // Always enabled to prevent re-fetching when switching tabs
   );
@@ -189,9 +184,24 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
         console.log('📊 getCurrentData for All tab - allFavors length:', allFavors.length);
         return allFavors;
       case 'Active':
-        // Combine active and in-progress favors
-        const activeFavors = activeMyFavorsResponse?.data.favors || [];
-        const inProgressFavors = inProgressMyFavorsResponse?.data.favors || [];
+        // Combine active and in-progress favors, but exclude completed/cancelled favors
+        const rawActiveFavors = activeMyFavorsResponse?.data.favors || [];
+        const rawInProgressFavors = inProgressMyFavorsResponse?.data.favors || [];
+        
+        // Filter out completed and cancelled favors from Active tab
+        const activeFavors = rawActiveFavors.filter(favor => 
+          favor.status !== 'completed' && favor.status !== 'cancelled'
+        );
+        const inProgressFavors = rawInProgressFavors.filter(favor => 
+          favor.status !== 'completed' && favor.status !== 'cancelled'
+        );
+        
+        // Debug logging to track active tab filtering
+        console.log('📊 Active tab data filtering:');
+        console.log(`   Raw active favors: ${rawActiveFavors.length}, filtered: ${activeFavors.length}`);
+        console.log(`   Raw in-progress favors: ${rawInProgressFavors.length}, filtered: ${inProgressFavors.length}`);
+        console.log('   Active tab favor statuses:', [...activeFavors, ...inProgressFavors].map(f => f.status));
+        
         return [...activeFavors, ...inProgressFavors];
       case 'History':
         // Combine completed and cancelled favors - with extra filtering for safety
@@ -713,21 +723,6 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
     setPendingFavorAction(null);
   };
 
-  const handleCallNumber = (phoneNumber: string) => {
-    const cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
-    Linking.openURL(`tel:${cleanNumber}`).catch(err => {
-      console.error('Error making call:', err);
-      Alert.alert('Error', 'Unable to make phone call');
-    });
-  };
-
-  const handleTextNumber = (phoneNumber: string) => {
-    const cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
-    Linking.openURL(`sms:${cleanNumber}`).catch(err => {
-      console.error('Error opening messages:', err);
-      Alert.alert('Error', 'Unable to open messaging app');
-    });
-  };
 
   const handleFavorCardPress = (favor: Favor) => {
     if (activeTab === 'All') {
@@ -744,33 +739,6 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
     // For Active tab, all favors should be cancellable since they are user's active favors
     // For All tab, determine based on status
     const isActiveFavor = activeTab === 'Active' || favor.status === 'in_progress' || favor.status === 'pending';
-    
-    // Fetch contact details for in-progress favors in Active tab
-    const shouldFetchContact = activeTab === 'Active' && (favor.status === 'in_progress' || favor.status === 'in-progress');
-    const { data: userContactResponse } = usePublicUserProfileQuery(
-      favor.user.id,
-      { enabled: shouldFetchContact }
-    );
-    const userContact = userContactResponse?.data.user;
-
-    // Debug logging for contact fetching
-    React.useEffect(() => {
-      if (shouldFetchContact) {
-        console.log('📱 ProvideFavorScreen FavorCard - Fetching contact for:', {
-          favorId: favor.id,
-          userId: favor.user.id,
-          userName: favor.user.full_name,
-          favorStatus: favor.status,
-          activeTab,
-          hasContact: !!userContact,
-          contactInfo: userContact ? {
-            hasCall: !!userContact.phone_no_call,
-            hasText: !!userContact.phone_no_text,
-            hasEmail: !!userContact.email
-          } : null
-        });
-      }
-    }, [shouldFetchContact, userContact, favor.id, favor.user.id, favor.status, activeTab]);
     
     if (activeTab === 'All') {
       // For "All" tab, use the exact same UI as HomeListScreen
@@ -831,8 +799,16 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
                     return favor.address || 'Location not specified';
                   })()}
                 </Text>
-                <Text className="text-gray-700 text-sm mb-4 leading-5" numberOfLines={2} ellipsizeMode="tail">
+                <Text className="text-gray-700 text-sm mb-1 leading-5" numberOfLines={2} ellipsizeMode="tail">
                   {favor.description}
+                </Text>
+                
+                {/* Simple Status Text */}
+                <Text className="text-gray-600 text-sm mb-4">
+                  Status: {favor.status === 'in_progress' 
+                    ? 'In Progress' 
+                    : favor.status?.charAt(0).toUpperCase() + favor.status?.slice(1).replace('_', ' ') || 'Unknown'
+                  }
                 </Text>
               </View>
             </View>
@@ -850,32 +826,13 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
       );
     }
 
-    // For Active/History tabs, keep the original layout
+    // For Active/History tabs, display user name and priority alongside image
     return (
       <TouchableOpacity 
         onPress={() => handleFavorCardPress(favor)}
         activeOpacity={0.7}
       >
         <View className="bg-[#F7FBF5] rounded-2xl p-4 mb-4 mx-4 shadow-sm border-2 border-b-4 border-b-[#44A27B] border-[#44A27B66]">
-          {/* Header with user name and priority */}
-          <View className="flex-row items-center justify-between mb-3">
-            <View className="flex-row items-center">
-              {!favor.favor_pay && parseFloat((favor.tip || 0).toString()) > 0 && (
-                <View className="mr-2">
-                  <DollarSvg />
-                </View>
-              )}
-              <Text className="text-lg font-semibold text-gray-800">
-                {favor.user.full_name.length > 15 
-                  ? `${favor.user.full_name.substring(0, 15)}...` 
-                  : favor.user.full_name}
-              </Text>
-              <View className="ml-2 px-2 py-1 rounded">
-                <Text className="text-[#D12E34] text-sm font-medium">{formatPriority(favor.priority)}</Text>
-              </View>
-            </View>
-          </View>
-
           <View className="flex-row mb-4">
             {favor.image_url ? (
               <Image
@@ -891,6 +848,21 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
               </View>
             )}
             <View className="flex-1">
+              {/* User name and priority */}
+              <View className="flex-row items-center mb-2">
+                {!favor.favor_pay && parseFloat((favor.tip || 0).toString()) > 0 && (
+                  <View className="mr-2">
+                    <DollarSvg />
+                  </View>
+                )}
+                <Text className="text-lg font-semibold text-gray-800 flex-1" numberOfLines={1}>
+                  {favor.user.full_name}
+                </Text>
+                <View className="ml-2 px-2 py-1 rounded">
+                  <Text className="text-[#D12E34] text-sm font-medium">{formatPriority(favor.priority)}</Text>
+                </View>
+              </View>
+              
               {/* Category and Time */}
               <Text className="text-sm text-gray-600 mb-1" numberOfLines={1} ellipsizeMode="tail">
                 {favor.title || favor.favor_subject.name} | {favor.time_to_complete || 'Time not specified'}
@@ -917,120 +889,37 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
               </Text>
               
               {/* Description */}
-              <Text className="text-gray-700 text-sm mb-4 leading-5" numberOfLines={2} ellipsizeMode="tail">
+              <Text className="text-gray-700 text-sm mb-1 leading-5" numberOfLines={2} ellipsizeMode="tail">
                 {favor.description}
               </Text>
-
-              {/* Status indicator for Active tab */}
-              {activeTab === 'Active' && (
-                <View className="px-3 py-2 bg-green-50 rounded-lg mb-3">
-                  <Text className="text-sm text-green-700 font-medium capitalize">
-                    Status: {favor.status.replace('_', ' ')}
-                  </Text>
-                </View>
-              )}
-
-              {/* Contact Information for in-progress favors */}
-              {shouldFetchContact && userContact && (
-                <View className="bg-blue-50 rounded-lg p-3 mb-3">
-                  <Text className="text-sm text-blue-700 font-medium mb-2">Contact Information</Text>
-                  {userContact.phone_no_call && (
-                    <TouchableOpacity 
-                      className="flex-row items-center mb-1"
-                      onPress={() => handleCallNumber(userContact.phone_no_call!)}
-                    >
-                      <Text className="text-sm text-blue-600 underline">
-                        📞 {userContact.phone_no_call}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                  {userContact.phone_no_text && (
-                    <TouchableOpacity 
-                      className="flex-row items-center mb-1"
-                      onPress={() => handleTextNumber(userContact.phone_no_text!)}
-                    >
-                      <Text className="text-sm text-blue-600 underline">
-                        💬 {userContact.phone_no_text}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                  {userContact.email && (
-                    <Text className="text-sm text-gray-600">
-                      ✉️ {userContact.email}
-                    </Text>
-                  )}
-                </View>
-              )}
-
-              {/* Status Badge - Only show in History tab */}
-              {activeTab === 'History' && (
-                <View className={`self-start px-3 py-1 rounded-full mb-3 ${
-                  favor.status === 'completed' 
-                    ? 'bg-green-100 border border-green-300' 
-                    : favor.status === 'cancelled'
-                    ? 'bg-red-100 border border-red-300'
-                    : 'bg-gray-100 border border-gray-300'
-                }`}>
-                  <Text className={`text-xs font-medium ${
-                    favor.status === 'completed' 
-                      ? 'text-green-700' 
-                      : favor.status === 'cancelled'
-                      ? 'text-red-700'
-                      : 'text-gray-700'
-                  }`}>
-                    {favor.status === 'completed' 
-                      ? 'Completed' 
-                      : favor.status === 'cancelled'
-                      ? 'Cancelled'
-                      : favor.status?.charAt(0).toUpperCase() + favor.status?.slice(1) || 'Unknown'
-                    }
-                  </Text>
-                </View>
-              )}
+              
+              {/* Simple Status Text */}
+              <Text className="text-gray-600 text-sm mb-4">
+                Status: {favor.status === 'in_progress' 
+                  ? 'In Progress' 
+                  : favor.status?.charAt(0).toUpperCase() + favor.status?.slice(1).replace('_', ' ') || 'Unknown'
+                }
+              </Text>
             </View>
           </View>
 
           {/* Show contextual buttons for Active/History tabs */}
           {favor.status !== 'completed' && favor.status !== 'cancelled' && (
-            <>
-              {/* Show Submit Review button for in-progress favors in Active tab */}
-              {activeTab === 'Active' && (favor.status === 'in_progress' || favor.status === 'in-progress') ? (
-                <View className="flex-row space-x-2">
-                  <TouchableOpacity 
-                    className="flex-1 bg-[#44A27B] rounded-full py-3 mr-2"
-                    onPress={() => handleCompleteFavor(favor)}
-                  >
-                    <Text className="text-white text-center font-semibold text-base">
-                      Submit Review
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    className="flex-1 border-2 border-gray-400 rounded-full py-3"
-                    onPress={() => handleCancelFavor(favor)}
-                  >
-                    <Text className="text-gray-600 text-center font-semibold text-base">
-                      Cancel
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <TouchableOpacity 
-                  className="bg-green-500 rounded-full py-3"
-                  onPress={() => {
-                    if (isActiveFavor) {
-                      handleCancelFavor(favor);
-                    } else {
-                      handleProvideFavor(favor);
-                    }
-                  }}
-                >
-                  <Text className="text-white text-center font-semibold text-base">
-                    {isActiveFavor ? 'Cancel Favor' : 
-                     `$${parseFloat((favor.tip || 0).toString()).toFixed(2)} | Provide a Favor`}
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </>
+            <TouchableOpacity 
+              className="bg-green-500 rounded-full py-3"
+              onPress={() => {
+                if (isActiveFavor) {
+                  handleCancelFavor(favor);
+                } else {
+                  handleProvideFavor(favor);
+                }
+              }}
+            >
+              <Text className="text-white text-center font-semibold text-base">
+                {isActiveFavor ? 'Cancel Favor' : 
+                 `$${parseFloat((favor.tip || 0).toString()).toFixed(2)} | Provide a Favor`}
+              </Text>
+            </TouchableOpacity>
           )}
 
           {/* Show Try Reapply button for cancelled favors in History tab */}
@@ -1109,19 +998,6 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
           />
         </View>
 
-        {/* Sort Filter Button - Only show for Active and History tabs */}
-        {(activeTab === 'Active' || activeTab === 'History') && (
-          <View className="mx-4 mt-4 flex-row justify-end">
-            <TouchableOpacity
-              className="bg-green-500 rounded-full px-4 py-2"
-              onPress={() => setShowSortModal(true)}
-            >
-              <Text className="text-white font-medium">
-                Sort
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
       </View>
 
       {/* Content Area */}
@@ -1381,124 +1257,6 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
         </View>
       </Modal>
 
-      {/* Sort Filter Modal */}
-      <Modal
-        visible={showSortModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowSortModal(false)}
-      >
-        <View className="flex-1 bg-black/50 justify-center items-center px-6">
-          <View className="bg-white rounded-3xl p-6 max-w-sm w-full">
-            {/* Close Button */}
-            <TouchableOpacity
-              className="absolute top-4 right-4 w-8 h-8 bg-gray-200 rounded-full items-center justify-center"
-              onPress={() => setShowSortModal(false)}
-            >
-              <Text className="text-gray-600 font-bold text-lg">×</Text>
-            </TouchableOpacity>
-
-            <Text className="text-xl font-bold text-gray-800 mb-6 text-center">Sort Options</Text>
-
-            {/* Sort By Section */}
-            <Text className="text-lg font-semibold text-gray-700 mb-3">Sort By:</Text>
-            <View className="mb-6">
-              <TouchableOpacity
-                className={`flex-row items-center p-3 rounded-lg mb-2 ${
-                  sortBy === 'created_at' ? 'bg-green-100 border border-green-300' : 'bg-gray-50'
-                }`}
-                onPress={() => setSortBy('created_at')}
-              >
-                <View className={`w-4 h-4 rounded-full border-2 mr-3 ${
-                  sortBy === 'created_at' ? 'border-green-500 bg-green-500' : 'border-gray-400'
-                }`}>
-                  {sortBy === 'created_at' && <View className="w-2 h-2 bg-white rounded-full mx-auto mt-0.5" />}
-                </View>
-                <Text className={`font-medium ${
-                  sortBy === 'created_at' ? 'text-green-700' : 'text-gray-700'
-                }`}>Created Date</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                className={`flex-row items-center p-3 rounded-lg ${
-                  sortBy === 'updated_at' ? 'bg-green-100 border border-green-300' : 'bg-gray-50'
-                }`}
-                onPress={() => setSortBy('updated_at')}
-              >
-                <View className={`w-4 h-4 rounded-full border-2 mr-3 ${
-                  sortBy === 'updated_at' ? 'border-green-500 bg-green-500' : 'border-gray-400'
-                }`}>
-                  {sortBy === 'updated_at' && <View className="w-2 h-2 bg-white rounded-full mx-auto mt-0.5" />}
-                </View>
-                <Text className={`font-medium ${
-                  sortBy === 'updated_at' ? 'text-green-700' : 'text-gray-700'
-                }`}>Updated Date</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Sort Order Section */}
-            <Text className="text-lg font-semibold text-gray-700 mb-3">Order:</Text>
-            <View className="mb-6">
-              <TouchableOpacity
-                className={`flex-row items-center p-3 rounded-lg mb-2 ${
-                  sortOrder === 'desc' ? 'bg-green-100 border border-green-300' : 'bg-gray-50'
-                }`}
-                onPress={() => setSortOrder('desc')}
-              >
-                <View className={`w-4 h-4 rounded-full border-2 mr-3 ${
-                  sortOrder === 'desc' ? 'border-green-500 bg-green-500' : 'border-gray-400'
-                }`}>
-                  {sortOrder === 'desc' && <View className="w-2 h-2 bg-white rounded-full mx-auto mt-0.5" />}
-                </View>
-                <Text className={`font-medium ${
-                  sortOrder === 'desc' ? 'text-green-700' : 'text-gray-700'
-                }`}>Newest First</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                className={`flex-row items-center p-3 rounded-lg ${
-                  sortOrder === 'asc' ? 'bg-green-100 border border-green-300' : 'bg-gray-50'
-                }`}
-                onPress={() => setSortOrder('asc')}
-              >
-                <View className={`w-4 h-4 rounded-full border-2 mr-3 ${
-                  sortOrder === 'asc' ? 'border-green-500 bg-green-500' : 'border-gray-400'
-                }`}>
-                  {sortOrder === 'asc' && <View className="w-2 h-2 bg-white rounded-full mx-auto mt-0.5" />}
-                </View>
-                <Text className={`font-medium ${
-                  sortOrder === 'asc' ? 'text-green-700' : 'text-gray-700'
-                }`}>Oldest First</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Buttons */}
-            <View className="flex-row gap-x-4">
-              <TouchableOpacity
-                className="flex-1 bg-gray-200 rounded-full py-4"
-                onPress={() => {
-                  setSortBy('updated_at');
-                  setSortOrder('asc');
-                  setShowSortModal(false);
-                  handleRefresh(); // Refresh data with default sort parameters
-                }}
-              >
-                <Text className="text-gray-700 text-center font-semibold text-lg">Remove Filter</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                className="flex-1 bg-green-500 rounded-full py-4"
-                onPress={() => {
-                  setShowSortModal(false);
-                  handleRefresh(); // Refresh data with new sort parameters
-                }}
-              >
-                <Text className="text-white text-center font-semibold text-lg">Apply Sort</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
 
       {/* Stripe Connect WebView */}
       <StripeConnectWebView
