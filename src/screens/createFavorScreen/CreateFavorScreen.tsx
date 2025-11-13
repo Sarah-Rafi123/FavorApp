@@ -720,9 +720,9 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
           </View>
           
           {/* No requests indicator */}
-          <View className="bg-gray-50 rounded-xl p-3">
+          <View className="bg-transparent  p-3">
             <Text className="text-sm text-gray-600 text-center">
-              No requests yet!
+              No Requests Found
             </Text>
           </View>
         </View>
@@ -840,17 +840,13 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
                 {favor.favor_subject.name} | {favor.time_to_complete || '1 Hour'} | {new Date(favor.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
               </Text>
               <Text className="text-sm text-gray-600 mb-1">{favor.city}, {favor.state}</Text>
+              <Text className="text-sm text-gray-600 mb-1">
+                Status: {favor.status === 'in_progress' ? 'In-progress' : favor.status.charAt(0).toUpperCase() + favor.status.slice(1).replace('_', ' ')}
+              </Text>
               <Text className="text-gray-700 text-sm leading-4">
                 {favor.description}
               </Text>
             </View>
-          </View>
-          
-          {/* Status indicator */}
-          <View className="px-3 py-2 bg-green-50 rounded-lg mb-3">
-            <Text className="text-sm text-green-700 font-medium capitalize">
-              Status: {favor.status.replace('_', ' ')}
-            </Text>
           </View>
         </TouchableOpacity>
         
@@ -892,21 +888,13 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
               {favor.favor_subject.name} | {favor.time_to_complete || '1 Hour'} | {new Date(favor.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
             </Text>
             <Text className="text-sm text-gray-600 mb-1">{favor.city}, {favor.state}</Text>
+            <Text className="text-sm text-gray-600 mb-1">
+              Status: {favor.status === 'completed' ? 'Completed' : favor.status.charAt(0).toUpperCase() + favor.status.slice(1).replace('_', ' ')}
+            </Text>
             <Text className="text-gray-700 text-sm leading-4">
               {favor.description}
             </Text>
           </View>
-        </View>
-        
-        {/* Status indicator */}
-        <View className={`mt-3 px-3 py-2 rounded-lg ${
-          favor.status === 'completed' ? 'bg-green-50' : 'bg-red-50'
-        }`}>
-          <Text className={`text-sm font-medium capitalize ${
-            favor.status === 'completed' ? 'text-green-700' : 'text-red-700'
-          }`}>
-            Status: {favor.status.replace('_', ' ')}
-          </Text>
         </View>
       </View>
     </TouchableOpacity>
