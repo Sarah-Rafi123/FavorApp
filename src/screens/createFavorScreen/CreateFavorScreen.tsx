@@ -41,7 +41,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [favorToCancel, setFavorToCancel] = useState<Favor | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0); // Used to reset carousel states
-  
+  const [loadingApplicants, setLoadingApplicants] = useState<Set<string>>(new Set());
 
   // Get auth store state
   const { user, accessToken } = useAuthStore();
@@ -51,17 +51,45 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
   
   // Accept applicant mutation
   const acceptApplicantMutation = useAcceptApplicant({
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
+      // Remove from loading state
+      setLoadingApplicants(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(`${variables.favorId}-${variables.applicantId}`);
+        return newSet;
+      });
       // Refresh all tabs after successful accept
       handleRefreshAllTabs();
+    },
+    onError: (error, variables) => {
+      // Remove from loading state on error too
+      setLoadingApplicants(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(`${variables.favorId}-${variables.applicantId}`);
+        return newSet;
+      });
     }
   });
   
   // Reassign favor mutation
   const reassignFavorMutation = useReassignFavor({
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
+      // Remove from loading state
+      setLoadingApplicants(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(`${variables.favorId}-${variables.newProviderId}`);
+        return newSet;
+      });
       // Refresh all tabs after successful reassign
       handleRefreshAllTabs();
+    },
+    onError: (error, variables) => {
+      // Remove from loading state on error too
+      setLoadingApplicants(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(`${variables.favorId}-${variables.newProviderId}`);
+        return newSet;
+      });
     }
   });
 
@@ -224,6 +252,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
       setFavorToCancel(null);
       setShowCancelModal(false);
       setRefreshTrigger(prev => prev + 1); // Force carousel components to reset
+      setLoadingApplicants(new Set()); // Clear all loading states
       
       // Refresh all tabs simultaneously
       console.log('🔄 Refreshing all API data after mutation...');
@@ -419,8 +448,8 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
 
     return (
       <View className="bg-[#F7FBF5] rounded-2xl p-4 mb-4 mx-4 shadow-sm border-2 border-b-4 border-b-[#44A27B] border-[#44A27B66]">
-        {/* Edit Icon - Top Right - Hide when status is in_progress */}
-        {favor.status !== 'in_progress' && (
+        {/* Edit Icon - Top Right - Hide when status is in_progress or has accepted provider */}
+        {favor.status !== 'in_progress' && !favor.accepted_response && (
           <View className="absolute top-4 right-4 z-10">
             <TouchableOpacity 
               onPress={() => navigation?.navigate('EditFavorScreen', { favorId: favor.id })}
@@ -525,6 +554,9 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
                 <TouchableOpacity 
                   className="bg-[#44A27B] rounded-full py-4 mt-4"
                   onPress={() => {
+                    const key = `${favor.id}-${applicant.user.id}`;
+                    setLoadingApplicants(prev => new Set(prev).add(key));
+                    
                     if (favor.accepted_response && favor.status === 'in_progress') {
                       // Favor already has accepted provider, call reassign API
                       reassignFavorMutation.mutate({
@@ -539,10 +571,10 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
                       });
                     }
                   }}
-                  disabled={acceptApplicantMutation.isPending || reassignFavorMutation.isPending}
+                  disabled={loadingApplicants.has(`${favor.id}-${applicant.user.id}`)}
                 >
                   <Text className="text-white font-bold text-lg text-center">
-                    {(acceptApplicantMutation.isPending || reassignFavorMutation.isPending) 
+                    {loadingApplicants.has(`${favor.id}-${applicant.user.id}`)
                       ? (favor.accepted_response && favor.status === 'in_progress' ? 'Reassigning...' : 'Accepting...') 
                       : (favor.accepted_response && favor.status === 'in_progress' ? 'Reassign' : 'Accept')
                     }
@@ -658,6 +690,9 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
           <TouchableOpacity 
             className="bg-[#44A27B] rounded-full py-4 mt-4"
             onPress={() => {
+              const key = `${favor.id}-${applicant.user.id}`;
+              setLoadingApplicants(prev => new Set(prev).add(key));
+              
               if (favor.accepted_response && favor.status === 'in_progress') {
                 // Favor already has accepted provider, call reassign API
                 reassignFavorMutation.mutate({
@@ -672,10 +707,10 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
                 });
               }
             }}
-            disabled={acceptApplicantMutation.isPending || reassignFavorMutation.isPending}
+            disabled={loadingApplicants.has(`${favor.id}-${applicant.user.id}`)}
           >
             <Text className="text-white font-bold text-lg text-center">
-              {(acceptApplicantMutation.isPending || reassignFavorMutation.isPending) 
+              {loadingApplicants.has(`${favor.id}-${applicant.user.id}`)
                 ? (favor.accepted_response && favor.status === 'in_progress' ? 'Reassigning...' : 'Accepting...') 
                 : (favor.accepted_response && favor.status === 'in_progress' ? 'Reassign' : 'Accept')
               }
@@ -743,7 +778,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
 
   // Component that fetches applicants for a favor and renders individual cards
   const FavorWithApplicants = ({ favor, navigation }: { favor: Favor; navigation: any }) => {
-    const { data: applicantsData, isLoading, error } = useFavorApplicants(favor.id);
+    const { data: applicantsData } = useFavorApplicants(favor.id);
     
     // Filter to only show pending applicants (hide accepted ones for All tab too)
     const pendingApplicants = applicantsData?.data?.applicants?.filter(
@@ -767,7 +802,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
 
   // Component for Active tab that fetches applicants for favors with pending reviews
   const ActiveFavorWithApplicants = ({ favor, navigation }: { favor: Favor; navigation: any }) => {
-    const { data: applicantsData, isLoading, error } = useFavorApplicants(favor.id);
+    const { data: applicantsData } = useFavorApplicants(favor.id);
     
     // Filter to only show pending applicants (hide accepted ones)
     const pendingApplicants = applicantsData?.data?.applicants?.filter(
@@ -804,8 +839,8 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
     // If no pending reviews, show regular active card
     return (
       <View className="bg-[#F7FBF5] rounded-2xl p-4 mb-4 mx-4 shadow-sm border-2 border-b-4 border-b-[#44A27B] border-[#44A27B66]">
-        {/* Edit Icon - Top Right - Hide when status is in_progress */}
-        {favor.status !== 'in_progress' && (
+        {/* Edit Icon - Top Right - Hide when status is in_progress or has accepted provider */}
+        {favor.status !== 'in_progress' && !favor.accepted_response && (
           <View className="absolute top-4 right-4 z-10">
             <TouchableOpacity 
               onPress={() => navigation?.navigate('EditFavorScreen', { favorId: favor.id })}

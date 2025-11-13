@@ -19,7 +19,7 @@ import BackSvg from '../../assets/icons/Back';
 import CancelSvg from '../../assets/icons/Cancel';
 import UserSvg from '../../assets/icons/User';
 import { useFavor, useFavorReviews } from '../../services/queries/FavorQueries';
-import { usePublicUserProfileQuery, useFavorProviderProfileQuery, useUserReviewsQuery } from '../../services/queries/ProfileQueries';
+import { usePublicUserProfileQuery, useFavorProviderProfileQuery, useUserReviewsQuery, useUserReviewStatisticsQuery } from '../../services/queries/ProfileQueries';
 import { useDeleteFavor, useReassignFavor, useCompleteFavor, useCancelAndRepost, useCreateReview } from '../../services/mutations/FavorMutations';
 import { Favor } from '../../services/apis/FavorApis';
 import { PublicUserProfile, ProviderProfile } from '../../services/apis/ProfileApis';
@@ -114,6 +114,18 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
     { enabled: !!favorResponse?.data.favor?.accepted_response?.user?.id && isRequestMode }
   );
 
+  // NEW: Fetch user review statistics for the requester
+  const { data: userReviewStatisticsResponse, isLoading: userReviewStatisticsLoading } = useUserReviewStatisticsQuery(
+    favorResponse?.data.favor?.user?.id || null,
+    { enabled: !!favorResponse?.data.favor?.user?.id && !isRequestMode }
+  );
+
+  // NEW: Fetch provider review statistics for the provider
+  const { data: providerReviewStatisticsResponse, isLoading: providerReviewStatisticsLoading } = useUserReviewStatisticsQuery(
+    favorResponse?.data.favor?.accepted_response?.user?.id || null,
+    { enabled: !!favorResponse?.data.favor?.accepted_response?.user?.id && isRequestMode }
+  );
+
   // Debug logging for review statistics
   React.useEffect(() => {
     const userId = isRequestMode 
@@ -125,6 +137,7 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
       : favorResponse?.data.favor?.user?.full_name;
 
     const reviewsData = isRequestMode ? providerReviewsResponse : userReviewsResponse;
+    const reviewStatisticsData = isRequestMode ? providerReviewStatisticsResponse : userReviewStatisticsResponse;
     const isLoading = isRequestMode ? providerReviewsLoading : userReviewsLoading;
     const error = isRequestMode ? providerReviewsError : userReviewsError;
 
@@ -133,11 +146,13 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
         isRequestMode,
         isLoading,
         error: error?.message,
-        hasResponse: !!reviewsData,
-        statistics: reviewsData?.data?.statistics
+        hasOldResponse: !!reviewsData,
+        oldStatistics: reviewsData?.data?.statistics,
+        hasNewResponse: !!reviewStatisticsData,
+        newStatistics: reviewStatisticsData?.data
       });
     }
-  }, [userReviewsResponse, providerReviewsResponse, userReviewsLoading, providerReviewsLoading, userReviewsError, providerReviewsError, isRequestMode, favorResponse]);
+  }, [userReviewsResponse, providerReviewsResponse, userReviewsLoading, providerReviewsLoading, userReviewsError, providerReviewsError, userReviewStatisticsResponse, providerReviewStatisticsResponse, isRequestMode, favorResponse]);
 
   // Delete favor mutation and Reassign favor mutation
   const deleteFavorMutation = useDeleteFavor();
@@ -638,16 +653,18 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
                 <View className="flex-row items-center mb-1">
                   <Text className="text-gray-500 text-base font-medium">
                     ⭐ {(() => {
-                      const apiRating = userReviewsResponse?.data?.statistics?.average_rating;
-                      console.log(`🔍 User Rating display - API: ${apiRating}`);
-                      return apiRating?.toFixed(1) || '0.0';
+                      const newApiRating = userReviewStatisticsResponse?.data?.total?.average_rating;
+                      const oldApiRating = userReviewsResponse?.data?.statistics?.average_rating;
+                      console.log(`🔍 User Rating display - New API: ${newApiRating}, Old API: ${oldApiRating}`);
+                      return newApiRating?.toFixed(1) || oldApiRating?.toFixed(1) || '0.0';
                     })()}
                   </Text>
                   <Text className="text-gray-500 text-base ml-2">
                     | {(() => {
-                      const apiCount = userReviewsResponse?.data?.statistics?.total_reviews;
-                      console.log(`🔍 User Review count display - API: ${apiCount}`);
-                      return apiCount || 0;
+                      const newApiCount = userReviewStatisticsResponse?.data?.total?.count;
+                      const oldApiCount = userReviewsResponse?.data?.statistics?.total_reviews;
+                      console.log(`🔍 User Review count display - New API: ${newApiCount}, Old API: ${oldApiCount}`);
+                      return newApiCount || oldApiCount || 0;
                     })()} Reviews
                   </Text>
                 </View>
@@ -782,18 +799,20 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
                 <View className="flex-row items-center mb-1">
                   <Text className="text-gray-500 text-base font-medium">
                     ⭐ {(() => {
-                      const apiRating = providerReviewsResponse?.data?.statistics?.average_rating;
+                      const newApiRating = providerReviewStatisticsResponse?.data?.total?.average_rating;
+                      const oldApiRating = providerReviewsResponse?.data?.statistics?.average_rating;
                       const fallbackRating = providerProfile?.average_rating;
-                      console.log(`🔍 Rating display - API: ${apiRating}, Fallback: ${fallbackRating}`);
-                      return apiRating?.toFixed(1) || fallbackRating?.toFixed(1) || '0.0';
+                      console.log(`🔍 Provider Rating display - New API: ${newApiRating}, Old API: ${oldApiRating}, Fallback: ${fallbackRating}`);
+                      return newApiRating?.toFixed(1) || oldApiRating?.toFixed(1) || fallbackRating?.toFixed(1) || '0.0';
                     })()}
                   </Text>
                   <Text className="text-gray-500 text-base ml-2">
                     | {(() => {
-                      const apiCount = providerReviewsResponse?.data?.statistics?.total_reviews;
+                      const newApiCount = providerReviewStatisticsResponse?.data?.total?.count;
+                      const oldApiCount = providerReviewsResponse?.data?.statistics?.total_reviews;
                       const fallbackCount = providerProfile?.total_reviews;
-                      console.log(`🔍 Review count display - API: ${apiCount}, Fallback: ${fallbackCount}`);
-                      return apiCount || fallbackCount || 0;
+                      console.log(`🔍 Provider Review count display - New API: ${newApiCount}, Old API: ${oldApiCount}, Fallback: ${fallbackCount}`);
+                      return newApiCount || oldApiCount || fallbackCount || 0;
                     })()} Reviews
                   </Text>
                 </View>
@@ -1297,15 +1316,17 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
                   <View className="mb-3">
                     <Text className="text-gray-700 text-base">
                       Rating : <Text className="font-semibold">⭐ {(() => {
-                        const apiRating = providerReviewsResponse?.data?.statistics?.average_rating;
-                        const apiCount = providerReviewsResponse?.data?.statistics?.total_reviews;
+                        const newApiRating = providerReviewStatisticsResponse?.data?.total?.average_rating;
+                        const newApiCount = providerReviewStatisticsResponse?.data?.total?.count;
+                        const oldApiRating = providerReviewsResponse?.data?.statistics?.average_rating;
+                        const oldApiCount = providerReviewsResponse?.data?.statistics?.total_reviews;
                         const fallbackRating = providerProfile.average_rating;
                         const fallbackCount = providerProfile.total_reviews;
                         
-                        const finalRating = apiRating || fallbackRating;
-                        const finalCount = apiCount || fallbackCount;
+                        const finalRating = newApiRating || oldApiRating || fallbackRating;
+                        const finalCount = newApiCount || oldApiCount || fallbackCount;
                         
-                        console.log(`🔍 Provider Rating section - API: ${apiRating}/${apiCount}, Fallback: ${fallbackRating}/${fallbackCount}, Final: ${finalRating}/${finalCount}`);
+                        console.log(`🔍 Provider Rating modal section - New API: ${newApiRating}/${newApiCount}, Old API: ${oldApiRating}/${oldApiCount}, Fallback: ${fallbackRating}/${fallbackCount}, Final: ${finalRating}/${finalCount}`);
                         
                         return `${finalRating} (${finalCount} reviews)`;
                       })()}</Text>

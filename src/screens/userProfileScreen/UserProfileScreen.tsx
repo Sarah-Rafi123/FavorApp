@@ -11,6 +11,7 @@ import {
   Alert,
   Linking,
 } from 'react-native';
+import { BlurView } from '@react-native-community/blur';
 import BackSvg from '../../assets/icons/Back';
 import UserSvg from '../../assets/icons/User';
 import { usePublicUserProfileQuery, useUserReviewsQuery } from '../../services/queries/ProfileQueries';
@@ -26,6 +27,41 @@ const VerifiedIcon = () => (
     <Text className="text-white text-xs font-bold">✓</Text>
   </View>
 );
+
+const BlurredContactInfo = ({ children, shouldBlur }: { children: string; shouldBlur: boolean }) => {
+  if (!shouldBlur) {
+    return (
+      <Text className="text-gray-800 text-base" numberOfLines={1} ellipsizeMode="tail">
+        {children}
+      </Text>
+    );
+  }
+
+  return (
+    <View style={{
+      position: 'relative',
+      borderRadius: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      overflow: 'hidden',
+    }}>
+      <Text className="text-gray-800 text-base" numberOfLines={1} ellipsizeMode="tail">
+        {children}
+      </Text>
+      <BlurView
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+        }}
+        blurType="light"
+        blurAmount={30}
+      />
+    </View>
+  );
+};
 
 export function UserProfileScreen({ navigation, route }: UserProfileScreenProps) {
   const [currentPage, setCurrentPage] = useState(1);
@@ -60,15 +96,17 @@ export function UserProfileScreen({ navigation, route }: UserProfileScreenProps)
     }
   }, [userProfile]);
 
+  // Helper to determine if contact info should be visible (not blurred)
+  const shouldShowClearContactInfo = favorStatus === 'in_progress' || favorStatus === 'in-progress' || favorStatus === 'completed';
+  
   // Debug: Log favor status to track contact info visibility
   React.useEffect(() => {
-    const shouldShowContact = favorStatus === 'in_progress' || favorStatus === 'in-progress';
     console.log('🎯 UserProfileScreen navigation params:', {
       userId,
       favorStatus,
-      shouldShowContact
+      shouldShowClearContactInfo
     });
-  }, [userId, favorStatus]);
+  }, [userId, favorStatus, shouldShowClearContactInfo]);
 
   const handleGoBack = () => {
     navigation?.goBack();
@@ -317,43 +355,55 @@ export function UserProfileScreen({ navigation, route }: UserProfileScreenProps)
               </View>
             )}
 
-            {/* Only show contact info if favor is in_progress */}
-            {(favorStatus === 'in_progress' || favorStatus === 'in-progress') && userProfile.email && (
+            {/* Contact info - always show with conditional blur */}
+            {userProfile.email && (
               <View className="flex-row">
                 <Text className="text-gray-700 text-base w-32">Email</Text>
                 <Text className="text-gray-700 text-base mr-2">:</Text>
                 <View className="flex-1">
-                  <Text className="text-gray-800 text-base" numberOfLines={1} ellipsizeMode="tail">
+                  <BlurredContactInfo shouldBlur={!shouldShowClearContactInfo}>
                     {userProfile.email}
-                  </Text>
+                  </BlurredContactInfo>
                 </View>
               </View>
             )}
 
-            {(favorStatus === 'in_progress' || favorStatus === 'in-progress') && userProfile.phone_no_call && (
+            {userProfile.phone_no_call && (
               <View className="flex-row">
                 <Text className="text-gray-700 text-base w-32">Call Phone</Text>
                 <Text className="text-gray-700 text-base mr-2">:</Text>
                 <View className="flex-1">
-                  <TouchableOpacity onPress={() => handleCallNumber(userProfile.phone_no_call)}>
-                    <Text className="text-gray-700 text-base underline" numberOfLines={1} ellipsizeMode="tail">
+                  {shouldShowClearContactInfo ? (
+                    <TouchableOpacity onPress={() => handleCallNumber(userProfile.phone_no_call)}>
+                      <Text className="text-gray-700 text-base underline" numberOfLines={1} ellipsizeMode="tail">
+                        {userProfile.phone_no_call}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <BlurredContactInfo shouldBlur={!shouldShowClearContactInfo}>
                       {userProfile.phone_no_call}
-                    </Text>
-                  </TouchableOpacity>
+                    </BlurredContactInfo>
+                  )}
                 </View>
               </View>
             )}
 
-            {(favorStatus === 'in_progress' || favorStatus === 'in-progress') && userProfile.phone_no_text && (
+            {userProfile.phone_no_text && (
               <View className="flex-row">
                 <Text className="text-gray-700 text-base w-32">Text Phone</Text>
                 <Text className="text-gray-700 text-base mr-2">:</Text>
                 <View className="flex-1">
-                  <TouchableOpacity onPress={() => handleTextNumber(userProfile.phone_no_text)}>
-                    <Text className="text-gray-700 text-base underline" numberOfLines={1} ellipsizeMode="tail">
+                  {shouldShowClearContactInfo ? (
+                    <TouchableOpacity onPress={() => handleTextNumber(userProfile.phone_no_text)}>
+                      <Text className="text-gray-700 text-base underline" numberOfLines={1} ellipsizeMode="tail">
+                        {userProfile.phone_no_text}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <BlurredContactInfo shouldBlur={!shouldShowClearContactInfo}>
                       {userProfile.phone_no_text}
-                    </Text>
-                  </TouchableOpacity>
+                    </BlurredContactInfo>
+                  )}
                 </View>
               </View>
             )}
@@ -394,7 +444,7 @@ export function UserProfileScreen({ navigation, route }: UserProfileScreenProps)
               </View>
             )}
 
-            <View className="flex-row">
+            {/* <View className="flex-row">
               <Text className="text-gray-700 text-base w-32">Status</Text>
               <Text className="text-gray-700 text-base mr-2">:</Text>
               <View className="flex-1">
@@ -405,9 +455,9 @@ export function UserProfileScreen({ navigation, route }: UserProfileScreenProps)
                   </Text>
                 </View>
               </View>
-            </View>
+            </View> */}
 
-            {userProfile.created_at && (
+            {/* {userProfile.created_at && (
               <View className="flex-row">
                 <Text className="text-gray-700 text-base w-32">Account Created</Text>
                 <Text className="text-gray-700 text-base mr-2">:</Text>
@@ -421,7 +471,7 @@ export function UserProfileScreen({ navigation, route }: UserProfileScreenProps)
                   </Text>
                 </View>
               </View>
-            )}
+            )} */}
           </View>
 
           {/* Contact Buttons */}
@@ -535,8 +585,8 @@ export function UserProfileScreen({ navigation, route }: UserProfileScreenProps)
         )}
       </ScrollView>
 
-      {/* Contact Buttons - Only show if favor is in-progress and contact info is available */}
-      {(favorStatus === 'in_progress' || favorStatus === 'in-progress') && userProfile && (userProfile.phone_no_call || userProfile.phone_no_text) && (
+      {/* Contact Buttons - Only show if favor is in-progress/completed and contact info is available */}
+      {shouldShowClearContactInfo && userProfile && (userProfile.phone_no_call || userProfile.phone_no_text) && (
         <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-4 pb-8">
           <View className="flex-row space-x-3">
             {userProfile.phone_no_call && (

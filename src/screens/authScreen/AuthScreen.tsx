@@ -449,16 +449,19 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
           message: '✓ Email is available',
         });
       } else {
+        // Use the specific message from the API response
+        const apiMessage = response.data.message || 'This email is already registered';
+        
         setEmailAvailability({
           isChecking: false,
           isAvailable: false,
-          message: '✗ This email is already registered',
+          message: `✗ ${apiMessage}`,
         });
         
-        // Also set form error
+        // Also set form error with the API message
         setErrors(prev => ({
           ...prev,
-          email: 'This email is already registered. Please use a different email or sign in.',
+          email: apiMessage,
         }));
       }
     } catch (error: any) {
@@ -553,7 +556,7 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
         } else {
           newErrors.email = '';
           
-          // Debounced email availability check for signup tab
+          // Debounced email availability check for signup tab only
           if (activeTab === 'signup') {
             // Clear previous timeout
             if (emailCheckTimeout.current) {

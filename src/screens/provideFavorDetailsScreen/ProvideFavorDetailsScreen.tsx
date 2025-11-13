@@ -156,7 +156,7 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
       console.log('📞 Phone Text:', userProfile.phone_no_text);
       console.log('📊 Favor Status:', favor.status);
       console.log('🎯 Should Show Contact:', 
-        !!(userProfile?.phone_no_call || userProfile?.phone_no_text) && favor.status === 'in_progress'
+        !!(userProfile?.phone_no_call || userProfile?.phone_no_text) && favor.status === 'in-progress'
       );
       console.log('📋 All User Profile Fields:', Object.keys(userProfile));
     }
@@ -681,7 +681,7 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
           </View>
 
           {/* Cancel Favor Button - Show inside details card for pending or in-progress status */}
-          {(favor.status === 'pending' || favor.status === 'in_progress') && (
+          {(favor.status === 'pending' || favor.status === 'in-progress') && (
             <TouchableOpacity 
               className="bg-green-500 rounded-full py-3 mt-4"
               onPress={handleCancelFavor}
@@ -742,37 +742,48 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
                   <Text className="text-gray-600 text-sm">{userProfile.years_of_experience} years experience</Text>
                 )}
                 
-                {/* Contact Details - Show for in_progress status */}
-                {favor.status === 'in_progress' && userProfile?.phone_no_call && (
-                  <View className="flex-row mt-2">
-                    <Text className="text-gray-600 text-sm w-20">Call Phone</Text>
-                    <Text className="text-gray-600 text-sm mr-2">:</Text>
-                    <TouchableOpacity onPress={() => handleCallNumber(userProfile.phone_no_call)}>
-                      <Text className="text-blue-600 text-sm underline">
-                        {userProfile.phone_no_call}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-
-                {favor.status === 'in_progress' && userProfile?.phone_no_text && (
-                  <View className="flex-row mt-1">
-                    <Text className="text-gray-600 text-sm w-20">Text Phone</Text>
-                    <Text className="text-gray-600 text-sm mr-2">:</Text>
-                    <TouchableOpacity onPress={() => handleTextNumber(userProfile.phone_no_text)}>
-                      <Text className="text-blue-600 text-sm underline">
-                        {userProfile.phone_no_text}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-
                 <TouchableOpacity onPress={() => navigation?.navigate('UserProfileScreen', { userId: favor.user.id, favorStatus: favor.status })}>
                   <Text className="text-[#44A27B] text-sm font-medium">View Profile</Text>
                 </TouchableOpacity>
               </View>
             </View>
 
+            {/* Contact Details - Show for in_progress status */}
+            {favor.status === 'in-progress' && userProfile && (
+              <View className="mx-4 mb-4">
+                <View className="flex-row">
+                  {userProfile.phone_no_call && (
+                    <TouchableOpacity 
+                      className="flex-1 bg-transparent border border-gray-400 rounded-xl py-3 px-4 mr-2"
+                      onPress={() => handleCallNumber(userProfile.phone_no_call)}
+                    >
+                      <Text className="text-gray-800 text-center font-medium text-sm">
+                        Call: {userProfile.phone_no_call}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {userProfile.phone_no_text && (
+                    <TouchableOpacity 
+                      className="flex-1 bg-transparent border border-gray-400 rounded-xl py-3 px-4"
+                      onPress={() => handleTextNumber(userProfile.phone_no_text)}
+                    >
+                      <Text className="text-gray-800 text-center font-medium text-sm">
+                        Text: {userProfile.phone_no_text}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                {(!userProfile.phone_no_call && !userProfile.phone_no_text) && (
+                  <View className="mt-1">
+                    <Text className="text-gray-500 text-sm italic text-center">
+                      Contact details not available
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
 
             {/* Submit Review Button */}
             {favor.status === 'completed' && !userHasReviewed && (

@@ -31,7 +31,7 @@ export interface Favor {
   additional_tip?: string | number;
   favor_pay: boolean;
   priority: 'immediate' | 'delayed' | 'no_rush';
-  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
+  status: 'pending' | 'in-progress' | 'completed' | 'cancelled';
   is_active: boolean;
   time_to_complete?: string;
   city: string;
