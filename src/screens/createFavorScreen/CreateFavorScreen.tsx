@@ -875,9 +875,31 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
                 {favor.favor_subject.name} | {favor.time_to_complete || '1 Hour'} | {new Date(favor.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
               </Text>
               <Text className="text-sm text-gray-600 mb-1">{favor.city}, {favor.state}</Text>
-              <Text className="text-sm text-gray-600 mb-1">
-                Status: {favor.status === 'in_progress' ? 'In-progress' : favor.status.charAt(0).toUpperCase() + favor.status.slice(1).replace('_', ' ')}
-              </Text>
+              {/* Status Badge */}
+              <View className="flex-row mb-1">
+                <View className={`px-3 py-1 rounded-xl ${
+                  favor.status === 'completed' ? 'bg-green-100' :
+                  favor.status === 'in-progress' ? 'bg-blue-100' :
+                  favor.status === 'pending' ? 'bg-orange-100' :
+                  favor.status === 'cancelled' ? 'bg-red-100' :
+                  'bg-gray-100'
+                }`}>
+                  <Text className={`text-sm font-medium ${
+                    favor.status === 'completed' ? 'text-green-700' :
+                    favor.status === 'in-progress' ? 'text-blue-700' :
+                    favor.status === 'pending' ? 'text-orange-700' :
+                    favor.status === 'cancelled' ? 'text-red-700' :
+                    'text-gray-700'
+                  }`}>
+                    {favor.status === 'in-progress' 
+                      ? 'In Progress' 
+                      : favor.status === 'completed'
+                      ? 'Completed'
+                      : favor.status?.charAt(0).toUpperCase() + favor.status?.slice(1).replace('_', ' ') || 'Unknown'
+                    }
+                  </Text>
+                </View>
+              </View>
               <Text className="text-gray-700 text-sm leading-4">
                 {favor.description}
               </Text>
@@ -923,9 +945,31 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
               {favor.favor_subject.name} | {favor.time_to_complete || '1 Hour'} | {new Date(favor.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
             </Text>
             <Text className="text-sm text-gray-600 mb-1">{favor.city}, {favor.state}</Text>
-            <Text className="text-sm text-gray-600 mb-1">
-              Status: {favor.status === 'completed' ? 'Completed' : favor.status.charAt(0).toUpperCase() + favor.status.slice(1).replace('_', ' ')}
-            </Text>
+            {/* Status Badge */}
+            <View className="flex-row mb-1">
+              <View className={`px-3 py-1 rounded-xl ${
+                favor.status === 'completed' ? 'bg-green-100' :
+                favor.status === 'in-progress' ? 'bg-blue-100' :
+                favor.status === 'pending' ? 'bg-orange-100' :
+                favor.status === 'cancelled' ? 'bg-red-100' :
+                'bg-gray-100'
+              }`}>
+                <Text className={`text-sm font-medium ${
+                  favor.status === 'completed' ? 'text-green-700' :
+                  favor.status === 'in-progress' ? 'text-blue-700' :
+                  favor.status === 'pending' ? 'text-orange-700' :
+                  favor.status === 'cancelled' ? 'text-red-700' :
+                  'text-gray-700'
+                }`}>
+                  {favor.status === 'in-progress' 
+                    ? 'In Progress' 
+                    : favor.status === 'completed'
+                    ? 'Completed'
+                    : favor.status?.charAt(0).toUpperCase() + favor.status?.slice(1).replace('_', ' ') || 'Unknown'
+                  }
+                </Text>
+              </View>
+            </View>
             <Text className="text-gray-700 text-sm leading-4">
               {favor.description}
             </Text>

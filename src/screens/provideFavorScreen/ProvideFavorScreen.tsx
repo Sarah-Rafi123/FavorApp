@@ -803,13 +803,31 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
                   {favor.description}
                 </Text>
                 
-                {/* Simple Status Text */}
-                <Text className="text-gray-600 text-sm mb-4">
-                  Status: {favor.status === 'in_progress' 
-                    ? 'In Progress' 
-                    : favor.status?.charAt(0).toUpperCase() + favor.status?.slice(1).replace('_', ' ') || 'Unknown'
-                  }
-                </Text>
+                {/* Status Badge */}
+                <View className="flex-row mb-4">
+                  <View className={`px-3 py-1 rounded-xl ${
+                    favor.status === 'completed' ? 'bg-green-100' :
+                    favor.status === 'in-progress' ? 'bg-blue-100' :
+                    favor.status === 'pending' ? 'bg-orange-100' :
+                    favor.status === 'cancelled' ? 'bg-red-100' :
+                    'bg-gray-100'
+                  }`}>
+                    <Text className={`text-sm font-medium ${
+                      favor.status === 'completed' ? 'text-green-700' :
+                      favor.status === 'in-progress' ? 'text-blue-700' :
+                      favor.status === 'pending' ? 'text-orange-700' :
+                      favor.status === 'cancelled' ? 'text-red-700' :
+                      'text-gray-700'
+                    }`}>
+                      {favor.status === 'in-progress' 
+                        ? 'In Progress' 
+                        : favor.status === 'completed'
+                        ? 'Completed'
+                        : favor.status?.charAt(0).toUpperCase() + favor.status?.slice(1).replace('_', ' ') || 'Unknown'
+                      }
+                    </Text>
+                  </View>
+                </View>
               </View>
             </View>
           </TouchableOpacity>
@@ -893,13 +911,31 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
                 {favor.description}
               </Text>
               
-              {/* Simple Status Text */}
-              <Text className="text-gray-600 text-sm mb-4">
-                Status: {favor.status === 'in_progress' 
-                  ? 'In Progress' 
-                  : favor.status?.charAt(0).toUpperCase() + favor.status?.slice(1).replace('_', ' ') || 'Unknown'
-                }
-              </Text>
+              {/* Status Badge */}
+              <View className="flex-row mb-4">
+                <View className={`px-3 py-1 rounded-xl ${
+                  favor.status === 'completed' ? 'bg-green-100' :
+                  favor.status === 'in-progress' ? 'bg-blue-100' :
+                  favor.status === 'pending' ? 'bg-orange-100' :
+                  favor.status === 'cancelled' ? 'bg-red-100' :
+                  'bg-gray-100'
+                }`}>
+                  <Text className={`text-sm font-medium ${
+                    favor.status === 'completed' ? 'text-green-700' :
+                    favor.status === 'in-progress' ? 'text-blue-700' :
+                    favor.status === 'pending' ? 'text-orange-700' :
+                    favor.status === 'cancelled' ? 'text-red-700' :
+                    'text-gray-700'
+                  }`}>
+                    {favor.status === 'in-progress' 
+                      ? 'In Progress' 
+                      : favor.status === 'completed'
+                      ? 'Completed'
+                      : favor.status?.charAt(0).toUpperCase() + favor.status?.slice(1).replace('_', ' ') || 'Unknown'
+                    }
+                  </Text>
+                </View>
+              </View>
             </View>
           </View>
 
