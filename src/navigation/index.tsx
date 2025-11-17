@@ -6,6 +6,7 @@ import { StatusBar, View } from 'react-native';
 import { SplashScreen as CustomSplashScreen, CarouselScreen } from '../screens';
 import { MainTabs } from './tabs/MainTabs';
 import { NotificationPopupRenderer } from '../context/NotificationContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /**
  * Application Navigation Flow
@@ -35,12 +36,33 @@ export default function Navigator() {
   const [showCustomSplash, setShowCustomSplash] = useState(false);
   const [carouselCompleted, setCarouselCompleted] = useState(false);
   const [shouldShowSplashCarousel, setShouldShowSplashCarousel] = useState(true);
+  const [skipSplashFromSignup, setSkipSplashFromSignup] = useState(false);
+  const [hasEverBeenAuthenticated, setHasEverBeenAuthenticated] = useState(false);
 
   useEffect(() => {
     const prepare = async () => {
       try {
         // Initialize auth tokens from storage
         await initializeAuth();
+        
+        // Check if we should skip splash from signup/OTP navigation
+        const skipOtpFlag = await AsyncStorage.getItem('skip_splash_from_otp');
+        const skipSignupFlag = await AsyncStorage.getItem('skip_splash_from_signup');
+        
+        if (skipOtpFlag === 'true' || skipSignupFlag === 'true') {
+          setSkipSplashFromSignup(true);
+          // Clear the flags after reading them
+          await AsyncStorage.removeItem('skip_splash_from_otp');
+          await AsyncStorage.removeItem('skip_splash_from_signup');
+          console.log('🔄 Skip splash flag detected from signup/OTP flow');
+        }
+
+        // Check if user was previously authenticated (to handle logout scenarios)
+        const wasAuthenticated = await AsyncStorage.getItem('was_ever_authenticated');
+        if (wasAuthenticated === 'true') {
+          setHasEverBeenAuthenticated(true);
+          console.log('🔍 User was previously authenticated');
+        }
       } catch (e) {
         console.error('Failed to initialize auth:', e);
       } finally {
@@ -60,6 +82,12 @@ export default function Navigator() {
         setShouldShowSplashCarousel(false);
         setShowCustomSplash(false);
         setCarouselCompleted(true);
+      } else if (skipSplashFromSignup) {
+        // Skip splash and carousel when coming from signup flow
+        console.log('🔄 Skipping splash from signup flow - going directly to auth');
+        setShouldShowSplashCarousel(false);
+        setShowCustomSplash(false);
+        setCarouselCompleted(true);
       } else {
         console.log('❌ User not logged in - skipping splash and carousel, going directly to auth');
         // Skip splash and carousel, go directly to AuthScreen
@@ -68,7 +96,7 @@ export default function Navigator() {
         setCarouselCompleted(true);
       }
     }
-  }, [appIsReady, user, accessToken]);
+  }, [appIsReady, user, accessToken, skipSplashFromSignup]);
 
   // Immediate response to auth state changes - highest priority
   useEffect(() => {
@@ -77,8 +105,19 @@ export default function Navigator() {
       setShouldShowSplashCarousel(false);
       setShowCustomSplash(false);
       setCarouselCompleted(true);
+      setHasEverBeenAuthenticated(true);
+      
+      // Store the flag that user has been authenticated
+      AsyncStorage.setItem('was_ever_authenticated', 'true');
+    } else if (hasEverBeenAuthenticated) {
+      // User was authenticated before but now is not (logout scenario)
+      // Skip splash and carousel, go directly to auth screen
+      console.log('🚪 User logged out - skipping splash/carousel, going to auth screen');
+      setShouldShowSplashCarousel(false);
+      setShowCustomSplash(false);
+      setCarouselCompleted(true);
     }
-  }, [user, accessToken]);
+  }, [user, accessToken, hasEverBeenAuthenticated]);
 
   // Debug auth state
   useEffect(() => {
@@ -88,7 +127,9 @@ export default function Navigator() {
     console.log('App Ready:', appIsReady);
     console.log('Should Show Splash/Carousel:', shouldShowSplashCarousel);
     console.log('Carousel Completed:', carouselCompleted);
-  }, [user, accessToken, appIsReady, shouldShowSplashCarousel, carouselCompleted]);
+    console.log('Skip Splash From Signup:', skipSplashFromSignup);
+    console.log('Has Ever Been Authenticated:', hasEverBeenAuthenticated);
+  }, [user, accessToken, appIsReady, shouldShowSplashCarousel, carouselCompleted, skipSplashFromSignup, hasEverBeenAuthenticated]);
 
   // Cleanup when component unmounts
   useEffect(()=>{

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import BackSvg from '../../assets/icons/Back';
 import EyeSvg from '../../assets/icons/Eye';
-import { useUpdatePasswordMutation } from '../../services/mutations/ProfileMutations';
+import { useUpdatePasswordMutation, useValidateCurrentPasswordMutation } from '../../services/mutations/ProfileMutations';
 
 interface ChangePasswordScreenProps {
   navigation?: any;
@@ -34,6 +34,11 @@ export function ChangePasswordScreen({ navigation }: ChangePasswordScreenProps) 
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
   const updatePasswordMutation = useUpdatePasswordMutation();
+  const validateCurrentPasswordMutation = useValidateCurrentPasswordMutation();
+  
+  const [isCurrentPasswordValidated, setIsCurrentPasswordValidated] = useState(false);
+  const [isValidatingPassword, setIsValidatingPassword] = useState(false);
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const validatePassword = (password: string) => {
     const hasMinLength = password.length >= 8 && password.length <= 50;
@@ -57,12 +62,78 @@ export function ChangePasswordScreen({ navigation }: ChangePasswordScreenProps) 
 
   const passwordValidation = useMemo(() => validatePassword(formData.newPassword), [formData.newPassword]);
 
+  // Function to validate current password via API
+  const validateCurrentPasswordAPI = (password: string) => {
+    if (password.length < 1) {
+      setIsCurrentPasswordValidated(false);
+      setIsValidatingPassword(false);
+      return;
+    }
+
+    setIsValidatingPassword(true);
+    
+    validateCurrentPasswordMutation.mutate(
+      { current_password: password },
+      {
+        onSuccess: (response) => {
+          console.log('✅ Current password validated successfully:', response);
+          setIsCurrentPasswordValidated(true);
+          setIsValidatingPassword(false);
+          
+          // Clear any existing error for current password
+          setErrors(prev => ({
+            ...prev,
+            currentPassword: ''
+          }));
+        },
+        onError: (error: any) => {
+          console.error('❌ Current password validation failed:', error);
+          setIsCurrentPasswordValidated(false);
+          setIsValidatingPassword(false);
+          
+          // Set error message
+          setErrors(prev => ({
+            ...prev,
+            currentPassword: error.message || 'Current password is incorrect'
+          }));
+        },
+      }
+    );
+  };
+
+  // Debounced effect to validate current password when user stops typing
+  useEffect(() => {
+    // Clear existing timeout
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+
+    // Set new timeout for debounced validation
+    debounceTimeoutRef.current = setTimeout(() => {
+      if (formData.currentPassword.trim().length > 0) {
+        validateCurrentPasswordAPI(formData.currentPassword);
+      }
+    }, 1000); // Wait 1 second after user stops typing
+
+    // Cleanup timeout on component unmount
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, [formData.currentPassword]);
+
   const updateFormData = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     
     // Clear errors when user starts typing
     if (errors[field as keyof typeof errors]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
+    }
+
+    // Reset validation when current password changes
+    if (field === 'currentPassword' && isCurrentPasswordValidated) {
+      setIsCurrentPasswordValidated(false);
     }
   };
 
@@ -74,9 +145,18 @@ export function ChangePasswordScreen({ navigation }: ChangePasswordScreenProps) 
       confirmPassword: '',
     };
 
-    // Validation
+    // Basic validation first
     if (!formData.currentPassword.trim()) {
       newErrors.currentPassword = 'Current password is required';
+      setErrors(newErrors);
+      return;
+    }
+
+    // Check if current password is validated
+    if (!isCurrentPasswordValidated) {
+      newErrors.currentPassword = 'Please wait for current password verification or enter a valid password';
+      setErrors(newErrors);
+      return;
     }
 
     if (!passwordValidation.isValid) {
@@ -98,6 +178,11 @@ export function ChangePasswordScreen({ navigation }: ChangePasswordScreenProps) 
       return;
     }
 
+    // Proceed with password update since current password is already validated
+    performPasswordUpdate();
+  };
+
+  const performPasswordUpdate = () => {
     const passwordData = {
       profile: {
         current_password: formData.currentPassword,
@@ -108,7 +193,11 @@ export function ChangePasswordScreen({ navigation }: ChangePasswordScreenProps) 
 
     updatePasswordMutation.mutate(passwordData, {
       onSuccess: () => {
+        setIsCurrentPasswordValidated(false); // Reset for future use
         navigation?.goBack();
+      },
+      onError: () => {
+        setIsCurrentPasswordValidated(false); // Reset on error so user can retry validation
       },
     });
   };
@@ -153,7 +242,13 @@ export function ChangePasswordScreen({ navigation }: ChangePasswordScreenProps) 
             <View className="relative">
               <TextInput
                 className={`px-4 py-3 rounded-xl border pr-12 text-base bg-transparent ${
-                  errors.currentPassword ? 'border-red-500' : 'border-gray-200'
+                  errors.currentPassword 
+                    ? 'border-red-500' 
+                    : isCurrentPasswordValidated 
+                      ? 'border-green-500' 
+                      : isValidatingPassword 
+                        ? 'border-blue-400'
+                        : 'border-gray-300'
                 }`}
                 style={{ 
                   backgroundColor: 'transparent',
@@ -185,6 +280,12 @@ export function ChangePasswordScreen({ navigation }: ChangePasswordScreenProps) 
             </View>
             {errors.currentPassword ? (
               <Text className="text-red-500 text-sm mt-1">{errors.currentPassword}</Text>
+            ) : isValidatingPassword ? (
+              <Text className="text-blue-400 text-sm mt-1">🔄 Validating password...</Text>
+            ) : isCurrentPasswordValidated ? (
+              <Text className="text-green-500 text-sm mt-1">✓ Current password verified</Text>
+            ) : formData.currentPassword.length > 0 ? (
+              <Text className="text-gray-400 text-sm mt-1">Enter password to verify</Text>
             ) : null}
           </View>
 
@@ -196,7 +297,7 @@ export function ChangePasswordScreen({ navigation }: ChangePasswordScreenProps) 
             <View className="relative">
               <TextInput
                 className={`px-4 py-3 rounded-xl border pr-12 text-base bg-transparent ${
-                  errors.newPassword ? 'border-red-500' : 'border-gray-200'
+                  errors.newPassword ? 'border-red-500' : 'border-gray-300'
                 }`}
                 style={{ 
                   backgroundColor: 'transparent',
@@ -239,7 +340,7 @@ export function ChangePasswordScreen({ navigation }: ChangePasswordScreenProps) 
             <View className="relative">
               <TextInput
                 className={`px-4 py-3 rounded-xl border pr-12 text-base bg-transparent ${
-                  errors.confirmPassword ? 'border-red-500' : 'border-gray-200'
+                  errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
                 }`}
                 style={{ 
                   backgroundColor: 'transparent',
@@ -299,15 +400,21 @@ export function ChangePasswordScreen({ navigation }: ChangePasswordScreenProps) 
           <View className="mt-12">
             <TouchableOpacity 
               className={`rounded-full py-4 ${
-                updatePasswordMutation.isPending 
+                validateCurrentPasswordMutation.isPending || updatePasswordMutation.isPending || !isCurrentPasswordValidated
                   ? 'bg-gray-400' 
                   : 'bg-green-500'
               }`}
               onPress={handleChangePassword}
-              disabled={updatePasswordMutation.isPending}
+              disabled={validateCurrentPasswordMutation.isPending || updatePasswordMutation.isPending || !isCurrentPasswordValidated}
             >
               <Text className="text-white text-center text-lg font-semibold">
-                {updatePasswordMutation.isPending ? 'Updating...' : 'Update Password'}
+                {validateCurrentPasswordMutation.isPending 
+                  ? 'Validating...' 
+                  : updatePasswordMutation.isPending 
+                    ? 'Updating...' 
+                    : !isCurrentPasswordValidated
+                      ? 'Verify Password First'
+                      : 'Update Password'}
               </Text>
             </TouchableOpacity>
           </View>

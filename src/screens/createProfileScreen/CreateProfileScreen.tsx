@@ -385,16 +385,47 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
     }
 
     setErrors(newErrors);
+    
+    // Show popup with validation errors if there are any
+    if (!isValid) {
+      showValidationErrorsPopup(newErrors);
+    }
+    
     return isValid;
+  };
+
+  const showValidationErrorsPopup = (validationErrors: typeof errors) => {
+    const errorMessages = Object.entries(validationErrors)
+      .filter(([_, error]) => error)
+      .map(([field, error]) => {
+        const fieldLabels: Record<string, string> = {
+          firstName: 'First Name',
+          lastName: 'Last Name',
+          dateOfBirth: 'Date of Birth',
+          fullAddress: 'Full Address',
+          phoneCall: 'Phone Number (Call)',
+          phoneText: 'Phone Number (Text)',
+          yearsOfExperience: 'Years of Experience',
+          aboutMe: 'About Me',
+          otherSkills: 'Other Skills',
+          ageConsent: 'Age Consent',
+        };
+        return `• ${fieldLabels[field] || field}: ${error}`;
+      });
+    
+    if (errorMessages.length > 0) {
+      Toast.show({
+        type: 'error',
+        text1: 'Please fix the following errors:',
+        text2: errorMessages.slice(0, 4).join('\n') + (errorMessages.length > 4 ? '\n• And more...' : ''),
+        visibilityTime: 6000,
+      });
+    }
   };
 
   const handleSubmit = async () => {
     if (!validateForm() || !registrationData) {
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: 'Please fill in all\nrequired fields'
-      });
+      // Validation popup is already shown by validateForm()
       return;
     }
 
@@ -611,7 +642,7 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
                     backgroundColor: 'transparent',
                     lineHeight: 20,
                   }}
-                  className="px-4 py-4 rounded-xl border border-gray-200 text-base bg-transparent"
+                  className="px-4 py-4 rounded-xl border border-gray-300 text-base bg-transparent"
                   placeholder="Enter your first name"
                   placeholderTextColor="#9CA3AF"
                   value={formData.firstName}
@@ -635,7 +666,7 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
                   Last Name *
                 </Text>
                 <TextInput
-                  className="px-4 py-4 rounded-xl border border-gray-200 text-base bg-transparent"
+                  className="px-4 py-4 rounded-xl border border-gray-300 text-base bg-transparent"
                   style={{ 
                     backgroundColor: 'transparent',
                     lineHeight: 20,
@@ -665,7 +696,7 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
                 </Text>
                 <View className="relative">
                   <TouchableOpacity
-                    className="px-4 py-4 rounded-xl border border-gray-200 pr-12 bg-transparent"
+                    className="px-4 py-4 rounded-xl border border-gray-300 pr-12 bg-transparent"
                     onPress={() => setShowDatePicker(true)}
                   >
                     <Text className="text-base text-gray-800">
@@ -695,7 +726,7 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
                   </Text>
                 )}
                 <TouchableOpacity
-                  className={`px-4 py-4 rounded-xl border ${errors.fullAddress ? 'border-red-500' : 'border-gray-200'} bg-transparent`}
+                  className={`px-4 py-4 rounded-xl border ${errors.fullAddress ? 'border-red-500' : 'border-gray-300'} bg-transparent`}
                   onPress={() => setShowAddressModal(true)}
                 >
                   <Text className={`text-base ${formData.fullAddress ? 'text-gray-800' : 'text-gray-400'}`}>
@@ -719,7 +750,7 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
                 </Text>
                 <View className="flex-row">
                   <TouchableOpacity 
-                    className="px-3 py-4 rounded-l-xl border border-r-0 border-gray-200 bg-transparent flex-row items-center"
+                    className="px-3 py-4 rounded-l-xl border border-r-0 border-gray-300 bg-transparent flex-row items-center"
                     onPress={() => setShowCountryCallDropdown(true)}
                   >
                     <Text className="text-lg mr-2">{selectedCountryCall.flag}</Text>
@@ -727,7 +758,7 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
                     <Text className="text-gray-500 ml-1">▼</Text>
                   </TouchableOpacity>
                   <TextInput
-                    className="flex-1 px-4 py-4 rounded-r-xl border border-gray-200 text-base bg-transparent"
+                    className="flex-1 px-4 py-4 rounded-r-xl border border-gray-300 text-base bg-transparent"
                     placeholder="(XXX) XXX-XXXX"
                     placeholderTextColor="#9CA3AF"
                     value={formData.phoneCall}
@@ -751,7 +782,7 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
                 </Text>
                 <View className="flex-row">
                   <TouchableOpacity 
-                    className="px-3 py-4 rounded-l-xl border border-r-0 border-gray-200 bg-transparent flex-row items-center"
+                    className="px-3 py-4 rounded-l-xl border border-r-0 border-gray-300 bg-transparent flex-row items-center"
                     onPress={() => setShowCountryTextDropdown(true)}
                   >
                     <Text className="text-lg mr-2">{selectedCountryText.flag}</Text>
@@ -759,7 +790,7 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
                     <Text className="text-gray-500 ml-1">▼</Text>
                   </TouchableOpacity>
                   <TextInput
-                    className="flex-1 px-4 py-4 rounded-r-xl border border-gray-200 text-base bg-transparent"
+                    className="flex-1 px-4 py-4 rounded-r-xl border border-gray-300 text-base bg-transparent"
                     placeholder="(XXX) XXX-XXXX"
                     placeholderTextColor="#9CA3AF"
                     value={formData.phoneText}
@@ -783,7 +814,7 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
                 </Text>
                 <View className="relative">
                   <TouchableOpacity 
-                    className="px-4 py-4 rounded-xl border border-gray-200 pr-12 bg-transparent"
+                    className="px-4 py-4 rounded-xl border border-gray-300 pr-12 bg-transparent"
                     onPress={() => setShowSkillsDropdown(true)}
                   >
                     <Text className={`text-base ${formData.skills.length > 0 ? 'text-gray-800' : 'text-gray-400'}`}>
@@ -806,7 +837,7 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
                     Other Skills
                   </Text>
                   <TextInput
-                    className="px-4 py-4 rounded-xl border border-gray-200 text-base bg-transparent"
+                    className="px-4 py-4 rounded-xl border border-gray-300 text-base bg-transparent"
                     placeholder="Describe your other skills..."
                     placeholderTextColor="#9CA3AF"
                     value={formData.otherSkills}
@@ -826,7 +857,7 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
                   Years of Experience *
                 </Text>
                 <TextInput
-                  className="px-4 py-4 rounded-xl border border-gray-200 text-base bg-transparent"
+                  className="px-4 py-4 rounded-xl border border-gray-300 text-base bg-transparent"
                   placeholder="Enter years of experience (0-99)"
                   placeholderTextColor="#9CA3AF"
                   value={formData.yearsOfExperience}
@@ -844,7 +875,7 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
                   About Me *
                 </Text>
                 <TextInput
-                  className="px-4 py-4 rounded-xl border border-gray-200 text-base bg-transparent h-24"
+                  className="px-4 py-4 rounded-xl border border-gray-300 text-base bg-transparent h-24"
                   placeholder="Tell us about yourself..."
                   placeholderTextColor="#9CA3AF"
                   value={formData.aboutMe}
@@ -873,7 +904,7 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
                 </Text>
                 <View className="relative">
                   <TouchableOpacity 
-                    className="px-4 py-4 rounded-xl border border-gray-200 pr-12 bg-transparent"
+                    className="px-4 py-4 rounded-xl border border-gray-300 pr-12 bg-transparent"
                     onPress={() => setShowHeardAboutDropdown(true)}
                   >
                     <Text className={`text-base ${formData.heardAboutUs ? 'text-gray-800' : 'text-gray-400'}`}>
@@ -961,7 +992,7 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
                   {/* Year Selector */}
                   <View>
                     <Text className="text-sm font-medium text-gray-700 mb-2">Year</Text>
-                    <View className="border border-gray-200 rounded-xl">
+                    <View className="border border-gray-300 rounded-xl">
                       <TouchableOpacity 
                         className="px-4 py-3 flex-row justify-between items-center"
                         onPress={() => setShowYearPicker(true)}
@@ -975,7 +1006,7 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
                   {/* Month Selector */}
                   <View>
                     <Text className="text-sm font-medium text-gray-700 mb-2">Month</Text>
-                    <View className="border border-gray-200 rounded-xl">
+                    <View className="border border-gray-300 rounded-xl">
                       <TouchableOpacity 
                         className="px-4 py-3 flex-row justify-between items-center"
                         onPress={() => setShowMonthPicker(true)}
@@ -991,7 +1022,7 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
                   {/* Day Selector */}
                   <View>
                     <Text className="text-sm font-medium text-gray-700 mb-2">Day</Text>
-                    <View className="border border-gray-200 rounded-xl">
+                    <View className="border border-gray-300 rounded-xl">
                       <TouchableOpacity 
                         className="px-4 py-3 flex-row justify-between items-center"
                         onPress={() => setShowDayPicker(true)}
@@ -1088,7 +1119,7 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
           onPress={() => setShowHeardAboutDropdown(false)}
         >
           <View className="bg-[#F4F5DE] rounded-xl max-w-sm mx-auto w-full">
-            <View className="py-4 border-b border-gray-200">
+            <View className="py-4 border-b border-gray-300">
               <Text className="text-lg font-semibold text-gray-800 text-center">
                 Where did you hear about us?
               </Text>
@@ -1119,7 +1150,7 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
           onPress={() => setShowYearPicker(false)}
         >
           <View className="bg-white rounded-xl max-w-sm mx-auto w-full max-h-96">
-            <View className="py-4 border-b border-gray-200">
+            <View className="py-4 border-b border-gray-300">
               <Text className="text-lg font-semibold text-gray-800 text-center">Select Year</Text>
             </View>
             <ScrollView className="max-h-80" showsVerticalScrollIndicator={false}>
@@ -1156,7 +1187,7 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
           onPress={() => setShowMonthPicker(false)}
         >
           <View className="bg-white rounded-xl max-w-sm mx-auto w-full">
-            <View className="py-4 border-b border-gray-200">
+            <View className="py-4 border-b border-gray-300">
               <Text className="text-lg font-semibold text-gray-800 text-center">Select Month</Text>
             </View>
             {generateMonths().map((month, index) => (
@@ -1191,7 +1222,7 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
           onPress={() => setShowDayPicker(false)}
         >
           <View className="bg-white rounded-xl max-w-sm mx-auto w-full max-h-96">
-            <View className="py-4 border-b border-gray-200">
+            <View className="py-4 border-b border-gray-300">
               <Text className="text-lg font-semibold text-gray-800 text-center">Select Day</Text>
             </View>
             <ScrollView className="max-h-80" showsVerticalScrollIndicator={false}>
@@ -1227,7 +1258,7 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
       >
         <View className="flex-1 bg-black/50">
           <View className="flex-1 bg-[#FBFFF0] mt-20 rounded-t-3xl">
-            <View className="flex-row justify-between items-center p-6 border-b border-gray-200">
+            <View className="flex-row justify-between items-center p-6 border-b border-gray-300">
               <Text className="text-xl font-bold text-gray-800">Search Address</Text>
               <TouchableOpacity onPress={() => setShowAddressModal(false)}>
                 <Text className="text-gray-500 text-lg">✕</Text>

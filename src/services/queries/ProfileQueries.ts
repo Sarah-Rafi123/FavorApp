@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getProfile, getPublicUserProfile, getFavorProviderProfile, getUserReviews, UserReviewsParams } from "../apis/ProfileApis";
+import { getProfile, getPublicUserProfile, getFavorProviderProfile, getUserReviews, getUserReviewStatistics, UserReviewsParams } from "../apis/ProfileApis";
 import { StripeConnectApis } from "../apis/StripeConnectApis";
 
 export const useProfileQuery = () => {
@@ -8,6 +8,13 @@ export const useProfileQuery = () => {
     queryFn: getProfile,
     staleTime: 1000 * 60 * 5, // 5 minutes
     gcTime: 1000 * 60 * 30, // 30 minutes
+    retry: (failureCount, error: any) => {
+      // Don't retry on 401/403 errors
+      if (error?.response?.status === 401 || error?.response?.status === 403) {
+        return false;
+      }
+      return failureCount < 3;
+    },
   });
 };
 
@@ -42,6 +49,38 @@ export const useUserReviewsQuery = (
     enabled: !!userId && (options?.enabled !== false),
     staleTime: 1000 * 60 * 3, // 3 minutes (reviews change more frequently)
     gcTime: 1000 * 60 * 15, // 15 minutes
+    retry: (failureCount, error: any) => {
+      // Don't retry on 500 errors after first attempt
+      if (error?.response?.status === 500) {
+        return failureCount < 1;
+      }
+      // Retry other errors up to 3 times
+      return failureCount < 3;
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+  });
+};
+
+export const useUserReviewStatisticsQuery = (userId: number | null, options?: { enabled?: boolean }) => {
+  return useQuery({
+    queryKey: ['userReviewStatistics', userId],
+    queryFn: () => getUserReviewStatistics(userId!),
+    enabled: !!userId && (options?.enabled !== false),
+    staleTime: 1000 * 60 * 5, // 5 minutes (statistics don't change as frequently)
+    gcTime: 1000 * 60 * 30, // 30 minutes
+    retry: (failureCount, error: any) => {
+      // Don't retry on 404 errors
+      if (error?.response?.status === 404) {
+        return false;
+      }
+      // Don't retry on 500 errors after first attempt
+      if (error?.response?.status === 500) {
+        return failureCount < 1;
+      }
+      // Retry other errors up to 3 times
+      return failureCount < 3;
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
   });
 };
 

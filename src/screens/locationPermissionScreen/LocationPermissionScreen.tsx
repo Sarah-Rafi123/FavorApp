@@ -145,21 +145,21 @@ export function LocationPermissionScreen({ onLocationGranted, onSkip }: Location
             {/* Permission Options */}
             <View className="space-y-3">
               <TouchableOpacity 
-                className="py-3 border-t border-gray-200"
+                className="py-3 border-t border-gray-300"
                 onPress={() => handleSystemPermission(true)}
               >
                 <Text className="text-blue-500 text-center font-medium">Allow Once</Text>
               </TouchableOpacity>
 
               <TouchableOpacity 
-                className="py-3 border-t border-gray-200"
+                className="py-3 border-t border-gray-300"
                 onPress={() => handleSystemPermission(true)}
               >
                 <Text className="text-blue-500 text-center font-medium">Allow While Using The App</Text>
               </TouchableOpacity>
 
               <TouchableOpacity 
-                className="py-3 border-t border-gray-200"
+                className="py-3 border-t border-gray-300"
                 onPress={() => handleSystemPermission(false)}
               >
                 <Text className="text-blue-500 text-center font-medium">Don't Allow</Text>

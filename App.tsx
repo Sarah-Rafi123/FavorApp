@@ -6,6 +6,8 @@ import { SetupIntentProvider } from './src/components/auth/SetupIntentProvider';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import { NotificationProvider } from './src/context/NotificationContext';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import useAuthStore from './src/store/useAuthStore';
+import { useEffect } from 'react';
 import './global.css';
 
 // Polyfill for crypto.getRandomValues() required by react-native-google-places-autocomplete
@@ -24,8 +26,16 @@ if (typeof global.crypto.getRandomValues !== 'function') {
 const queryClient = new QueryClient();
 
 export default function App() {
+  const setQueryClient = useAuthStore((state) => state.setQueryClient);
+  
   // HARDCODED for testing - remove after fixing env variables
   const stripePublishableKey = 'pk_test_51Q7dmgB0ebyuNLiRFS67rDTvorE6TiCaf5cXjofD1MUKOUtoT7xDl8LKMkbEhthWmzZtDc5cbwotic3Fv0KjosJ600I9SOjcpj';
+  
+  // Set the query client in auth store for cache management
+  useEffect(() => {
+    console.log('🔧 Setting QueryClient in auth store for cache management');
+    setQueryClient(queryClient);
+  }, [setQueryClient]);
   
   console.log('🔍 Stripe Publishable Key in App.tsx (HARDCODED):', {
     hasKey: !!stripePublishableKey,

@@ -220,7 +220,7 @@ export function NewPasswordScreen({ onPasswordReset, email, resetToken }: NewPas
             <View className="relative">
               <TextInput
                 className={`px-4 py-3 rounded-xl border pr-12 text-base bg-transparent ${
-                  errors.password ? 'border-red-500' : 'border-gray-200'
+                  errors.password ? 'border-red-500' : 'border-gray-300'
                 }`}
                 style={{ 
                   backgroundColor: 'transparent',
@@ -262,7 +262,7 @@ export function NewPasswordScreen({ onPasswordReset, email, resetToken }: NewPas
             <View className="relative">
               <TextInput
                 className={`px-4 py-3 rounded-xl border pr-12 text-base bg-transparent ${
-                  errors.confirmPassword ? 'border-red-500' : 'border-gray-200'
+                  errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
                 }`}
                 style={{ 
                   backgroundColor: 'transparent',

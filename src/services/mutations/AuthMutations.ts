@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { registerUser, verifyOtp, loginUser, resendOtp, forgotPassword, verifyResetOtp, resetPassword, deleteAccount, DeleteAccountData } from "../apis/AuthApis";
+import { registerUser, verifyOtp, loginUser, resendOtp, forgotPassword, verifyResetOtp, resetPassword, deleteAccount, DeleteAccountData, checkEmailAvailability } from "../apis/AuthApis";
 import { RegistrationData, OtpVerificationData, LoginData, ResendOtpData, ForgotPasswordData, VerifyResetOtpData, ResetPasswordData } from "../../types";
 import Toast from 'react-native-toast-message';
 import useAuthStore from '../../store/useAuthStore';
@@ -43,6 +43,12 @@ export const useVerifyResetOtpMutation = () => {
 export const useResetPasswordMutation = () => {
   return useMutation({
     mutationFn: (payload: ResetPasswordData) => resetPassword(payload),
+  });
+};
+
+export const useCheckEmailAvailabilityMutation = () => {
+  return useMutation({
+    mutationFn: (email: string) => checkEmailAvailability(email),
   });
 };
 

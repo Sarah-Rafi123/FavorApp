@@ -233,7 +233,7 @@ export function CreateProfileScreen({ onProfileComplete }: CreateProfileScreenPr
           {/* First Name */}
           <View className="mb-4 relative">
             <TextInput
-              className="px-4 py-4 rounded-xl border border-gray-200 text-base bg-transparent"
+              className="px-4 py-4 rounded-xl border border-gray-300 text-base bg-transparent"
               placeholder="Enter your full name"
               placeholderTextColor="#9CA3AF"
               value={formData.fullName}
@@ -250,7 +250,7 @@ export function CreateProfileScreen({ onProfileComplete }: CreateProfileScreenPr
           {/* Last Name */}
           <View className="mb-4 relative">
             <TextInput
-              className="px-4 py-4 rounded-xl border border-gray-200 text-base bg-transparent"
+              className="px-4 py-4 rounded-xl border border-gray-300 text-base bg-transparent"
               placeholder="Enter your last name"
               placeholderTextColor="#9CA3AF"
               value={formData.lastName}
@@ -267,7 +267,7 @@ export function CreateProfileScreen({ onProfileComplete }: CreateProfileScreenPr
           {/* Date of Birth */}
           <View className="mb-4 relative">
             <TouchableOpacity
-              className="px-4 py-4 rounded-xl border border-gray-200 pr-12 bg-transparent"
+              className="px-4 py-4 rounded-xl border border-gray-300 pr-12 bg-transparent"
               onPress={() => setShowDatePicker(true)}
             >
               <Text className={`text-base ${formData.dateOfBirth ? 'text-gray-800' : 'text-gray-400'}`}>
@@ -291,7 +291,7 @@ export function CreateProfileScreen({ onProfileComplete }: CreateProfileScreenPr
           {/* Full Address */}
           <View className="mb-4 relative">
             <TextInput
-              className="px-4 py-4 rounded-xl border border-gray-200 text-base bg-transparent"
+              className="px-4 py-4 rounded-xl border border-gray-300 text-base bg-transparent"
               placeholder="Enter your address"
               placeholderTextColor="#9CA3AF"
               value={formData.fullAddress}
@@ -309,7 +309,7 @@ export function CreateProfileScreen({ onProfileComplete }: CreateProfileScreenPr
           {/* Phone Number (Call) */}
           <View className="mb-4 relative">
             <TextInput
-              className="px-4 py-4 rounded-xl border border-gray-200 pr-12 text-base bg-transparent"
+              className="px-4 py-4 rounded-xl border border-gray-300 pr-12 text-base bg-transparent"
               placeholder="Enter"
               placeholderTextColor="#9CA3AF"
               value={formData.phoneCall}
@@ -330,7 +330,7 @@ export function CreateProfileScreen({ onProfileComplete }: CreateProfileScreenPr
           {/* Phone Number (Text) */}
           <View className="mb-4 relative">
             <TextInput
-              className="px-4 py-4 rounded-xl border border-gray-200 pr-12 text-base bg-transparent"
+              className="px-4 py-4 rounded-xl border border-gray-300 pr-12 text-base bg-transparent"
               placeholder="Enter"
               placeholderTextColor="#9CA3AF"
               value={formData.phoneText}
@@ -351,7 +351,7 @@ export function CreateProfileScreen({ onProfileComplete }: CreateProfileScreenPr
           {/* Years of Experience */}
           <View className="mb-4 relative">
             <TouchableOpacity 
-              className="px-4 py-4 rounded-xl border border-gray-200 pr-12 bg-transparent"
+              className="px-4 py-4 rounded-xl border border-gray-300 pr-12 bg-transparent"
               onPress={() => setShowExperienceDropdown(true)}
             >
               <Text className={`text-base ${formData.yearsOfExperience ? 'text-gray-800' : 'text-gray-400'}`}>
@@ -372,7 +372,7 @@ export function CreateProfileScreen({ onProfileComplete }: CreateProfileScreenPr
           {/* Skills */}
           <View className="mb-4 relative">
             <TouchableOpacity 
-              className="px-4 py-4 rounded-xl border border-gray-200 pr-12 bg-transparent"
+              className="px-4 py-4 rounded-xl border border-gray-300 pr-12 bg-transparent"
               onPress={() => setShowSkillsDropdown(true)}
             >
               <Text className={`text-base ${formData.skills.length > 0 ? 'text-gray-800' : 'text-gray-400'}`}>
@@ -393,7 +393,7 @@ export function CreateProfileScreen({ onProfileComplete }: CreateProfileScreenPr
           {/* About Me */}
           <View className="mb-4 relative">
             <TextInput
-              className="px-4 py-4 rounded-xl border border-gray-200 text-base bg-transparent h-24"
+              className="px-4 py-4 rounded-xl border border-gray-300 text-base bg-transparent h-24"
               placeholder="Tell us about yourself..."
               placeholderTextColor="#9CA3AF"
               value={formData.aboutMe}
@@ -413,7 +413,7 @@ export function CreateProfileScreen({ onProfileComplete }: CreateProfileScreenPr
           {/* Where did you hear about us */}
           <View className="mb-4 relative">
             <TouchableOpacity 
-              className="px-4 py-4 rounded-xl border border-gray-200 pr-12 bg-transparent"
+              className="px-4 py-4 rounded-xl border border-gray-300 pr-12 bg-transparent"
               onPress={() => setShowDropdown(true)}
             >
               <Text className={`text-base ${formData.hearAbout ? 'text-gray-800' : 'text-gray-400'}`}>
@@ -520,7 +520,7 @@ export function CreateProfileScreen({ onProfileComplete }: CreateProfileScreenPr
           onPress={() => setShowExperienceDropdown(false)}
         >
           <View className="bg-white rounded-xl max-w-sm mx-auto w-full">
-            <View className="py-4 border-b border-gray-200">
+            <View className="py-4 border-b border-gray-300">
               <Text className="text-lg font-semibold text-gray-800 text-center">
                 Years of Experience
               </Text>
@@ -594,7 +594,7 @@ export function CreateProfileScreen({ onProfileComplete }: CreateProfileScreenPr
           onPress={() => setShowDropdown(false)}
         >
           <View className="bg-white rounded-xl max-w-sm mx-auto w-full">
-            <View className="py-4 border-b border-gray-200">
+            <View className="py-4 border-b border-gray-300">
               <Text className="text-lg font-semibold text-gray-800 text-center">
                 Where did you hear about us?
               </Text>

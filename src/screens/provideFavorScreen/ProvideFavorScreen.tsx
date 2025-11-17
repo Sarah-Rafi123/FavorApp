@@ -12,6 +12,7 @@ import {
   RefreshControl,
   Alert,
   Modal,
+  Linking,
 } from 'react-native';
 import { CarouselButton } from '../../components/buttons';
 import ProvideFavorSvg from '../../assets/icons/ProvideFavor';
@@ -23,7 +24,7 @@ import FilterSvg from '../../assets/icons/Filter';
 import { NotificationBell } from '../../components/notifications/NotificationBell';
 import CancelSvg from '../../assets/icons/Cancel';
 import { useMyFavors, useFavorSubjects, useBrowseFavors, useFavors } from '../../services/queries/FavorQueries';
-import { useApplyToFavor, useCancelRequest } from '../../services/mutations/FavorMutations';
+import { useApplyToFavor, useCancelRequest, useCompleteFavor } from '../../services/mutations/FavorMutations';
 import { StripeConnectManager } from '../../services/StripeConnectManager';
 import { Favor } from '../../services/apis/FavorApis';
 import { FavorSubject } from '../../services/apis/FavorSubjectApis';
@@ -50,6 +51,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
   const [stripeOnboardingUrl, setStripeOnboardingUrl] = useState<string>('');
   const [pendingFavorAction, setPendingFavorAction] = useState<(() => void) | null>(null);
   
+  
   // Pagination state (same as HomeListScreen)
   const [currentPage, setCurrentPage] = useState(1);
   const [allFavors, setAllFavors] = useState<Favor[]>([]);
@@ -61,9 +63,10 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
   // Get filter store state
   const { hasActiveFilters, toBrowseParams, getFilterCount } = useFilterStore();
 
-  // Apply to Favor mutation, Cancel Request mutation, and Stripe Connect Manager
+  // Apply to Favor mutation, Cancel Request mutation, Complete Favor mutation, and Stripe Connect Manager
   const applyToFavorMutation = useApplyToFavor();
   const cancelRequestMutation = useCancelRequest();
+  const completeFavorMutation = useCompleteFavor();
   const stripeConnectManager = StripeConnectManager.getInstance();
 
   // Fetch favor subjects/categories
@@ -106,7 +109,9 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
       tab: 'active', 
       page: 1, 
       per_page: 10,
-      category: selectedCategories.length > 0 ? selectedCategories : undefined
+      category: selectedCategories.length > 0 ? selectedCategories : undefined,
+      sort_by: 'updated_at',
+      sort_order: 'asc'
     },
     { enabled: activeTab === 'Active' }
   );
@@ -122,7 +127,9 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
       tab: 'in-progress', 
       page: 1, 
       per_page: 10,
-      category: selectedCategories.length > 0 ? selectedCategories : undefined
+      category: selectedCategories.length > 0 ? selectedCategories : undefined,
+      sort_by: 'updated_at',
+      sort_order: 'asc'
     },
     { enabled: activeTab === 'Active' }
   );
@@ -138,7 +145,9 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
       tab: 'completed', 
       page: 1, 
       per_page: 10,
-      category: selectedCategories.length > 0 ? selectedCategories : undefined
+      category: selectedCategories.length > 0 ? selectedCategories : undefined,
+      sort_by: 'updated_at',
+      sort_order: 'asc'
     },
     { enabled: true } // Always enabled to prevent re-fetching when switching tabs
   );
@@ -154,7 +163,9 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
       tab: 'cancelled', 
       page: 1, 
       per_page: 10,
-      category: selectedCategories.length > 0 ? selectedCategories : undefined
+      category: selectedCategories.length > 0 ? selectedCategories : undefined,
+      sort_by: 'updated_at',
+      sort_order: 'asc'
     },
     { enabled: true } // Always enabled to prevent re-fetching when switching tabs
   );
@@ -173,9 +184,24 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
         console.log('📊 getCurrentData for All tab - allFavors length:', allFavors.length);
         return allFavors;
       case 'Active':
-        // Combine active and in-progress favors
-        const activeFavors = activeMyFavorsResponse?.data.favors || [];
-        const inProgressFavors = inProgressMyFavorsResponse?.data.favors || [];
+        // Combine active and in-progress favors, but exclude completed/cancelled favors
+        const rawActiveFavors = activeMyFavorsResponse?.data.favors || [];
+        const rawInProgressFavors = inProgressMyFavorsResponse?.data.favors || [];
+        
+        // Filter out completed and cancelled favors from Active tab
+        const activeFavors = rawActiveFavors.filter(favor => 
+          favor.status !== 'completed' && favor.status !== 'cancelled'
+        );
+        const inProgressFavors = rawInProgressFavors.filter(favor => 
+          favor.status !== 'completed' && favor.status !== 'cancelled'
+        );
+        
+        // Debug logging to track active tab filtering
+        console.log('📊 Active tab data filtering:');
+        console.log(`   Raw active favors: ${rawActiveFavors.length}, filtered: ${activeFavors.length}`);
+        console.log(`   Raw in-progress favors: ${rawInProgressFavors.length}, filtered: ${inProgressFavors.length}`);
+        console.log('   Active tab favor statuses:', [...activeFavors, ...inProgressFavors].map(f => f.status));
+        
         return [...activeFavors, ...inProgressFavors];
       case 'History':
         // Combine completed and cancelled favors - with extra filtering for safety
@@ -634,6 +660,30 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
     setFavorToCancel(null);
   };
 
+  const handleCompleteFavor = async (favor: Favor) => {
+    console.log('🎯 Complete favor clicked for:', favor.user.full_name);
+    
+    try {
+      console.log('🎯 Marking favor as completed:', favor.id);
+      await completeFavorMutation.mutateAsync(favor.id);
+      
+      // Navigate to favor details screen for review submission
+      navigation?.navigate('FavorDetailsScreen', { 
+        favorId: favor.id,
+        source: 'ProvideFavorScreen'
+      });
+      
+      console.log('✅ Favor marked as completed successfully');
+    } catch (error: any) {
+      console.error('❌ Complete favor failed:', error.message);
+      Alert.alert(
+        'Error',
+        'Failed to complete favor. Please try again.',
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
   const handleStripeSetupRequired = async (onSetupComplete: () => void) => {
     try {
       console.log('🚀 Starting Stripe Connect WebView setup...');
@@ -672,6 +722,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
     setStripeOnboardingUrl('');
     setPendingFavorAction(null);
   };
+
 
   const handleFavorCardPress = (favor: Favor) => {
     if (activeTab === 'All') {
@@ -748,9 +799,35 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
                     return favor.address || 'Location not specified';
                   })()}
                 </Text>
-                <Text className="text-gray-700 text-sm mb-4 leading-5" numberOfLines={2} ellipsizeMode="tail">
+                <Text className="text-gray-700 text-sm mb-1 leading-5" numberOfLines={2} ellipsizeMode="tail">
                   {favor.description}
                 </Text>
+                
+                {/* Status Badge */}
+                <View className="flex-row mb-4">
+                  <View className={`px-3 py-1 rounded-xl ${
+                    favor.status === 'completed' ? 'bg-green-100' :
+                    favor.status === 'in-progress' ? 'bg-blue-100' :
+                    favor.status === 'pending' ? 'bg-orange-100' :
+                    favor.status === 'cancelled' ? 'bg-red-100' :
+                    'bg-gray-100'
+                  }`}>
+                    <Text className={`text-sm font-medium ${
+                      favor.status === 'completed' ? 'text-green-700' :
+                      favor.status === 'in-progress' ? 'text-blue-700' :
+                      favor.status === 'pending' ? 'text-orange-700' :
+                      favor.status === 'cancelled' ? 'text-red-700' :
+                      'text-gray-700'
+                    }`}>
+                      {favor.status === 'in-progress' 
+                        ? 'In Progress' 
+                        : favor.status === 'completed'
+                        ? 'Completed'
+                        : favor.status?.charAt(0).toUpperCase() + favor.status?.slice(1).replace('_', ' ') || 'Unknown'
+                      }
+                    </Text>
+                  </View>
+                </View>
               </View>
             </View>
           </TouchableOpacity>
@@ -767,32 +844,13 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
       );
     }
 
-    // For Active/History tabs, keep the original layout
+    // For Active/History tabs, display user name and priority alongside image
     return (
       <TouchableOpacity 
         onPress={() => handleFavorCardPress(favor)}
         activeOpacity={0.7}
       >
         <View className="bg-[#F7FBF5] rounded-2xl p-4 mb-4 mx-4 shadow-sm border-2 border-b-4 border-b-[#44A27B] border-[#44A27B66]">
-          {/* Header with user name and priority */}
-          <View className="flex-row items-center justify-between mb-3">
-            <View className="flex-row items-center">
-              {!favor.favor_pay && parseFloat((favor.tip || 0).toString()) > 0 && (
-                <View className="mr-2">
-                  <DollarSvg />
-                </View>
-              )}
-              <Text className="text-lg font-semibold text-gray-800">
-                {favor.user.full_name.length > 15 
-                  ? `${favor.user.full_name.substring(0, 15)}...` 
-                  : favor.user.full_name}
-              </Text>
-              <View className="ml-2 px-2 py-1 rounded">
-                <Text className="text-[#D12E34] text-sm font-medium">{formatPriority(favor.priority)}</Text>
-              </View>
-            </View>
-          </View>
-
           <View className="flex-row mb-4">
             {favor.image_url ? (
               <Image
@@ -808,6 +866,21 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
               </View>
             )}
             <View className="flex-1">
+              {/* User name and priority */}
+              <View className="flex-row items-center mb-2">
+                {!favor.favor_pay && parseFloat((favor.tip || 0).toString()) > 0 && (
+                  <View className="mr-2">
+                    <DollarSvg />
+                  </View>
+                )}
+                <Text className="text-lg font-semibold text-gray-800 flex-1" numberOfLines={1}>
+                  {favor.user.full_name}
+                </Text>
+                <View className="ml-2 px-2 py-1 rounded">
+                  <Text className="text-[#D12E34] text-sm font-medium">{formatPriority(favor.priority)}</Text>
+                </View>
+              </View>
+              
               {/* Category and Time */}
               <Text className="text-sm text-gray-600 mb-1" numberOfLines={1} ellipsizeMode="tail">
                 {favor.title || favor.favor_subject.name} | {favor.time_to_complete || 'Time not specified'}
@@ -834,35 +907,35 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
               </Text>
               
               {/* Description */}
-              <Text className="text-gray-700 text-sm mb-4 leading-5" numberOfLines={2} ellipsizeMode="tail">
+              <Text className="text-gray-700 text-sm mb-1 leading-5" numberOfLines={2} ellipsizeMode="tail">
                 {favor.description}
               </Text>
-
-              {/* Status Badge - Only show in History tab */}
-              {activeTab === 'History' && (
-                <View className={`self-start px-3 py-1 rounded-full mb-3 ${
-                  favor.status === 'completed' 
-                    ? 'bg-green-100 border border-green-300' 
-                    : favor.status === 'cancelled'
-                    ? 'bg-red-100 border border-red-300'
-                    : 'bg-gray-100 border border-gray-300'
+              
+              {/* Status Badge */}
+              <View className="flex-row mb-4">
+                <View className={`px-3 py-1 rounded-xl ${
+                  favor.status === 'completed' ? 'bg-green-100' :
+                  favor.status === 'in-progress' ? 'bg-blue-100' :
+                  favor.status === 'pending' ? 'bg-orange-100' :
+                  favor.status === 'cancelled' ? 'bg-red-100' :
+                  'bg-gray-100'
                 }`}>
-                  <Text className={`text-xs font-medium ${
-                    favor.status === 'completed' 
-                      ? 'text-green-700' 
-                      : favor.status === 'cancelled'
-                      ? 'text-red-700'
-                      : 'text-gray-700'
+                  <Text className={`text-sm font-medium ${
+                    favor.status === 'completed' ? 'text-green-700' :
+                    favor.status === 'in-progress' ? 'text-blue-700' :
+                    favor.status === 'pending' ? 'text-orange-700' :
+                    favor.status === 'cancelled' ? 'text-red-700' :
+                    'text-gray-700'
                   }`}>
-                    {favor.status === 'completed' 
-                      ? 'Completed' 
-                      : favor.status === 'cancelled'
-                      ? 'Cancelled'
-                      : favor.status?.charAt(0).toUpperCase() + favor.status?.slice(1) || 'Unknown'
+                    {favor.status === 'in-progress' 
+                      ? 'In Progress' 
+                      : favor.status === 'completed'
+                      ? 'Completed'
+                      : favor.status?.charAt(0).toUpperCase() + favor.status?.slice(1).replace('_', ' ') || 'Unknown'
                     }
                   </Text>
                 </View>
-              )}
+              </View>
             </View>
           </View>
 
@@ -881,6 +954,18 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
               <Text className="text-white text-center font-semibold text-base">
                 {isActiveFavor ? 'Cancel Favor' : 
                  `$${parseFloat((favor.tip || 0).toString()).toFixed(2)} | Provide a Favor`}
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Show Try Reapply button for cancelled favors in History tab */}
+          {activeTab === 'History' && favor.status === 'cancelled' && (
+            <TouchableOpacity 
+              className="bg-green-500 rounded-full py-3"
+              onPress={() => handleProvideFavor(favor)}
+            >
+              <Text className="text-white text-center font-semibold text-base">
+                ${parseFloat((favor.tip || 0).toString()).toFixed(2)} | Reapply
               </Text>
             </TouchableOpacity>
           )}
@@ -949,7 +1034,6 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
           />
         </View>
 
-        
       </View>
 
       {/* Content Area */}
@@ -984,7 +1068,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
             keyExtractor={(item) => item.id.toString()}
             renderItem={({ item }) => <FavorCard favor={item} />}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingTop: 16, paddingBottom: 120 }}
+            contentContainerStyle={{ paddingTop: 8, paddingBottom: 120 }}
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}
@@ -1013,7 +1097,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
           <ScrollView 
             className="flex-1"
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingTop: 16, paddingBottom: 120 }}
+            contentContainerStyle={{ paddingTop: 8, paddingBottom: 120 }}
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}
@@ -1094,7 +1178,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
         >
           <View className="bg-white rounded-2xl m-6 max-h-96">
             {/* Header */}
-            <View className="flex-row justify-between items-center p-4 border-b border-gray-200">
+            <View className="flex-row justify-between items-center p-4 border-b border-gray-300">
               <Text className="text-lg font-bold text-gray-900">Filter by Category</Text>
               <TouchableOpacity onPress={() => setShowCategoryFilter(false)}>
                 <Text className="text-gray-500 text-xl">✕</Text>
@@ -1129,9 +1213,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
                 ))}
               </View>
             </ScrollView>
-
-            {/* Footer */}
-            <View className="flex-row p-4 border-t border-gray-200">
+            <View className="flex-row p-4 border-t border-gray-300">
               <TouchableOpacity
                 className="flex-1 py-3 px-4 bg-gray-100 rounded-xl mr-2"
                 onPress={handleClearFilters}
@@ -1210,6 +1292,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
           </View>
         </View>
       </Modal>
+
 
       {/* Stripe Connect WebView */}
       <StripeConnectWebView

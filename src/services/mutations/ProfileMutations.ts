@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { updatePassword, UpdatePasswordData, updateProfile, UpdateProfileData, uploadProfileImage, removeProfileImage } from "../apis/ProfileApis";
+import { updatePassword, UpdatePasswordData, updateProfile, UpdateProfileData, uploadProfileImage, removeProfileImage, validateCurrentPassword, ValidateCurrentPasswordData } from "../apis/ProfileApis";
 import Toast from 'react-native-toast-message';
 
 export const useUpdatePasswordMutation = () => {
@@ -11,7 +11,7 @@ export const useUpdatePasswordMutation = () => {
       Toast.show({
         type: 'success',
         text1: 'Password Updated',
-        text2: 'Your password has been changed successfully.',
+        text2: 'Your password has been\nchanged successfully.',
         position: 'top',
       });
     },
@@ -122,6 +122,35 @@ export const useRemoveProfileImageMutation = () => {
       Toast.show({
         type: 'error',
         text1: 'Image Removal Failed',
+        text2: errorMessage,
+        position: 'top',
+      });
+    },
+  });
+};
+
+export const useValidateCurrentPasswordMutation = () => {
+  return useMutation({
+    mutationFn: (payload: ValidateCurrentPasswordData) => validateCurrentPassword(payload),
+    onSuccess: (response) => {
+      console.log('🎉 Validate Current Password Success:', response);
+      
+      Toast.show({
+        type: 'success',
+        text1: 'Password Verified',
+        text2: 'Current password is correct.',
+        position: 'top',
+        visibilityTime: 2000,
+      });
+    },
+    onError: (error: any) => {
+      console.error('❌ Validate Current Password Error:', error);
+      
+      const errorMessage = error.message || 'Failed to validate current password.';
+      
+      Toast.show({
+        type: 'error',
+        text1: 'Validation Failed',
         text2: errorMessage,
         position: 'top',
       });

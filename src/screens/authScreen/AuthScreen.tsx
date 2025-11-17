@@ -15,7 +15,7 @@ import {
 import { CarouselButton } from '../../components/buttons';
 import useAuthStore from '../../store/useAuthStore';
 import EyeSvg from '../../assets/icons/Eye';
-import { useLoginMutation } from '../../services/mutations/AuthMutations';
+import { useLoginMutation, useCheckEmailAvailabilityMutation, useResendOtpMutation } from '../../services/mutations/AuthMutations';
 import Toast from 'react-native-toast-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -24,10 +24,11 @@ interface AuthScreenProps {
   onForgotPassword?: () => void;
   onSignup?: (email: string) => void;
   onCreateProfile?: () => void;
+  onSignupOTP?: (email: string, userData?: any) => void;
   clearDataOnMount?: boolean;
 }
 
-export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfile, clearDataOnMount }: AuthScreenProps) {
+export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfile, onSignupOTP, clearDataOnMount }: AuthScreenProps) {
   const [activeTab, setActiveTab] = useState<'signin' | 'signup'>('signin');
   const [formData, setFormData] = useState({
     email: '',
@@ -47,8 +48,21 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showCompleteAccountModal, setShowCompleteAccountModal] = useState(false);
   const [showInvalidCredentialsModal, setShowInvalidCredentialsModal] = useState(false);
+  const [showOtpVerificationModal, setShowOtpVerificationModal] = useState(false);
+  const [otpResponseData, setOtpResponseData] = useState<any>(null);
   const [savedCredentials, setSavedCredentials] = useState<Array<{email: string, password: string}>>([]);
   const [showEmailDropdown, setShowEmailDropdown] = useState(false);
+  
+  // Email availability checking
+  const [emailAvailability, setEmailAvailability] = useState<{
+    isChecking: boolean;
+    isAvailable: boolean | null;
+    message: string;
+  }>({
+    isChecking: false,
+    isAvailable: null,
+    message: '',
+  });
   
   // Refs for handling keyboard and scrolling
   const scrollViewRef = useRef<ScrollView>(null);
@@ -62,6 +76,11 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
   const setRegistrationData = useAuthStore((state) => state.setRegistrationData);
   const clearRegistrationData = useAuthStore((state) => state.clearRegistrationData);
   const loginMutation = useLoginMutation();
+  const emailCheckMutation = useCheckEmailAvailabilityMutation();
+  const resendOtpMutation = useResendOtpMutation();
+  
+  // Ref for debouncing email checks
+  const emailCheckTimeout = useRef<NodeJS.Timeout | null>(null);
 
   // Load saved credentials on component mount and auto-populate if available
   useEffect(() => {
@@ -109,6 +128,8 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
       setShowPrivacyModal(false);
       setShowCompleteAccountModal(false);
       setShowInvalidCredentialsModal(false);
+      setShowOtpVerificationModal(false);
+      setOtpResponseData(null);
       setShowEmailDropdown(false);
       
       // Clear registration data from auth store
@@ -250,7 +271,11 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
     if (activeTab === 'signin') {
       return formData.email && formData.password;
     } else {
-      return formData.email && formData.password && formData.confirmPassword && formData.agreeTerms;
+      // For signup, also check that email is available (not taken)
+      const emailIsValid = formData.email && formData.password && formData.confirmPassword && formData.agreeTerms;
+      const emailIsAvailable = !emailAvailability.isChecking && emailAvailability.isAvailable !== false;
+      
+      return emailIsValid && emailIsAvailable;
     }
   };
 
@@ -269,6 +294,34 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
           console.log('🔍 Token from response:', response.data?.token);
           console.log('🔍 Refresh token from response:', response.data?.refresh_token);
           console.log('🔍 User from response:', response.data?.user);
+          console.log('🔍 Requires OTP verification:', response.data?.requires_otp_verification);
+          
+          // Check if OTP verification is required
+          if (response.data?.requires_otp_verification && response.data?.otp_sent) {
+            console.log('🔐 OTP verification required, navigating to OTP screen...');
+            try {
+              // Call resend OTP API to ensure fresh OTP is sent
+              console.log('📧 Resending OTP to:', formData.email);
+              await resendOtpMutation.mutateAsync({ email: formData.email });
+              console.log('✅ OTP resent successfully');
+              
+              // Navigate directly to SignupOTPScreen
+              onSignupOTP?.(formData.email, response.data);
+              
+              // Clear form data after navigation
+              clearFormData();
+              
+              return;
+            } catch (error: any) {
+              console.error('❌ Failed to resend OTP:', error);
+              Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: 'Failed to resend OTP. Please try again.'
+              });
+              return;
+            }
+          }
           
           // Store tokens and user data atomically (API returns 'token' not 'access_token')
           if (response.data?.token) {
@@ -332,6 +385,95 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
     }
   };
 
+  // Handle OTP verification modal actions
+  const handleOtpVerificationModalClose = () => {
+    setShowOtpVerificationModal(false);
+    setOtpResponseData(null);
+  };
+
+  const handleProceedToOtpVerification = async () => {
+    try {
+      // Call resend OTP API to ensure fresh OTP is sent
+      console.log('📧 Resending OTP to:', formData.email);
+      await resendOtpMutation.mutateAsync({ email: formData.email });
+      console.log('✅ OTP resent successfully');
+      
+      // Close modal
+      setShowOtpVerificationModal(false);
+      
+      // Navigate to SignupOTPScreen
+      onSignupOTP?.(formData.email, otpResponseData);
+      
+      // Clear OTP response data
+      setOtpResponseData(null);
+    } catch (error: any) {
+      console.error('❌ Failed to resend OTP:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to resend OTP. Please try again.'
+      });
+    }
+  };
+
+  // Email availability checking function
+  const checkEmailAvailability = async (email: string) => {
+    // Don't check if email is empty or invalid
+    if (!email || !validateEmail(email)) {
+      setEmailAvailability({
+        isChecking: false,
+        isAvailable: null,
+        message: '',
+      });
+      return;
+    }
+
+    // Only check for signup tab
+    if (activeTab !== 'signup') {
+      return;
+    }
+
+    setEmailAvailability(prev => ({
+      ...prev,
+      isChecking: true,
+      message: 'Checking email availability...',
+    }));
+
+    try {
+      const response = await emailCheckMutation.mutateAsync(email);
+      
+      if (response.data.available) {
+        setEmailAvailability({
+          isChecking: false,
+          isAvailable: true,
+          message: '✓ Email is available',
+        });
+      } else {
+        // Use the specific message from the API response
+        const apiMessage = response.data.message || 'This email is already registered';
+        
+        setEmailAvailability({
+          isChecking: false,
+          isAvailable: false,
+          message: `✗ ${apiMessage}`,
+        });
+        
+        // Also set form error with the API message
+        setErrors(prev => ({
+          ...prev,
+          email: apiMessage,
+        }));
+      }
+    } catch (error: any) {
+      console.error('Email availability check failed:', error);
+      setEmailAvailability({
+        isChecking: false,
+        isAvailable: null,
+        message: '',
+      });
+    }
+  };
+
   const clearFormData = () => {
     setFormData({
       email: '',
@@ -348,6 +490,19 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
     // Reset password visibility to hidden state
     setShowPassword(false);
     setShowConfirmPassword(false);
+    
+    // Clear email availability state
+    setEmailAvailability({
+      isChecking: false,
+      isAvailable: null,
+      message: '',
+    });
+    
+    // Clear any pending email check timeout
+    if (emailCheckTimeout.current) {
+      clearTimeout(emailCheckTimeout.current);
+      emailCheckTimeout.current = null;
+    }
   };
 
   // Function to scroll to input when focused
@@ -384,10 +539,35 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
       if (field === 'email') {
         if (!value) {
           newErrors.email = 'Email is required';
+          // Clear email availability state when email is empty
+          setEmailAvailability({
+            isChecking: false,
+            isAvailable: null,
+            message: '',
+          });
         } else if (!validateEmail(value)) {
           newErrors.email = 'Please enter correct email';
+          // Clear email availability state for invalid emails
+          setEmailAvailability({
+            isChecking: false,
+            isAvailable: null,
+            message: '',
+          });
         } else {
           newErrors.email = '';
+          
+          // Debounced email availability check for signup tab only
+          if (activeTab === 'signup') {
+            // Clear previous timeout
+            if (emailCheckTimeout.current) {
+              clearTimeout(emailCheckTimeout.current);
+            }
+            
+            // Set new timeout for debounced check
+            emailCheckTimeout.current = setTimeout(() => {
+              checkEmailAvailability(value);
+            }, 800); // Wait 800ms after user stops typing
+          }
         }
       }
       
@@ -503,7 +683,7 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
                   <TextInput
                     ref={emailInputRef}
                     className={`px-4 py-3 rounded-xl border text-base bg-transparent ${
-                      errors.email ? 'border-red-500' : 'border-gray-200'
+                      errors.email ? 'border-red-500' : 'border-gray-300'
                     }`}
                     style={{ 
                       backgroundColor: 'transparent',
@@ -533,7 +713,7 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
                 
                 {/* Credential Dropdown */}
                 {showEmailDropdown && activeTab === 'signin' && savedCredentials.length > 0 && (
-                  <View className="absolute top-14 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-10 max-h-48">
+                  <View className="absolute top-14 left-0 right-0 bg-white border border-gray-300 rounded-xl shadow-lg z-10 max-h-48">
                     <View className="p-2">
                       <Text className="text-xs font-medium text-gray-500 px-2 py-1">Saved Accounts</Text>
                       {savedCredentials.map((credential, index) => (
@@ -569,6 +749,21 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
                   {errors.email ? (
                     <Text className="text-red-500 text-sm mt-1">{errors.email}</Text>
                   ) : null}
+                  
+                  {/* Email availability indicator (only for signup) */}
+                  {activeTab === 'signup' && emailAvailability.message && !errors.email && (
+                    <Text 
+                      className={`text-sm mt-1 ${
+                        emailAvailability.isChecking 
+                          ? 'text-gray-500' 
+                          : emailAvailability.isAvailable 
+                            ? 'text-green-600' 
+                            : 'text-red-500'
+                      }`}
+                    >
+                      {emailAvailability.message}
+                    </Text>
+                  )}
                 </View>
               </View>
               
@@ -581,7 +776,7 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
                   <TextInput
                     ref={passwordInputRef}
                     className={`px-4 py-3 rounded-xl border pr-12 text-base bg-transparent ${
-                      errors.password ? 'border-red-500' : 'border-gray-200'
+                      errors.password ? 'border-red-500' : 'border-gray-300'
                     }`}
                     style={{ 
                       backgroundColor: 'transparent',
@@ -626,7 +821,7 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
                     <TextInput
                       ref={confirmPasswordInputRef}
                       className={`px-4 py-3 rounded-xl border pr-12 text-base bg-transparent ${
-                        errors.confirmPassword ? 'border-red-500' : 'border-gray-200'
+                        errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
                       }`}
                       style={{ 
                         backgroundColor: 'transparent',
@@ -1009,6 +1204,75 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
                   Try Again
                 </Text>
               </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* OTP Verification Required Modal */}
+      <Modal
+        visible={showOtpVerificationModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={handleOtpVerificationModalClose}
+      >
+        <View className="flex-1 bg-black/50 justify-center items-center">
+          <View className="bg-white rounded-3xl w-full max-w-sm mx-4 border-4 border-[#71DFB1]">
+            <View className="p-6">
+              <View className="flex-row justify-between items-center mb-6">
+                <Text className="text-xl font-bold text-black">Account Verification Required</Text>
+                <TouchableOpacity 
+                  onPress={handleOtpVerificationModalClose}
+                  className="w-6 h-6 bg-black rounded-full items-center justify-center"
+                >
+                  <Text className="text-white text-sm">×</Text>
+                </TouchableOpacity>
+              </View>
+              
+              {/* Icon */}
+              <View className="items-center mb-6">
+                <View className="w-16 h-16 bg-blue-100 rounded-full items-center justify-center mb-4">
+                  <Text className="text-3xl">📧</Text>
+                </View>
+                <Text className="text-lg font-semibold text-gray-800 text-center mb-3">
+                  Email Verification Needed
+                </Text>
+                <Text className="text-sm text-gray-600 text-center leading-5">
+                  {otpResponseData?.note || "Your account is not verified yet. We've sent a new verification code to your email."}
+                </Text>
+              </View>
+
+              {/* Email info */}
+              <View className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+                <Text className="text-sm text-blue-800 font-medium mb-1">
+                  ✉️ Verification Code Sent
+                </Text>
+                <Text className="text-xs text-blue-700">
+                  Check your email "{formData.email}" for the verification code.
+                </Text>
+              </View>
+
+              {/* Action Buttons */}
+              <View className="gap-y-3">
+                <TouchableOpacity
+                  className="bg-[#44A27B] rounded-full py-4"
+                  onPress={handleProceedToOtpVerification}
+                  disabled={resendOtpMutation.isPending}
+                >
+                  <Text className="text-white text-center font-semibold text-base">
+                    {resendOtpMutation.isPending ? 'Sending...' : 'Verify Account'}
+                  </Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  className="bg-gray-100 rounded-full py-4 border border-gray-300"
+                  onPress={handleOtpVerificationModalClose}
+                >
+                  <Text className="text-gray-700 text-center font-semibold text-base">
+                    Cancel
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </View>

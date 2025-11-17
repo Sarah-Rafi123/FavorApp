@@ -98,6 +98,10 @@ export interface LoginResponse {
     token: string;
     refresh_token: string;
     expires_at: string;
+    // OTP verification fields
+    requires_otp_verification?: boolean;
+    otp_sent?: boolean;
+    note?: string;
   };
 }
 

@@ -43,7 +43,7 @@ export function PDFViewerModal({ visible, onClose, pdfUri, fileName }: PDFViewer
       <StatusBar barStyle="dark-content" backgroundColor="white" />
       <View className="flex-1 bg-white">
         {/* Header */}
-        <View className="pt-12 pb-4 px-4 bg-white border-b border-gray-200">
+        <View className="pt-12 pb-4 px-4 bg-white border-b border-gray-300">
           <View className="flex-row justify-between items-center">
             <View className="flex-1 pt-8 ">
               <Text className="text-lg font-semibold text-gray-800" numberOfLines={1}>

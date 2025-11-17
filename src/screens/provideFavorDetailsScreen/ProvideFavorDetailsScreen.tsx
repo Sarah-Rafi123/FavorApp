@@ -11,19 +11,22 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import BackSvg from '../../assets/icons/Back';
 import CancelSvg from '../../assets/icons/Cancel';
 import UserSvg from '../../assets/icons/User';
 import { useFavor, useFavorReviews } from '../../services/queries/FavorQueries';
-import { usePublicUserProfileQuery } from '../../services/queries/ProfileQueries';
-import { useDeleteFavor, useCompleteFavor, useCreateUserReview } from '../../services/mutations/FavorMutations';
+import { usePublicUserProfileQuery, useUserReviewStatisticsQuery } from '../../services/queries/ProfileQueries';
+import { useDeleteFavor, useCompleteFavor, useCreateUserReview, useCancelRequest } from '../../services/mutations/FavorMutations';
 import { Favor } from '../../services/apis/FavorApis';
 import { PublicUserProfile } from '../../services/apis/ProfileApis';
 import { Linking } from 'react-native';
 import Toast from 'react-native-toast-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import useAuthStore from '../../store/useAuthStore';
 
 interface ProvideFavorDetailsScreenProps {
   navigation?: any;
@@ -53,9 +56,12 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
   const [reviewText, setReviewText] = useState('');
   const [showTipOption, setShowTipOption] = useState(false);
   const [tipAmount, setTipAmount] = useState('');
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
 
   // Get favor ID from route params
   const favorId = route?.params?.favorId || route?.params?.favor?.id;
+  const isHistoryView = route?.params?.isHistoryView || false; // Flag to indicate viewing from history tab
   
   // Debug token status on screen load
   React.useEffect(() => {
@@ -77,7 +83,6 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
     
     checkTokenOnLoad();
   }, [favorId]);
-  
   // Fetch favor data using the API
   const { data: favorResponse, isLoading, error } = useFavor(favorId, {
     enabled: !!favorId
@@ -94,13 +99,76 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
     { enabled: !!favorResponse?.data.favor?.user?.id }
   );
 
+  // Fetch user review statistics for the requester
+  const { data: reviewStatisticsResponse, isLoading: reviewStatisticsLoading } = useUserReviewStatisticsQuery(
+    favorResponse?.data.favor?.user?.id || null,
+    { enabled: !!favorResponse?.data.favor?.user?.id }
+  );
+
   // Mutations
   const deleteFavorMutation = useDeleteFavor();
   const completeFavorMutation = useCompleteFavor();
   const createUserReviewMutation = useCreateUserReview();
+  const cancelRequestMutation = useCancelRequest();
+
+  // Debug logging for reviews data
+  React.useEffect(() => {
+    if (reviewsResponse?.data?.reviews) {
+      console.log('📊 ProvideFavorDetailsScreen Reviews Response:');
+      console.log('  - Total reviews:', reviewsResponse.data.reviews.length);
+      reviewsResponse.data.reviews.forEach((review, index) => {
+        console.log(`  - Review ${index + 1}:`, {
+          id: review.id,
+          rating: review.rating,
+          given_by_name: review.given_by?.full_name,
+          given_by_image: review.given_by?.image_url,
+          has_image: !!review.given_by?.image_url,
+          image_url_length: review.given_by?.image_url?.length
+        });
+      });
+    }
+  }, [reviewsResponse]);
+
+  // Debug logging for review statistics
+  React.useEffect(() => {
+    if (reviewStatisticsResponse?.data) {
+      console.log('📈 ProvideFavorDetailsScreen Review Statistics Response:');
+      console.log('  - User:', reviewStatisticsResponse.data.user);
+      console.log('  - Reviews as provider:', reviewStatisticsResponse.data.reviews_as_provider);
+      console.log('  - Reviews as requester:', reviewStatisticsResponse.data.reviews_as_requester);
+      console.log('  - Total:', reviewStatisticsResponse.data.total);
+      console.log('  - Total count displayed:', reviewStatisticsResponse.data.total.count);
+      console.log('  - Average rating displayed:', reviewStatisticsResponse.data.total.average_rating?.toFixed(1));
+    }
+  }, [reviewStatisticsResponse]);
 
   const favor = favorResponse?.data.favor;
   const userProfile = userProfileResponse?.data.user;
+  const currentUser = useAuthStore((state) => state.user);
+
+  // Debug: Log contact details availability
+  React.useEffect(() => {
+    if (favor && userProfile) {
+      console.log('🔍 ProvideFavorDetailsScreen Debug:');
+      console.log('📞 User Profile ID:', userProfile.id);
+      console.log('📞 User Profile Full Name:', userProfile.full_name);
+      console.log('📞 Phone Call:', userProfile.phone_no_call);
+      console.log('📞 Phone Text:', userProfile.phone_no_text);
+      console.log('📊 Favor Status:', favor.status);
+      console.log('🎯 Should Show Contact:', 
+        !!(userProfile?.phone_no_call || userProfile?.phone_no_text) && favor.status === 'in-progress'
+      );
+      console.log('📋 All User Profile Fields:', Object.keys(userProfile));
+    }
+  }, [favor, userProfile]);
+
+  // Check if current user has already reviewed this favor
+  const userHasReviewed = React.useMemo(() => {
+    if (!reviewsResponse?.data?.reviews || !currentUser?.id) return false;
+    return reviewsResponse.data.reviews.some(review => 
+      review.given_by?.id === currentUser.id
+    );
+  }, [reviewsResponse, currentUser]);
 
   const handleGoBack = () => {
     navigation?.goBack();
@@ -195,6 +263,8 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
     console.log('📊 Favor status:', favor.status);
     console.log('👤 Current user role: Provider');
     console.log('👥 Favor requester:', favor.user.full_name, '(ID:', favor.user.id + ')');
+    console.log('📚 Is history view:', isHistoryView);
+    console.log('✅ User has already reviewed:', userHasReviewed);
 
     // Check if favor is already completed
     if (favor.status === 'completed') {
@@ -251,23 +321,49 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
     console.log('🎯 Function: handleReviewSubmit()');
     console.log('📍 Location: ProvideFavorDetailsScreen.tsx');
     
-    if (!favor || rating === 0 || !reviewText.trim()) {
+    // Enhanced validation
+    if (!favor || rating === 0 || !reviewText.trim() || isSubmittingReview) {
       console.log('❌ Validation failed:');
       console.log('  - Favor exists:', !!favor);
       console.log('  - Rating provided:', rating);
       console.log('  - Review text provided:', !!reviewText.trim());
+      console.log('  - Review text length:', reviewText.trim().length);
+      
+      let errorMessage = 'Please provide ';
+      const missingFields = [];
+      
+      if (rating === 0) missingFields.push('a rating');
+      if (!reviewText.trim()) missingFields.push('review text');
+      
+      if (missingFields.length === 2) {
+        errorMessage += 'both a rating and review text.';
+      } else if (missingFields.length === 1) {
+        errorMessage += missingFields[0] + '.';
+      }
       
       Toast.show({
         type: 'error',
         text1: 'Incomplete Review',
-        text2: 'Please provide a rating\nand review text.',
+        text2: errorMessage,
         visibilityTime: 3000,
       });
 
       return;
     }
+    
+    // Check character limit
+    if (reviewText.trim().length > 200) {
+      Toast.show({
+        type: 'error',
+        text1: 'Review Too Long',
+        text2: 'Review must be 200 characters or less.',
+        visibilityTime: 3000,
+      });
+      return;
+    }
 
     try {
+      setIsSubmittingReview(true);
       console.log('\n🔐 === AUTHENTICATION CHECK ===');
       
       // Check auth token before making the API call
@@ -415,6 +511,8 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
       
       console.error('\n❌ === USER REVIEW SUBMISSION FAILED ===\n');
       // Error handling is done by the mutation's onError callback
+    } finally {
+      setIsSubmittingReview(false);
     }
   };
 
@@ -424,6 +522,35 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
     setReviewText('');
     setShowTipOption(false);
     setTipAmount('');
+  };
+
+  const handleCancelFavor = async () => {
+    if (!favor) return;
+
+    Alert.alert(
+      'Cancel Favor',
+      `Are you sure you want to cancel this favor request? This action cannot be undone.`,
+      [
+        { text: 'Keep Request', style: 'cancel' },
+        { 
+          text: 'Cancel Request',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              console.log('🚫 Canceling favor request:', favor.id);
+              await cancelRequestMutation.mutateAsync(favor.id);
+              console.log('✅ Favor request cancelled successfully');
+              
+              // Navigate back after successful cancellation
+              navigation?.goBack();
+            } catch (error: any) {
+              console.error('❌ Cancel favor request failed:', error);
+              // Error handling is done by the mutation's onError callback
+            }
+          }
+        }
+      ]
+    );
   };
 
   return (
@@ -453,7 +580,7 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
         contentContainerStyle={{ paddingBottom: 120 }}
       >
         {/* Favor Details Card */}
-        <View className="mx-4 mb-6 bg-white rounded-3xl p-6 border-4 border-[#71DFB1]">
+        <View className="mx-4 mb-6 bg-transparent rounded-3xl p-6 border-4 border-[#71DFB1]">
           {/* Favor Image */}
           <View className="items-center mb-6">
             <View className="w-32 h-24 rounded-2xl overflow-hidden items-center justify-center">
@@ -503,20 +630,20 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
                 <View className="flex-row">
                   <Text className="text-gray-700 text-base w-20">Type</Text>
                   <Text className="text-gray-700 text-base mr-2">:</Text>
-                  <Text className="text-green-600 text-base flex-1 font-semibold">Paid Favor</Text>
+                  <Text className="text-gray-700 text-base flex-1">Paid Favor</Text>
                 </View>
 
                 <View className="flex-row">
-                  <Text className="text-gray-700 text-base w-20">Tip</Text>
+                  <Text className="text-gray-700 text-base w-20">Favor Amount</Text>
                   <Text className="text-gray-700 text-base mr-2">:</Text>
-                  <Text className="text-gray-800 text-base flex-1 font-semibold">
+                  <Text className="text-gray-800 text-base flex-1">
                     ${parseFloat((favor.tip || 0).toString()).toFixed(2)}
                   </Text>
                 </View>
 
                 {favor.additional_tip && parseFloat((favor.additional_tip || 0).toString()) > 0 && (
                   <View className="flex-row">
-                    <Text className="text-gray-700 text-base w-20">Bonus</Text>
+                    <Text className="text-gray-700 text-base w-20">Tip</Text>
                     <Text className="text-gray-700 text-base mr-2">:</Text>
                     <Text className="text-green-600 text-base flex-1 font-semibold">
                       +${parseFloat((favor.additional_tip || 0).toString()).toFixed(2)}
@@ -527,7 +654,7 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
                 <View className="flex-row">
                   <Text className="text-gray-700 text-base w-20">Total</Text>
                   <Text className="text-gray-700 text-base mr-2">:</Text>
-                  <Text className="text-green-700 text-base flex-1 font-bold">
+                  <Text className="text-gray-700 text-base flex-1">
                     ${(
                       parseFloat((favor.tip || 0).toString()) + 
                       parseFloat((favor.additional_tip || 0).toString())
@@ -542,7 +669,7 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
               <View className="flex-row">
                 <Text className="text-gray-700 text-base w-20">Type</Text>
                 <Text className="text-gray-700 text-base mr-2">:</Text>
-                <Text className="text-blue-600 text-base flex-1 font-semibold">Free Favor</Text>
+                <Text className="text-gray-700 text-base flex-1 font-semibold">Free Favor</Text>
               </View>
             )}
 
@@ -552,6 +679,18 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
               <Text className="text-gray-800 text-base flex-1">{favor.description}</Text>
             </View>
           </View>
+
+          {/* Cancel Favor Button - Show inside details card for pending or in-progress status */}
+          {(favor.status === 'pending' || favor.status === 'in-progress') && (
+            <TouchableOpacity 
+              className="bg-green-500 rounded-full py-3 mt-4"
+              onPress={handleCancelFavor}
+            >
+              <Text className="text-white text-center font-medium text-base">
+                $0 | Cancel Favor
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Show requester information - "You helped" section */}
@@ -561,7 +700,7 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
               You are helping
             </Text>
             
-            <View className="flex-row items-center bg-white border rounded-2xl border-gray-300 p-4 border-1 mb-4">
+            <View className="flex-row items-center bg-transparent border rounded-2xl border-gray-300 p-4 border-1 mb-4">
               <View className="relative">
                 <View className="w-20 h-16 bg-[#44A27B] rounded-xl overflow-hidden items-center justify-center">
                   {userProfile?.image_url ? (
@@ -594,62 +733,81 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
                 <Text className="text-lg font-semibold text-black">
                   {favor.user.full_name}
                 </Text>
-                {favor.user.rating && (
-                  <View className="flex-row items-center">
-                    <Text className="text-gray-600 text-sm">⭐ {favor.user.rating.toFixed(1)} | </Text>
-                    <Text className="text-gray-600 text-sm">
-                      {reviewsResponse?.data?.reviews?.length || 0} Reviews
-                    </Text>
-                  </View>
-                )}
+                <View className="flex-row items-center">
+                  <Text className="text-gray-600 text-sm">
+                    ⭐ {reviewStatisticsResponse?.data?.total?.average_rating?.toFixed(1) || '0.0'} | {reviewStatisticsResponse?.data?.total?.count || 0} Reviews
+                  </Text>
+                </View>
                 {userProfile?.years_of_experience && (
                   <Text className="text-gray-600 text-sm">{userProfile.years_of_experience} years experience</Text>
                 )}
-             
-                <TouchableOpacity onPress={() => navigation?.navigate('UserProfileScreen', { userId: favor.user.id })}>
+                
+                <TouchableOpacity onPress={() => navigation?.navigate('UserProfileScreen', { userId: favor.user.id, favorStatus: favor.status })}>
                   <Text className="text-[#44A27B] text-sm font-medium">View Profile</Text>
                 </TouchableOpacity>
               </View>
             </View>
 
-            {/* Contact Buttons */}
-            {/* {(userProfile?.phone_no_call || userProfile?.phone_no_text) && (
-              <View className="flex-row mb-4">
-                {userProfile?.phone_no_call && (
-                  <TouchableOpacity 
-                    className={`flex-1 bg-transparent border border-black rounded-xl py-3 px-2 ${
-                      userProfile?.phone_no_text ? 'mr-2' : ''
-                    }`}
-                    onPress={() => handleCallNumber(userProfile.phone_no_call)}
-                  >
-                    <Text className="text-center text-gray-800 font-medium text-sm">
-                      Call: {userProfile.phone_no_call}
+            {/* Contact Details - Show for in_progress status */}
+            {favor.status === 'in-progress' && userProfile && (
+              <View className="mx-4 mb-4">
+                <View className="flex-row">
+                  {userProfile.phone_no_call && (
+                    <TouchableOpacity 
+                      className="flex-1 bg-transparent border border-gray-400 rounded-xl py-3 px-4 mr-2"
+                      onPress={() => handleCallNumber(userProfile.phone_no_call)}
+                    >
+                      <Text className="text-gray-800 text-center font-medium text-sm">
+                        Call: {userProfile.phone_no_call}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {userProfile.phone_no_text && (
+                    <TouchableOpacity 
+                      className="flex-1 bg-transparent border border-gray-400 rounded-xl py-3 px-4"
+                      onPress={() => handleTextNumber(userProfile.phone_no_text)}
+                    >
+                      <Text className="text-gray-800 text-center font-medium text-sm">
+                        Text: {userProfile.phone_no_text}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                {(!userProfile.phone_no_call && !userProfile.phone_no_text) && (
+                  <View className="mt-1">
+                    <Text className="text-gray-500 text-sm italic text-center">
+                      Contact details not available
                     </Text>
-                  </TouchableOpacity>
-                )}
-                {userProfile?.phone_no_text && (
-                  <TouchableOpacity 
-                    className={`flex-1 bg-transparent border border-black rounded-xl py-3 px-2 ${
-                      userProfile?.phone_no_call ? 'ml-2' : ''
-                    }`}
-                    onPress={() => handleTextNumber(userProfile.phone_no_text)}
-                  >
-                    <Text className="text-center text-gray-800 font-medium text-sm">
-                      Text: {userProfile.phone_no_text}
-                    </Text>
-                  </TouchableOpacity>
+                  </View>
                 )}
               </View>
-            )} */}
+            )}
 
             {/* Submit Review Button */}
-            {favor.status === 'completed' && (
+            {favor.status === 'completed' && !userHasReviewed && (
               <TouchableOpacity 
-                className="bg-[#44A27B] rounded-xl py-3 mb-4"
+                className={`rounded-xl py-3 mb-4 ${isSubmittingReview ? 'bg-gray-400' : 'bg-[#44A27B]'}`}
                 onPress={handleSubmitReview}
+                disabled={isSubmittingReview}
               >
-                <Text className="text-white text-center font-medium text-base">Submit Review</Text>
+                {isSubmittingReview ? (
+                  <View className="flex-row justify-center items-center">
+                    <ActivityIndicator size="small" color="white" />
+                    <Text className="text-white text-center font-medium text-base ml-2">Loading...</Text>
+                  </View>
+                ) : (
+                  <Text className="text-white text-center font-medium text-base">Submit Review</Text>
+                )}
               </TouchableOpacity>
+            )}
+            
+            {/* Review Status Message */}
+            {favor.status === 'completed' && userHasReviewed && (
+              <View className="bg-gray-100 rounded-xl py-3 mb-4">
+                <Text className="text-gray-600 text-center font-medium text-base">✓ You have already reviewed this favor</Text>
+              </View>
             )}
           </View>
         )}
@@ -662,11 +820,40 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
             </Text>
             
             {reviewsResponse.data.reviews.map((review, index) => (
-              <View key={index} className="bg-white rounded-2xl p-4 mb-3 border border-gray-200">
+              <View key={index} className="bg-transparent rounded-2xl p-4 mb-3 border border-gray-300">
                 {/* Reviewer Info */}
                 <View className="flex-row items-center mb-3">
                   <View className="w-10 h-10 bg-[#44A27B] rounded-full overflow-hidden items-center justify-center">
-                    <UserSvg focused={false} />
+                    {review.given_by?.image_url && 
+                     review.given_by.image_url.trim() !== '' && 
+                     !failedImages.has(review.given_by.image_url) ? (
+                      <Image
+                        source={{ 
+                          uri: review.given_by.image_url,
+                          cache: 'force-cache'
+                        }}
+                        className="w-full h-full"
+                        resizeMode="cover"
+                        onError={(error) => {
+                          console.log('❌ Failed to load review image for', review.given_by?.full_name, ':', review.given_by.image_url);
+                          console.log('Error details:', error.nativeEvent?.error);
+                          if (review.given_by?.image_url) {
+                            setFailedImages(prev => new Set(prev).add(review.given_by.image_url!));
+                          }
+                        }}
+                        onLoad={() => {
+                          console.log('✅ Successfully loaded review image for', review.given_by?.full_name);
+                        }}
+                        style={{ width: '100%', height: '100%' }}
+                      />
+                    ) : (
+                      <Text className="text-white font-bold text-sm">
+                        {review.given_by?.full_name 
+                          ? review.given_by.full_name.split(' ').map(name => name[0]).join('').toUpperCase()
+                          : 'A'
+                        }
+                      </Text>
+                    )}
                   </View>
                   <View className="ml-3 flex-1">
                     <Text className="text-base font-semibold text-gray-800">
@@ -707,74 +894,113 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
         animationType="fade"
         onRequestClose={handleReviewModalClose}
       >
-        <View className="flex-1 bg-black/50 justify-center items-center px-6">
-          <View className="bg-white rounded-3xl p-6 max-w-sm w-full border-4 border-green-400 relative">
-            {/* Close Button */}
-            <TouchableOpacity 
-              className="absolute top-4 right-4 w-8 h-8 bg-black rounded-full items-center justify-center"
-              onPress={handleReviewModalClose}
+        <KeyboardAvoidingView 
+          className="flex-1" 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        >
+          <View className="flex-1 bg-black/50 justify-center items-center px-6">
+            <ScrollView
+              contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center' }}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
             >
-              <Text className="text-white font-bold text-lg">×</Text>
-            </TouchableOpacity>
-
-            {/* Modal Title */}
-            <Text className="text-gray-800 text-lg font-semibold text-center mb-6 mt-4">
-              Give "{favor.user.full_name}" Feedback
-            </Text>
-
-            {/* Star Rating */}
-            <View className="flex-row justify-center mb-6">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <TouchableOpacity
-                  key={star}
-                  onPress={() => {
-                    if (rating === star) {
-                      // If clicking on the same star, decrease by 1
-                      setRating(star - 1);
-                    } else {
-                      // If clicking on a different star, set to that rating
-                      setRating(star);
-                    }
-                  }}
-                  className="mx-1"
+              <View className="bg-[#FBFFF0] rounded-3xl p-6 max-w-screen-2xl w-full border-4 border-[#71DFB1] relative my-4">
+                {/* Close Button */}
+                <TouchableOpacity 
+                  className="absolute top-4 right-4 w-6 h-6 bg-black rounded-full items-center justify-center z-10"
+                  onPress={handleReviewModalClose}
                 >
-                  <Svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-                    <Path
-                      d="M14 2L17.09 8.26L24 9.27L19 14.14L20.18 21.02L14 17.77L7.82 21.02L9 14.14L4 9.27L10.91 8.26L14 2Z"
-                      fill={rating >= star ? "#FCD34D" : "none"}
-                      stroke="#D1D5DB"
-                      strokeWidth="1.5"
-                      strokeLinejoin="round"
-                    />
-                  </Svg>
+                  <Text className="text-white font-bold text-base">×</Text>
                 </TouchableOpacity>
-              ))}
-            </View>
+
+                {/* Modal Title */}
+                <Text className="text-gray-800 text-lg font-semibold text-center mb-6 mt-4">
+                  Give "{favor.user.full_name}" Feedback
+                </Text>
+
+                {/* Star Rating */}
+                <View className="mb-4">
+                
+                  <View className="flex-row justify-center mb-6">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <TouchableOpacity
+                        key={star}
+                        onPress={() => {
+                          if (rating === star) {
+                            // If clicking on the same star, decrease by 1
+                            setRating(star - 1);
+                          } else {
+                            // If clicking on a different star, set to that rating
+                            setRating(star);
+                          }
+                        }}
+                        className="mx-1"
+                      >
+                        <Svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+                          <Path
+                            d="M14 2L17.09 8.26L24 9.27L19 14.14L20.18 21.02L14 17.77L7.82 21.02L9 14.14L4 9.27L10.91 8.26L14 2Z"
+                            fill={rating >= star ? "#FCD34D" : "none"}
+                            stroke="#D1D5DB"
+                            strokeWidth="1.5"
+                            strokeLinejoin="round"
+                          />
+                        </Svg>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
 
             {/* Review Text Input */}
             <View className="mb-4">
-              <Text className="text-gray-700 text-base font-medium mb-2">Write Review</Text>
+              <View className="flex-row justify-between items-center mb-2">
+                <Text className="text-gray-700 text-base font-medium">Write Review *</Text>
+                <Text className={`text-sm ${
+                  reviewText.length > 200 ? 'text-red-500' : 
+                  reviewText.length > 180 ? 'text-yellow-500' : 'text-gray-500'
+                }`}>
+                  {reviewText.length}/200
+                </Text>
+              </View>
               <TextInput
-                className="border border-gray-300 rounded-xl p-4 h-24 text-base"
+                className={`border rounded-xl p-4 h-24 text-base ${
+                  reviewText.length > 200 ? 'border-red-500' : 'border-gray-300'
+                }`}
                 placeholder="Share your experience..."
                 placeholderTextColor="#9CA3AF"
                 multiline
                 textAlignVertical="top"
                 value={reviewText}
                 onChangeText={setReviewText}
+                maxLength={250} // Allow slight overage for better UX
               />
+              {reviewText.length > 200 && (
+                <Text className="text-red-500 text-sm mt-1">
+                  Review exceeds 200 character limit
+                </Text>
+              )}
             </View>
 
 
-            {/* Submit Button */}
-            <TouchableOpacity 
-              className="bg-green-500 rounded-full py-4 mt-6"
-              onPress={handleReviewSubmit}
-            >
-              <Text className="text-white text-center font-semibold text-lg">Submit Review</Text>
-            </TouchableOpacity>
+                {/* Submit Button */}
+                <TouchableOpacity 
+                  className={`rounded-full py-4 mt-6 ${isSubmittingReview || rating === 0 || !reviewText.trim() || reviewText.length > 200 ? 'bg-gray-400' : 'bg-green-500'}`}
+                  onPress={handleReviewSubmit}
+                  disabled={isSubmittingReview || rating === 0 || !reviewText.trim() || reviewText.length > 200}
+                >
+                  {isSubmittingReview ? (
+                    <View className="flex-row justify-center items-center">
+                      <ActivityIndicator size="small" color="white" />
+                      <Text className="text-white text-center font-semibold text-lg ml-2">Submitting...</Text>
+                    </View>
+                  ) : (
+                    <Text className="text-white text-center font-semibold text-lg">Submit Review</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </ImageBackground>
   );

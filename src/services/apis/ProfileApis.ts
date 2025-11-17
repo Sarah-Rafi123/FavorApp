@@ -10,6 +10,8 @@ export interface UpdateProfileData {
     middle_name?: string;
     phone_no_call?: string;
     phone_no_text?: string;
+    date_of_birth?: string;
+    age?: number;
     years_of_experience?: number;
     about_me?: string;
     skills?: string[];
@@ -61,6 +63,19 @@ export interface UpdatePasswordResponse {
       email: string;
       updated_at: string;
     };
+  };
+  message: string;
+}
+
+// Validate Current Password Types
+export interface ValidateCurrentPasswordData {
+  current_password: string;
+}
+
+export interface ValidateCurrentPasswordResponse {
+  success: boolean;
+  data: {
+    valid: boolean;
   };
   message: string;
 }
@@ -159,6 +174,7 @@ export interface ProviderProfileResponse {
 export interface UserReviewsParams {
   page?: number;
   per_page?: number;
+  role?: 'requester' | 'provider';
 }
 
 export interface UserReviewsResponse {
@@ -185,6 +201,34 @@ export interface UserReviewsResponse {
       prev_page: number | null;
     };
   };
+}
+
+// User Review Statistics Types
+export interface UserReviewStatistics {
+  user: {
+    id: number;
+    first_name: string;
+    last_name: string;
+    full_name: string;
+  };
+  reviews_as_provider: {
+    count: number;
+    average_rating: number;
+  };
+  reviews_as_requester: {
+    count: number;
+    average_rating: number;
+  };
+  total: {
+    count: number;
+    average_rating: number;
+  };
+}
+
+export interface UserReviewStatisticsResponse {
+  success: boolean;
+  data: UserReviewStatistics;
+  message?: string;
 }
 
 // Export Profile Types
@@ -385,6 +429,52 @@ export const updatePassword = async (data: UpdatePasswordData): Promise<UpdatePa
   }
 };
 
+export const validateCurrentPassword = async (data: ValidateCurrentPasswordData): Promise<ValidateCurrentPasswordResponse> => {
+  try {
+    console.log(`🚀 Making Validate Current Password API call to: /profile/validate_current_password`);
+    
+    const response = await axiosInstance.post('/profile/validate_current_password', data, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    console.log('🎉 Validate Current Password API Success!');
+    console.log('📊 Response Status:', response.status);
+    console.log('📄 Full API Response:', JSON.stringify(response.data, null, 2));
+    
+    return response.data;
+  } catch (error: any) {
+    console.error('❌ Validate Current Password API Error!');
+    console.error('📄 Full API Error:', error);
+    console.error('📊 Error Response Status:', error.response?.status);
+    console.error('📄 Error Response Data:', JSON.stringify(error.response?.data, null, 2));
+    
+    // Handle specific error scenarios based on status codes
+    if (error.response?.status === 401) {
+      const errorData = error.response?.data;
+      if (errorData?.errors?.includes('Current password is incorrect')) {
+        throw new Error('Current password is incorrect');
+      } else {
+        throw new Error('Authentication failed. Please try again.');
+      }
+    } else if (error.response?.status === 400) {
+      const errorData = error.response?.data;
+      if (errorData?.errors?.includes('current_password is required')) {
+        throw new Error('Please enter your current password');
+      } else if (errorData?.errors && Array.isArray(errorData.errors)) {
+        throw new Error(errorData.errors.join(', '));
+      } else {
+        throw new Error('Validation failed. Please check your input.');
+      }
+    } else if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    } else {
+      throw new Error('Failed to validate password. Please check your connection and try again.');
+    }
+  }
+};
+
 export const uploadProfileImage = async (imageFile: any): Promise<UploadImageResponse> => {
   try {
     console.log(`🚀 Making Upload Profile Image API call to: /profile/upload_image`);
@@ -570,6 +660,7 @@ export const getUserReviews = async (
     const queryParams = new URLSearchParams();
     if (params.page) queryParams.append('page', params.page.toString());
     if (params.per_page) queryParams.append('per_page', params.per_page.toString());
+    if (params.role) queryParams.append('role', params.role);
     
     const url = `/users/${userId}/reviews${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     
@@ -595,6 +686,36 @@ export const getUserReviews = async (
       throw new Error(error.response.data.message);
     } else {
       throw new Error('Failed to load user reviews. Please check your connection and try again.');
+    }
+  }
+};
+
+export const getUserReviewStatistics = async (userId: number): Promise<UserReviewStatisticsResponse> => {
+  try {
+    console.log(`🚀 Making Get User Review Statistics API call to: /users/${userId}/review_statistics`);
+    
+    const response = await axiosInstance.get(`/users/${userId}/review_statistics`);
+    
+    console.log('🎉 Get User Review Statistics API Success!');
+    console.log('📊 Response Status:', response.status);
+    console.log('📄 Full API Response:', JSON.stringify(response.data, null, 2));
+    
+    return response.data;
+  } catch (error: any) {
+    console.error('❌ Get User Review Statistics API Error!');
+    console.error('📄 Full API Error:', error);
+    console.error('📊 Error Response Status:', error.response?.status);
+    console.error('📄 Error Response Data:', JSON.stringify(error.response?.data, null, 2));
+    
+    // Handle specific error scenarios based on status codes
+    if (error.response?.status === 404) {
+      throw new Error('User not found');
+    } else if (error.response?.status === 401) {
+      throw new Error('Authentication required');
+    } else if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    } else {
+      throw new Error('Failed to load user review statistics. Please check your connection and try again.');
     }
   }
 };

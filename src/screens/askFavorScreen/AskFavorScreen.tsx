@@ -16,7 +16,7 @@ import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplet
 import { useCreateFavor, useCreateFavorWithImage, buildFavorFormData } from '../../services/mutations/FavorMutations';
 import { CreateFavorRequest } from '../../services/apis/FavorApis';
 import { usePaymentMethods } from '../../services/queries/PaymentMethodQueries';
-import ImagePicker from 'react-native-image-crop-picker';
+import { ImagePickerUtils } from '../../utils/ImagePickerUtils';
 import BackSvg from '../../assets/icons/Back';
 
 interface AskFavorScreenProps {
@@ -172,9 +172,9 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
     try {
       console.log('📷 Browse File button clicked');
       
-      // Check if ImagePicker is available
-      if (!ImagePicker) {
-        console.error('❌ ImagePicker not available');
+      // Check if ImagePickerUtils is available
+      if (!ImagePickerUtils) {
+        console.error('❌ ImagePickerUtils not available');
         Alert.alert(
           'Feature Not Available',
           'Image picker is not available on this device.'
@@ -202,37 +202,19 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
       // Add a small delay to ensure modal is fully closed
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      const image = await ImagePicker.openPicker({
-        width: 800,
-        height: 600,
-        cropping: true,
-        compressImageQuality: 0.8,
-        mediaType: 'photo',
-        includeBase64: false,
-        // Android cropper customization for proper status bar handling
-        cropperStatusBarColor: '#71DFB1',
-        cropperToolbarColor: '#71DFB1',
-        cropperToolbarWidgetColor: '#FFFFFF',
-        cropperToolbarTitle: 'Edit Photo',
-      });
+      const result = await ImagePickerUtils.openImageLibrary();
       
-      // Check file size (10MB limit)
-      if (image.size && image.size > 10 * 1024 * 1024) {
-        Alert.alert('Error', 'Image file is too large. Please choose an image smaller than 10MB.');
-        return;
+      if (result) {
+        // Set the selected image
+        setSelectedImage({
+          uri: result.uri,
+          type: result.type,
+          name: result.name,
+          fileSize: result.fileSize,
+        });
       }
-
-      // Set the selected image
-      setSelectedImage({
-        uri: image.path,
-        type: image.mime || 'image/jpeg',
-        name: image.filename || `photo_${Date.now()}.jpg`,
-        fileSize: image.size,
-      });
     } catch (error: any) {
-      if (error.code !== 'E_PICKER_CANCELLED') {
-        Alert.alert('Error', 'Failed to select image. Please try again.');
-      }
+      Alert.alert('Error', 'Failed to select image. Please try again.');
     } finally {
       // Ensure modal is definitely closed
       setShowImageOptions(false);
@@ -246,37 +228,19 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
       // Add a small delay to ensure modal is fully closed
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      const image = await ImagePicker.openCamera({
-        width: 800,
-        height: 800,
-        cropping: true,
-        compressImageQuality: 0.8,
-        mediaType: 'photo',
-        includeBase64: false,
-        // Android cropper customization for proper status bar handling
-        cropperStatusBarColor: '#71DFB1',
-        cropperToolbarColor: '#71DFB1',
-        cropperToolbarWidgetColor: '#FFFFFF',
-        cropperToolbarTitle: 'Edit Photo',
-      });
+      const result = await ImagePickerUtils.openCamera();
       
-      // Check file size (10MB limit)
-      if (image.size && image.size > 10 * 1024 * 1024) {
-        Alert.alert('Error', 'Image file is too large. Please choose an image smaller than 10MB.');
-        return;
+      if (result) {
+        // Set the selected image
+        setSelectedImage({
+          uri: result.uri,
+          type: result.type,
+          name: result.name,
+          fileSize: result.fileSize,
+        });
       }
-
-      // Set the selected image
-      setSelectedImage({
-        uri: image.path,
-        type: image.mime || 'image/jpeg',
-        name: `camera_${Date.now()}.jpg`,
-        fileSize: image.size,
-      });
     } catch (error: any) {
-      if (error.code !== 'E_PICKER_CANCELLED') {
-        Alert.alert('Error', 'Failed to take photo. Please try again.');
-      }
+      Alert.alert('Error', 'Failed to take photo. Please try again.');
     } finally {
       // Ensure modal is definitely closed
       setShowImageOptions(false);
@@ -557,7 +521,7 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
               Time to complete
             </Text>
             <TouchableOpacity
-              className="px-4 py-3 rounded-xl border border-gray-200 bg-transparent flex-row justify-between items-center"
+              className="px-4 py-3 rounded-xl border border-gray-300 bg-transparent flex-row justify-between items-center"
               style={{ height: 56 }}
               onPress={() => setShowTimeDropdown(true)}
             >
@@ -587,11 +551,11 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
               <View>
                 <View className="mb-4">
                   <Text className="text-sm font-medium text-gray-700 mb-2">
-                    Tip Amount ($) *
+                    Favor Amount ($) *
                   </Text>
                   <TextInput
                     className={`px-4 py-3 rounded-xl border text-base bg-transparent ${
-                      errors.tip ? 'border-red-500' : 'border-gray-200'
+                      errors.tip ? 'border-red-500' : 'border-gray-300'
                     }`}
                     style={{
                       backgroundColor: 'transparent',
@@ -618,7 +582,7 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
                     Additional Tip ($) - Optional
                   </Text>
                   <TextInput
-                    className="px-4 py-3 rounded-xl border border-gray-200 text-base bg-transparent"
+                    className="px-4 py-3 rounded-xl border border-gray-300 text-base bg-transparent"
                     style={{
                       backgroundColor: 'transparent',
                       fontSize: 16,
@@ -646,7 +610,7 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
               Address
             </Text>
             <TouchableOpacity
-              className={`px-4 py-4 rounded-xl border ${errors.address ? 'border-red-500' : 'border-gray-200'} bg-transparent`}
+              className={`px-4 py-4 rounded-xl border ${errors.address ? 'border-red-500' : 'border-gray-300'} bg-transparent`}
               onPress={() => setShowAddressModal(true)}
             >
               <Text className={`text-base ${formData.address ? 'text-black' : 'text-gray-400'}`}>
@@ -666,7 +630,7 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
             </Text>
             <TextInput
               className={`px-4 py-3 rounded-xl border text-base bg-transparent ${
-                errors.description ? 'border-red-500' : 'border-gray-200'
+                errors.description ? 'border-red-500' : 'border-gray-300'
               }`}
               style={{
                 backgroundColor: 'transparent',
@@ -696,7 +660,7 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
 
           {/* File Upload Section */}
           <View className="mb-8">
-            <View className="bg-transparent border border-gray-200 rounded-2xl p-8 items-center">
+            <View className="bg-transparent border border-gray-300 rounded-2xl p-8 items-center">
               {selectedImage ? (
                 <View className="items-center">
                   <Image 
@@ -793,7 +757,7 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
           style={{ pointerEvents: 'auto' }}
         >
           <View className="bg-white rounded-xl max-w-sm mx-auto w-full" style={{ pointerEvents: 'auto' }}>
-            <View className="py-4 border-b border-gray-200">
+            <View className="py-4 border-b border-gray-300">
               <Text className="text-lg font-semibold text-gray-800 text-center">
                 Time to Complete
               </Text>
@@ -829,7 +793,7 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
           style={{ pointerEvents: 'auto' }}
         >
           <View className="bg-white rounded-2xl max-w-sm mx-auto w-full" style={{ pointerEvents: 'auto' }}>
-            <View className="py-6 border-b border-gray-200">
+            <View className="py-6 border-b border-gray-300">
               <Text className="text-xl font-bold text-gray-800 text-center">
                 Select Image
               </Text>
@@ -896,7 +860,7 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
       >
         <View className="flex-1 bg-black/50">
           <View className="flex-1 bg-[#FBFFF0] mt-20 rounded-t-3xl">
-            <View className="flex-row justify-between items-center p-6 border-b border-gray-200">
+            <View className="flex-row justify-between items-center p-6 border-b border-gray-300">
               <Text className="text-xl font-bold text-gray-800">Search Address</Text>
               <TouchableOpacity onPress={() => setShowAddressModal(false)}>
                 <Text className="text-gray-500 text-lg">✕</Text>
@@ -1017,7 +981,6 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
           </View>
         </View>
       </Modal>
-
     </ImageBackground>
   );
 }

@@ -11,6 +11,7 @@ import {
   Alert,
   Linking,
 } from 'react-native';
+import { BlurView } from '@react-native-community/blur';
 import BackSvg from '../../assets/icons/Back';
 import UserSvg from '../../assets/icons/User';
 import { usePublicUserProfileQuery, useUserReviewsQuery } from '../../services/queries/ProfileQueries';
@@ -27,11 +28,47 @@ const VerifiedIcon = () => (
   </View>
 );
 
+const BlurredContactInfo = ({ children, shouldBlur }: { children: string; shouldBlur: boolean }) => {
+  if (!shouldBlur) {
+    return (
+      <Text className="text-gray-800 text-base" numberOfLines={1} ellipsizeMode="tail">
+        {children}
+      </Text>
+    );
+  }
+
+  return (
+    <View style={{
+      position: 'relative',
+      borderRadius: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      overflow: 'hidden',
+    }}>
+      <Text className="text-gray-800 text-base" numberOfLines={1} ellipsizeMode="tail">
+        {children}
+      </Text>
+      <BlurView
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+        }}
+        blurType="light"
+        blurAmount={30}
+      />
+    </View>
+  );
+};
+
 export function UserProfileScreen({ navigation, route }: UserProfileScreenProps) {
   const [currentPage, setCurrentPage] = useState(1);
   
-  // Get user ID from route params
+  // Get user ID and favor status from route params
   const userId = route?.params?.userId;
+  const favorStatus = route?.params?.favorStatus;
   
   // Fetch user profile data
   const { data: userProfileResponse, isLoading: profileLoading, error: profileError } = usePublicUserProfileQuery(
@@ -50,6 +87,26 @@ export function UserProfileScreen({ navigation, route }: UserProfileScreenProps)
   const reviews = reviewsResponse?.data.reviews || [];
   const statistics = reviewsResponse?.data.statistics;
   const meta = reviewsResponse?.data.meta;
+
+  // Debug: Log all user profile data to see what's available
+  React.useEffect(() => {
+    if (userProfile) {
+      console.log('📊 Complete User Profile Data:', JSON.stringify(userProfile, null, 2));
+      console.log('🔍 Available fields:', Object.keys(userProfile));
+    }
+  }, [userProfile]);
+
+  // Helper to determine if contact info should be visible (not blurred)
+  const shouldShowClearContactInfo = favorStatus === 'in_progress' || favorStatus === 'in-progress' || favorStatus === 'completed';
+  
+  // Debug: Log favor status to track contact info visibility
+  React.useEffect(() => {
+    console.log('🎯 UserProfileScreen navigation params:', {
+      userId,
+      favorStatus,
+      shouldShowClearContactInfo
+    });
+  }, [userId, favorStatus, shouldShowClearContactInfo]);
 
   const handleGoBack = () => {
     navigation?.goBack();
@@ -170,7 +227,7 @@ export function UserProfileScreen({ navigation, route }: UserProfileScreenProps)
         contentContainerStyle={{ paddingBottom: 120 }}
       >
         {/* Profile Header */}
-        <View className="mx-4 mb-6 bg-white rounded-3xl p-6 border-4 border-[#71DFB1]">
+        <View className="mx-4 mb-6 bg-[#FBFFF0] rounded-3xl p-6 border-4 border-[#71DFB1]">
           {/* Profile Photo */}
           <View className="items-center mb-6">
             <View className="relative">
@@ -222,15 +279,17 @@ export function UserProfileScreen({ navigation, route }: UserProfileScreenProps)
               </View>
             )}
 
-            <View className="flex-row">
-              <Text className="text-gray-700 text-base w-32">Location</Text>
-              <Text className="text-gray-700 text-base mr-2">:</Text>
-              <View className="flex-1">
-                <Text className="text-gray-800 text-base" numberOfLines={2} ellipsizeMode="tail">
-                  {userProfile.address?.city}, {userProfile.address?.state}
-                </Text>
+            {(userProfile.address?.city || userProfile.address?.state) && (
+              <View className="flex-row">
+                <Text className="text-gray-700 text-base w-32">Location</Text>
+                <Text className="text-gray-700 text-base mr-2">:</Text>
+                <View className="flex-1">
+                  <Text className="text-gray-800 text-base" numberOfLines={2} ellipsizeMode="tail">
+                    {[userProfile.address?.city, userProfile.address?.state].filter(Boolean).join(', ')}
+                  </Text>
+                </View>
               </View>
-            </View>
+            )}
 
             <View className="flex-row">
               <Text className="text-gray-700 text-base w-32">Member Since</Text>
@@ -273,8 +332,8 @@ export function UserProfileScreen({ navigation, route }: UserProfileScreenProps)
                 <View className="flex-1">
                   <View className="flex-row flex-wrap" style={{ gap: 4 }}>
                     {userProfile.skills.map((skill, index) => (
-                      <View key={index} className="bg-gray-100 rounded-full px-3 py-1 mb-2" style={{ marginRight: 4 }}>
-                        <Text className="text-gray-800 text-sm" numberOfLines={1} ellipsizeMode="tail">
+                      <View key={index} className="bg-[#DCFBCC] rounded-full px-3 py-1 mb-2" style={{ marginRight: 4 }}>
+                        <Text className="text-green-500 text-sm" numberOfLines={1} ellipsizeMode="tail">
                           {skill}
                         </Text>
                       </View>
@@ -283,6 +342,136 @@ export function UserProfileScreen({ navigation, route }: UserProfileScreenProps)
                 </View>
               </View>
             )}
+
+            {userProfile.other_skills && (
+              <View className="flex-row items-start">
+                <Text className="text-gray-700 text-base w-32">Other Skills</Text>
+                <Text className="text-gray-700 text-base mr-2">:</Text>
+                <View className="flex-1">
+                  <Text className="text-gray-800 text-base leading-5" style={{ flexWrap: 'wrap' }}>
+                    {userProfile.other_skills}
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            {/* Contact info - always show with conditional blur */}
+            {userProfile.email && (
+              <View className="flex-row">
+                <Text className="text-gray-700 text-base w-32">Email</Text>
+                <Text className="text-gray-700 text-base mr-2">:</Text>
+                <View className="flex-1">
+                  <BlurredContactInfo shouldBlur={!shouldShowClearContactInfo}>
+                    {userProfile.email}
+                  </BlurredContactInfo>
+                </View>
+              </View>
+            )}
+
+            {userProfile.phone_no_call && (
+              <View className="flex-row">
+                <Text className="text-gray-700 text-base w-32">Call Phone</Text>
+                <Text className="text-gray-700 text-base mr-2">:</Text>
+                <View className="flex-1">
+                  {shouldShowClearContactInfo ? (
+                    <TouchableOpacity onPress={() => handleCallNumber(userProfile.phone_no_call)}>
+                      <Text className="text-gray-700 text-base underline" numberOfLines={1} ellipsizeMode="tail">
+                        {userProfile.phone_no_call}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <BlurredContactInfo shouldBlur={!shouldShowClearContactInfo}>
+                      {userProfile.phone_no_call}
+                    </BlurredContactInfo>
+                  )}
+                </View>
+              </View>
+            )}
+
+            {userProfile.phone_no_text && (
+              <View className="flex-row">
+                <Text className="text-gray-700 text-base w-32">Text Phone</Text>
+                <Text className="text-gray-700 text-base mr-2">:</Text>
+                <View className="flex-1">
+                  {shouldShowClearContactInfo ? (
+                    <TouchableOpacity onPress={() => handleTextNumber(userProfile.phone_no_text)}>
+                      <Text className="text-gray-700 text-base underline" numberOfLines={1} ellipsizeMode="tail">
+                        {userProfile.phone_no_text}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <BlurredContactInfo shouldBlur={!shouldShowClearContactInfo}>
+                      {userProfile.phone_no_text}
+                    </BlurredContactInfo>
+                  )}
+                </View>
+              </View>
+            )}
+
+            {userProfile.first_name && (
+              <View className="flex-row">
+                <Text className="text-gray-700 text-base w-32">First Name</Text>
+                <Text className="text-gray-700 text-base mr-2">:</Text>
+                <View className="flex-1">
+                  <Text className="text-gray-800 text-base" numberOfLines={1} ellipsizeMode="tail">
+                    {userProfile.first_name}
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            {userProfile.last_name && (
+              <View className="flex-row">
+                <Text className="text-gray-700 text-base w-32">Last Name</Text>
+                <Text className="text-gray-700 text-base mr-2">:</Text>
+                <View className="flex-1">
+                  <Text className="text-gray-800 text-base" numberOfLines={1} ellipsizeMode="tail">
+                    {userProfile.last_name}
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            {userProfile.middle_name && (
+              <View className="flex-row">
+                <Text className="text-gray-700 text-base w-32">Middle Name</Text>
+                <Text className="text-gray-700 text-base mr-2">:</Text>
+                <View className="flex-1">
+                  <Text className="text-gray-800 text-base" numberOfLines={1} ellipsizeMode="tail">
+                    {userProfile.middle_name}
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            {/* <View className="flex-row">
+              <Text className="text-gray-700 text-base w-32">Status</Text>
+              <Text className="text-gray-700 text-base mr-2">:</Text>
+              <View className="flex-1">
+                <View className="flex-row items-center">
+                  <View className={`w-3 h-3 rounded-full mr-2 ${userProfile.is_active ? 'bg-green-500' : 'bg-gray-400'}`} />
+                  <Text className="text-gray-800 text-base">
+                    {userProfile.is_active ? 'Active' : 'Inactive'}
+                  </Text>
+                </View>
+              </View>
+            </View> */}
+
+            {/* {userProfile.created_at && (
+              <View className="flex-row">
+                <Text className="text-gray-700 text-base w-32">Account Created</Text>
+                <Text className="text-gray-700 text-base mr-2">:</Text>
+                <View className="flex-1">
+                  <Text className="text-gray-800 text-base" numberOfLines={1} ellipsizeMode="tail">
+                    {new Date(userProfile.created_at).toLocaleDateString('en-US', { 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    })}
+                  </Text>
+                </View>
+              </View>
+            )} */}
           </View>
 
           {/* Contact Buttons */}
@@ -314,17 +503,24 @@ export function UserProfileScreen({ navigation, route }: UserProfileScreenProps)
             </Text>
             
             {reviews.map((review, index) => (
-              <View key={index} className="bg-white rounded-2xl p-4 mb-3 border border-gray-200">
+              <View key={index} className="bg-white rounded-2xl p-4 mb-3 border border-gray-300">
                 {/* Reviewer Info */}
                 <View className="flex-row items-center mb-3">
-                  <View className="w-10 h-10 bg-gray-200 rounded-full overflow-hidden">
-                    <Image
-                      source={{ 
-                        uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face' 
-                      }}
-                      className="w-full h-full"
-                      resizeMode="cover"
-                    />
+                  <View className="w-10 h-10 bg-[#44A27B] rounded-full overflow-hidden items-center justify-center">
+                    {review.given_by?.image_url ? (
+                      <Image
+                        source={{ uri: review.given_by.image_url }}
+                        className="w-full h-full"
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <Text className="text-white font-bold text-sm">
+                        {review.given_by?.full_name 
+                          ? review.given_by.full_name.split(' ').map(name => name[0]).join('').toUpperCase()
+                          : 'A'
+                        }
+                      </Text>
+                    )}
                   </View>
                   <View className="ml-3 flex-1">
                     <Text className="text-base font-semibold text-gray-800">
@@ -381,13 +577,41 @@ export function UserProfileScreen({ navigation, route }: UserProfileScreenProps)
 
         {/* No Reviews State */}
         {!reviewsLoading && reviews.length === 0 && (
-          <View className="mx-4 mb-6 bg-white rounded-2xl p-6 border border-gray-200">
+          <View className="mx-4 mb-6 bg-transparent rounded-2xl p-6">
             <Text className="text-center text-gray-600 text-base">
-              No reviews yet
+              No reviews found
             </Text>
           </View>
         )}
       </ScrollView>
+
+      {/* Contact Buttons - Only show if favor is in-progress/completed and contact info is available */}
+      {shouldShowClearContactInfo && userProfile && (userProfile.phone_no_call || userProfile.phone_no_text) && (
+        <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-4 pb-8">
+          <View className="flex-row space-x-3">
+            {userProfile.phone_no_call && (
+              <TouchableOpacity 
+                className="flex-1 bg-[#44A27B] rounded-xl py-4"
+                onPress={() => handleCallNumber(userProfile.phone_no_call)}
+              >
+                <Text className="text-white text-center font-semibold text-base">
+                  Call {userProfile.phone_no_call}
+                </Text>
+              </TouchableOpacity>
+            )}
+            {userProfile.phone_no_text && (
+              <TouchableOpacity 
+                className="flex-1 border-2 border-[#44A27B] rounded-xl py-4"
+                onPress={() => handleTextNumber(userProfile.phone_no_text)}
+              >
+                <Text className="text-[#44A27B] text-center font-semibold text-base">
+                  Text {userProfile.phone_no_text}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      )}
     </ImageBackground>
   );
 }

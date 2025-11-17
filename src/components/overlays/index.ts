@@ -4,4 +4,5 @@ export * from "./ProfileModal";
 export * from "./LogoutModal";
 export * from "./CountryDropdown";
 export * from "./FavorDetailsModal";
+export * from "./FavorMapPreviewModal";
 export * from "./StripeConnectWebView";

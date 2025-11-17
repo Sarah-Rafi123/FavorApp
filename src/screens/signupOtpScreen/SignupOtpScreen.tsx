@@ -13,6 +13,7 @@ import { SuccessModal } from '../../components/overlays/SuccessModal';
 import { useVerifyOtpMutation, useResendOtpMutation } from '../../services/mutations/AuthMutations';
 import useAuthStore from '../../store/useAuthStore';
 import Toast from 'react-native-toast-message';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface SignupOtpScreenProps {
   onBack: () => void;
@@ -20,13 +21,20 @@ interface SignupOtpScreenProps {
   onBackToLogin: () => void;
   email: string;
   onClearDataAndNavigateToAuth?: () => void;
+  userData?: any;
 }
 
-export function SignupOtpScreen({ onBack, onVerifySuccess, onBackToLogin, email, onClearDataAndNavigateToAuth }: SignupOtpScreenProps) {
+export function SignupOtpScreen({ onBack, onVerifySuccess, onBackToLogin, email, onClearDataAndNavigateToAuth, userData }: SignupOtpScreenProps) {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [timer, setTimer] = useState(300); // 5 minutes = 300 seconds
   const [canResend, setCanResend] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  
+  // Log received parameters for debugging
+  useEffect(() => {
+    console.log('📧 SignupOtpScreen initialized with email:', email);
+    console.log('📦 SignupOtpScreen received userData:', userData);
+  }, [email, userData]);
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
   const inputRefs = useRef<TextInput[]>([]);
   
@@ -193,7 +201,7 @@ export function SignupOtpScreen({ onBack, onVerifySuccess, onBackToLogin, email,
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleBackWithDataClear = () => {
+  const handleBackWithDataClear = async () => {
     // Clear OTP state
     setOtp(['', '', '', '', '', '']);
     setTimer(300);
@@ -203,6 +211,9 @@ export function SignupOtpScreen({ onBack, onVerifySuccess, onBackToLogin, email,
     
     // Clear registration data from auth store
     clearRegistrationData();
+    
+    // Set flag to skip splash screen when navigating to auth
+    await AsyncStorage.setItem('skip_splash_from_signup', 'true');
     
     // Navigate back to auth screen with data clearing
     if (onClearDataAndNavigateToAuth) {
@@ -257,7 +268,7 @@ export function SignupOtpScreen({ onBack, onVerifySuccess, onBackToLogin, email,
                 if (ref) inputRefs.current[index] = ref;
               }}
               className={`w-12 h-12 border-2 rounded-lg text-center text-xl font-semibold bg-transparent ${
-                focusedIndex === index ? 'border-green-500' : 'border-gray-200'
+                focusedIndex === index ? 'border-green-500' : 'border-gray-300'
               }`}
               value={digit}
               onChangeText={(value) => handleOtpChange(value, index)}
@@ -300,7 +311,11 @@ export function SignupOtpScreen({ onBack, onVerifySuccess, onBackToLogin, email,
         <View className="items-center">
           <View className="flex-row items-center">
             <Text className="text-gray-600">Already have an account? </Text>
-            <TouchableOpacity onPress={onBackToLogin}>
+            <TouchableOpacity onPress={async () => {
+              // Set flag to skip splash screen when navigating to auth
+              await AsyncStorage.setItem('skip_splash_from_signup', 'true');
+              onBackToLogin();
+            }}>
               <Text className="font-medium text-[#44A27B]">
                 Back to Login
               </Text>
@@ -314,8 +329,10 @@ export function SignupOtpScreen({ onBack, onVerifySuccess, onBackToLogin, email,
         visible={showSuccessModal}
         title="Success"
         message="Your email verification process is complete. You can now login with your credentials."
-        onContinue={() => {
+        onContinue={async () => {
           setShowSuccessModal(false);
+          // Set flag to skip splash screen when navigating to auth
+          await AsyncStorage.setItem('skip_splash_from_signup', 'true');
           onBackToLogin();
         }}
       />

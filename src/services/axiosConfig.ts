@@ -61,19 +61,28 @@ axiosInstance.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       
-      try {
-        console.log('🚨 401 Unauthorized error detected');
-        
-        // Clear invalid token
-        await AsyncStorage.removeItem('auth_token');
-        await AsyncStorage.removeItem('refresh_token');
-        
-        // Emit authentication error event for global handling
-        authErrorHandler.emitAuthError(error);
-        
-        return Promise.reject(new Error('Authentication required'));
-      } catch (clearError) {
-        console.warn('Failed to clear auth token:', clearError);
+      // Check if this is a password validation endpoint - don't auto-logout for these
+      const isPasswordValidationEndpoint = originalRequest.url?.includes('/profile/validate_current_password');
+      
+      if (!isPasswordValidationEndpoint) {
+        try {
+          console.log('🚨 401 Unauthorized error detected');
+          
+          // Clear invalid token
+          await AsyncStorage.removeItem('auth_token');
+          await AsyncStorage.removeItem('refresh_token');
+          
+          // Emit authentication error event for global handling
+          authErrorHandler.emitAuthError(error);
+          
+          return Promise.reject(new Error('Authentication required'));
+        } catch (clearError) {
+          console.warn('Failed to clear auth token:', clearError);
+        }
+      } else {
+        console.log('🔐 Password validation failed - not triggering auto-logout');
+        // For password validation endpoints, just return the original error without triggering logout
+        return Promise.reject(error);
       }
     }
     
@@ -83,17 +92,24 @@ axiosInstance.interceptors.response.use(
          error.response.data.message.toLowerCase().includes('token') ||
          error.response.data.message.toLowerCase().includes('unauthorized'))) {
       
-      console.log('🚨 Authentication error detected in message:', error.response.data.message);
+      // Check if this is a password validation endpoint - don't auto-logout for these
+      const isPasswordValidationEndpoint = originalRequest.url?.includes('/profile/validate_current_password');
       
-      try {
-        // Clear invalid token
-        await AsyncStorage.removeItem('auth_token');
-        await AsyncStorage.removeItem('refresh_token');
+      if (!isPasswordValidationEndpoint) {
+        console.log('🚨 Authentication error detected in message:', error.response.data.message);
         
-        // Emit authentication error event for global handling
-        authErrorHandler.emitAuthError(error);
-      } catch (clearError) {
-        console.warn('Failed to clear auth token:', clearError);
+        try {
+          // Clear invalid token
+          await AsyncStorage.removeItem('auth_token');
+          await AsyncStorage.removeItem('refresh_token');
+          
+          // Emit authentication error event for global handling
+          authErrorHandler.emitAuthError(error);
+        } catch (clearError) {
+          console.warn('Failed to clear auth token:', clearError);
+        }
+      } else {
+        console.log('🔐 Password validation error message - not triggering auto-logout');
       }
     }
     

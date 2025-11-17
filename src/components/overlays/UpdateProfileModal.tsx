@@ -4,7 +4,7 @@ import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplet
 import { CustomButton } from '../buttons/CustomButton';
 import { useProfileQuery } from '../../services/queries/ProfileQueries';
 import { useUpdateProfileMutation, useUploadProfileImageMutation, useRemoveProfileImageMutation } from '../../services/mutations/ProfileMutations';
-import ImagePicker from 'react-native-image-crop-picker';
+import { ImagePickerUtils } from '../../utils/ImagePickerUtils';
 import CalendarSvg from '../../assets/icons/Calender';
 import PhoneSvg from '../../assets/icons/Phone';
 import ChatSvg from '../../assets/icons/Chat';
@@ -45,11 +45,17 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
   // Helper function to format date from API to MM/DD/YYYY
   const formatDateForForm = (dateString: string) => {
     if (!dateString) return '';
-    const date = new Date(dateString);
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
-    const year = date.getFullYear();
-    return `${month}/${day}/${year}`;
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return '';
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const day = date.getDate().toString().padStart(2, '0');
+      const year = date.getFullYear();
+      return `${month}/${day}/${year}`;
+    } catch (error) {
+      console.warn('Date formatting error:', error);
+      return '';
+    }
   };
 
   // Helper function to format phone number for form display (without country code)
@@ -114,18 +120,67 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
   // Update form data when profile data is loaded from API
   useEffect(() => {
     if (profile) {
+      const formattedDate = formatDateForForm(profile.date_of_birth);
+      console.log('🗓️ Date formatting debug:', {
+        raw: profile.date_of_birth,
+        formatted: formattedDate
+      });
+      
+      // Separate predefined skills from custom skills
+      const allSkills = profile.skills || [];
+      const predefinedSkills = allSkills.filter(skill => skillsOptions.includes(skill));
+      const unlistedSkills = allSkills.filter(skill => !skillsOptions.includes(skill));
+      
+      // Combine existing other_skills with any unlisted skills found in the skills array
+      const existingOtherSkills = profile.other_skills || '';
+      const unlistedSkillsText = unlistedSkills.join(', ');
+      
+      // Combine both other skills sources, avoiding duplication
+      let combinedOtherSkills = '';
+      if (existingOtherSkills && unlistedSkillsText) {
+        // Check if unlisted skills are already in other_skills to avoid duplication
+        const existingSkillsLower = existingOtherSkills.toLowerCase();
+        const newUnlistedSkills = unlistedSkills.filter(skill => 
+          !existingSkillsLower.includes(skill.toLowerCase())
+        );
+        if (newUnlistedSkills.length > 0) {
+          combinedOtherSkills = `${existingOtherSkills}, ${newUnlistedSkills.join(', ')}`;
+        } else {
+          combinedOtherSkills = existingOtherSkills;
+        }
+      } else if (existingOtherSkills) {
+        combinedOtherSkills = existingOtherSkills;
+      } else if (unlistedSkillsText) {
+        combinedOtherSkills = unlistedSkillsText;
+      }
+      
+      // Auto-check "Others" if there are any unlisted skills or existing other_skills
+      const finalSkills = [...predefinedSkills];
+      if (combinedOtherSkills) {
+        finalSkills.push('Others');
+      }
+      
+      console.log('🔧 Skills processing:', {
+        allSkills,
+        predefinedSkills,
+        unlistedSkills,
+        existingOtherSkills,
+        combinedOtherSkills,
+        finalSkills
+      });
+      
       setProfileData({
         firstName: profile.first_name || '',
         lastName: profile.last_name || '',
         middleName: profile.middle_name || '',
-        dateOfBirth: formatDateForForm(profile.date_of_birth) || '',
+        dateOfBirth: formattedDate,
         address: profile.address?.full_address || '',
         phoneCall: formatPhoneForForm(profile.phone_no_call || '', getCountryFromPhone(profile.phone_no_call || '')) || '',
         phoneText: formatPhoneForForm(profile.phone_no_text || '', getCountryFromPhone(profile.phone_no_text || '')) || '',
         yearsOfExperience: profile.years_of_experience || 0,
         aboutMe: profile.about_me || '',
-        skills: profile.skills || [],
-        otherSkills: profile.other_skills || '',
+        skills: finalSkills,
+        otherSkills: combinedOtherSkills,
         city: profile.address?.city || '',
         state: profile.address?.state || '',
       });
@@ -145,7 +200,7 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
   });
 
   const [showCalendar, setShowCalendar] = useState(false);
-  const [showYearPicker, setShowYearPicker] = useState(false);
+  const [calendarView, setCalendarView] = useState<'calendar' | 'yearPicker'>('calendar');
   const [showSkillsDropdown, setShowSkillsDropdown] = useState(false);
   const [showCountryCallDropdown, setShowCountryCallDropdown] = useState(false);
   const [showCountryTextDropdown, setShowCountryTextDropdown] = useState(false);
@@ -158,7 +213,6 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
   // Generate calendar dates
   const generateCalendarDates = (year: number, month: number) => {
     const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
     const startDate = new Date(firstDay);
     startDate.setDate(startDate.getDate() - firstDay.getDay());
     
@@ -180,11 +234,19 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
   // Initialize calendar to show user's birth date when opened
   React.useEffect(() => {
     if (showCalendar && profileData.dateOfBirth) {
-      const birthDate = new Date(profileData.dateOfBirth);
-      if (!isNaN(birthDate.getTime())) {
-        setCurrentMonth(birthDate.getMonth());
-        setCurrentYear(birthDate.getFullYear());
-        setSelectedDate(birthDate);
+      try {
+        // Parse MM/DD/YYYY format
+        const [month, day, year] = profileData.dateOfBirth.split('/').map(num => parseInt(num, 10));
+        if (month && day && year && month >= 1 && month <= 12 && day >= 1 && day <= 31 && year > 1900) {
+          const birthDate = new Date(year, month - 1, day);
+          if (!isNaN(birthDate.getTime())) {
+            setCurrentMonth(birthDate.getMonth());
+            setCurrentYear(birthDate.getFullYear());
+            setSelectedDate(birthDate);
+          }
+        }
+      } catch (error) {
+        console.warn('Error parsing birth date for calendar:', error);
       }
     }
   }, [showCalendar, profileData.dateOfBirth]);
@@ -216,7 +278,17 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
     const updatedSkills = currentSkills.includes(skill)
       ? currentSkills.filter(s => s !== skill)
       : [...currentSkills, skill];
-    updateField('skills', updatedSkills);
+    
+    // If user unchecks "Others", clear the other skills field
+    if (skill === 'Others' && currentSkills.includes(skill)) {
+      setProfileData(prev => ({
+        ...prev,
+        skills: updatedSkills,
+        otherSkills: '' // Clear other skills when unchecking Others
+      }));
+    } else {
+      updateField('skills', updatedSkills);
+    }
   };
 
   // Get country from phone number
@@ -276,17 +348,44 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
       const year = selectedDate.getFullYear();
       const formattedDate = `${month}/${day}/${year}`;
       
+      // Calculate age for the new date
+      const [monthNum, dayNum, yearNum] = formattedDate.split('/').map(Number);
+      const birthDate = new Date(yearNum, monthNum - 1, dayNum);
+      const today = new Date();
+      let calculatedAge = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      const dayDiff = today.getDate() - birthDate.getDate();
+      if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+        calculatedAge = calculatedAge - 1;
+      }
+      
+      console.log('🗓️ Date update debug:', {
+        selectedDate,
+        formattedDate,
+        calculatedAge,
+        month,
+        day,
+        year
+      });
+      
       // Validate age before updating
       const validationError = validateDate(formattedDate);
       if (validationError) {
+        console.warn('🗓️ Date validation error:', validationError);
         // Show error but don't close modal
         setErrors(prev => ({ ...prev, dateOfBirth: validationError }));
         return;
       }
       
+      // Clear any existing errors
+      setErrors(prev => ({ ...prev, dateOfBirth: '' }));
+      
+      // Update the field
       updateField('dateOfBirth', formattedDate);
       setShowCalendar(false);
       setSelectedDate(null);
+      
+      console.log('🗓️ Date updated successfully:', formattedDate, 'Age:', calculatedAge);
     }
   };
 
@@ -308,11 +407,15 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
     }
   };
 
-  // Generate years for year picker (current year ± 50 years)
+  // Generate years for year picker (suitable for birth dates)
   const generateYears = () => {
     const years = [];
     const currentYearNow = new Date().getFullYear();
-    for (let year = currentYearNow - 50; year <= currentYearNow + 10; year++) {
+    // Generate years from 1924 (100 years old) to current year - 18 (minimum age)
+    const minYear = 1924;
+    const maxYear = currentYearNow - 18;
+    
+    for (let year = maxYear; year >= minYear; year--) {
       years.push(year);
     }
     return years;
@@ -323,8 +426,26 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
   const handleYearSelect = (year: number) => {
     console.log(`Setting current year to: ${year}`);
     setCurrentYear(year);
-    setShowYearPicker(false);
+    setCalendarView('calendar');
   };
+  
+  // Add ref for scrolling to current year
+  const yearScrollViewRef = React.useRef<ScrollView>(null);
+  
+  // Effect to scroll to current year when year picker opens
+  React.useEffect(() => {
+    if (calendarView === 'yearPicker' && yearScrollViewRef.current) {
+      const currentIndex = availableYears.findIndex(year => year === currentYear);
+      if (currentIndex !== -1) {
+        // Scroll to show current year in view (approximate calculation)
+        const itemHeight = 50; // Approximate height of each year button
+        const scrollOffset = Math.max(0, (currentIndex - 2) * itemHeight);
+        setTimeout(() => {
+          yearScrollViewRef.current?.scrollTo({ y: scrollOffset, animated: true });
+        }, 100);
+      }
+    }
+  }, [calendarView, currentYear, availableYears]);
 
   // Validation functions
   const validateName = (name: string) => {
@@ -415,6 +536,45 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
         return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
       };
 
+      // Calculate age from date of birth
+      const calculateAge = (dateStr: string) => {
+        if (!dateStr) return 0;
+        
+        try {
+          const [month, day, year] = dateStr.split('/').map(Number);
+          if (!month || !day || !year) return 0;
+          
+          const birthDate = new Date(year, month - 1, day);
+          const today = new Date();
+          
+          // Basic validation
+          if (isNaN(birthDate.getTime()) || birthDate > today) return 0;
+          
+          let age = today.getFullYear() - birthDate.getFullYear();
+          const monthDiff = today.getMonth() - birthDate.getMonth();
+          const dayDiff = today.getDate() - birthDate.getDate();
+          
+          // Adjust age if birthday hasn't occurred this year
+          if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+            age = age - 1;
+          }
+          
+          console.log('🎂 Age Calculation Debug:', {
+            input: dateStr,
+            birthDate: birthDate.toDateString(),
+            today: today.toDateString(),
+            calculatedAge: age,
+            monthDiff,
+            dayDiff
+          });
+          
+          return Math.max(0, age); // Ensure non-negative age
+        } catch (error) {
+          console.error('🎂 Age calculation error:', error);
+          return 0;
+        }
+      };
+
       // Extract city and state from address (improved extraction)
       const extractCityState = (address: string) => {
         if (!address) return { city: '', state: '' };
@@ -475,16 +635,50 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
       }
 
       // Transform form data to API format
+      const convertedDate = convertDateFormat(profileData.dateOfBirth);
+      const calculatedAge = calculateAge(profileData.dateOfBirth);
+      
+      console.log('🔄 Profile Update Debug:', {
+        originalDateOfBirth: profileData.dateOfBirth,
+        convertedDate,
+        calculatedAge,
+        dateValidation: validateDate(profileData.dateOfBirth),
+      });
+
+      // Additional date debugging
+      if (profileData.dateOfBirth) {
+        const [month, day, year] = profileData.dateOfBirth.split('/');
+        console.log('🔄 Date Parts Debug:', { month, day, year, convertedDate });
+      }
+      
+      // Prepare skills data - ensure other skills are only in other_skills field
+      const cleanedSkills = (profileData.skills || []).filter(skill => 
+        skillsOptions.includes(skill) && skill !== 'Others' // Keep only predefined skills except 'Others'
+      );
+      
+      // Add 'Others' back if user has other skills
+      if (profileData.otherSkills && profileData.otherSkills.trim()) {
+        cleanedSkills.push('Others');
+      }
+      
+      console.log('💾 Save skills processing:', {
+        originalSkills: profileData.skills,
+        cleanedSkills,
+        otherSkills: profileData.otherSkills,
+        hasOthers: profileData.otherSkills && profileData.otherSkills.trim()
+      });
+      
       const updateData = {
         profile: {
           first_name: profileData.firstName,
           last_name: profileData.lastName,
           phone_no_call: `${selectedCountryCall.dialCode}${profileData.phoneCall.replace(/\D/g, '')}`,
           phone_no_text: `${selectedCountryText.dialCode}${profileData.phoneText.replace(/\D/g, '')}`,
-          date_of_birth: convertDateFormat(profileData.dateOfBirth),
+          date_of_birth: convertedDate,
+          age: calculatedAge,
           years_of_experience: profileData.yearsOfExperience || 0,
           about_me: profileData.aboutMe || '',
-          skills: profileData.skills || [],
+          skills: cleanedSkills,
           other_skills: profileData.otherSkills || '',
           address_attributes: {
             full_address: profileData.address || '',
@@ -494,10 +688,40 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
         },
       };
 
+      console.log('✅ Sending both date_of_birth AND calculated age');
+
+      console.log('🚀 Final API Payload:', JSON.stringify(updateData, null, 2));
+      console.log('🔍 Date-specific payload check:', {
+        date_of_birth: updateData.profile.date_of_birth,
+        age: updateData.profile.age,
+        raw_input: profileData.dateOfBirth,
+        is_date_valid: !validateDate(profileData.dateOfBirth),
+        calculated_age: calculatedAge,
+      });
+
       updateProfileMutation.mutate(updateData, {
-        onSuccess: () => {
+        onSuccess: (response) => {
+          console.log('✅ Profile Update Success Response:', JSON.stringify(response, null, 2));
+          console.log('🔍 Returned date_of_birth:', (response?.data?.profile as any)?.date_of_birth);
+          console.log('🔍 Returned age:', (response?.data?.profile as any)?.age);
+          console.log('🔍 Expected date_of_birth:', convertedDate);
+          console.log('🔍 Expected age:', calculatedAge);
+          
+          // Check if the returned date matches what we sent
+          const returnedDate = (response?.data?.profile as any)?.date_of_birth;
+          if (returnedDate && returnedDate !== convertedDate) {
+            console.warn('⚠️  DATE MISMATCH! Backend returned different date:', {
+              sent: convertedDate,
+              received: returnedDate
+            });
+          }
+          
           onUpdate(profileData);
           onClose();
+        },
+        onError: (error: any) => {
+          console.error('❌ Profile Update Error:', error);
+          console.error('❌ Error response:', error?.response?.data);
         },
       });
     }
@@ -509,6 +733,14 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
     // Format phone numbers
     if ((field === 'phoneCall' || field === 'phoneText') && typeof value === 'string') {
       formattedValue = formatPhoneNumber(value);
+    }
+    
+    // Debug date updates
+    if (field === 'dateOfBirth') {
+      console.log('🗓️ UpdateField dateOfBirth:', {
+        oldValue: profileData.dateOfBirth,
+        newValue: formattedValue
+      });
     }
     
     setProfileData(prev => ({ ...prev, [field]: formattedValue }));
@@ -572,31 +804,14 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
       // Add a small delay to ensure any modals are closed
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      const image = await ImagePicker.openCamera({
-        width: 800,
-        height: 800,
-        cropping: true,
-        compressImageQuality: 0.8,
-        mediaType: 'photo',
-        includeBase64: false,
-        // Android cropper customization for proper status bar handling
-        cropperStatusBarColor: '#71DFB1',
-        cropperToolbarColor: '#71DFB1',
-        cropperToolbarWidgetColor: '#FFFFFF',
-        cropperToolbarTitle: 'Edit Photo',
-      });
-
-      // Check file size (10MB limit)
-      if (image.size && image.size > 10 * 1024 * 1024) {
-        Alert.alert('Error', 'Image file is too large. Please choose an image smaller than 10MB.');
-        return;
+      const result = await ImagePickerUtils.openCamera();
+      
+      if (result) {
+        await handleImageUpload(result);
       }
-
-      await handleImageUpload(image);
     } catch (error: any) {
-      if (error.code !== 'E_PICKER_CANCELLED') {
-        Alert.alert('Error', 'Failed to take photo. Please try again.');
-      }
+      console.error('Camera launch error:', error);
+      Alert.alert('Error', 'Failed to take photo. Please try again.');
     }
   };
 
@@ -605,39 +820,22 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
       // Add a small delay to ensure any modals are closed
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      const image = await ImagePicker.openPicker({
-        width: 800,
-        height: 800,
-        cropping: true,
-        compressImageQuality: 0.8,
-        mediaType: 'photo',
-        includeBase64: false,
-        // Android cropper customization for proper status bar handling
-        cropperStatusBarColor: '#71DFB1',
-        cropperToolbarColor: '#71DFB1',
-        cropperToolbarWidgetColor: '#FFFFFF',
-        cropperToolbarTitle: 'Edit Photo',
-      });
-
-      // Check file size (10MB limit)
-      if (image.size && image.size > 10 * 1024 * 1024) {
-        Alert.alert('Error', 'Image file is too large. Please choose an image smaller than 10MB.');
-        return;
+      const result = await ImagePickerUtils.openImageLibrary();
+      
+      if (result) {
+        await handleImageUpload(result);
       }
-
-      await handleImageUpload(image);
     } catch (error: any) {
-      if (error.code !== 'E_PICKER_CANCELLED') {
-        Alert.alert('Error', 'Failed to select image. Please try again.');
-      }
+      console.error('Image library launch error:', error);
+      Alert.alert('Error', 'Failed to select image. Please try again.');
     }
   };
 
   const handleImageUpload = async (image: any) => {
     const imageFile = {
-      uri: image.path,
-      type: image.mime,
-      name: image.filename || `profile_image_${Date.now()}.jpg`,
+      uri: image.uri,
+      type: image.type,
+      name: image.name || `profile_image_${Date.now()}.jpg`,
     };
 
     uploadImageMutation.mutate(imageFile);
@@ -777,9 +975,31 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
                     className="bg-transparent border border-gray-300 rounded-xl px-4 py-3 flex-row items-center justify-between" 
                     style={{ height: 56 }}
                   >
-                    <Text className="flex-1 text-black" style={{ fontSize: 16, lineHeight: 20 }}>
-                      {profileData.dateOfBirth || formatDateForForm(profile?.date_of_birth || '') || '8/2/2001'}
-                    </Text>
+                    <View className="flex-1">
+                      <Text className="text-black" style={{ fontSize: 16, lineHeight: 20 }}>
+                        {profileData.dateOfBirth || 'Select date of birth'}
+                      </Text>
+                      {profileData.dateOfBirth && (
+                        <Text className="text-gray-500 text-sm mt-1">
+                          Age: {(() => {
+                            try {
+                              const [month, day, year] = profileData.dateOfBirth.split('/').map(Number);
+                              const birthDate = new Date(year, month - 1, day);
+                              const today = new Date();
+                              let age = today.getFullYear() - birthDate.getFullYear();
+                              const monthDiff = today.getMonth() - birthDate.getMonth();
+                              const dayDiff = today.getDate() - birthDate.getDate();
+                              if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+                                age = age - 1;
+                              }
+                              return age;
+                            } catch {
+                              return '?';
+                            }
+                          })()}
+                        </Text>
+                      )}
+                    </View>
                     <CalendarSvg />
                   </TouchableOpacity>
                   {errors.dateOfBirth ? (
@@ -942,7 +1162,16 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
                 >
                   <Text className="text-black" style={{ fontSize: 16, lineHeight: 20 }}>
                     {profileData.skills && profileData.skills.length > 0 
-                      ? profileData.skills.join(', ')
+                      ? (() => {
+                          // Show standard skills first, then 'Others' if selected
+                          const standardSkills = profileData.skills.filter(skill => skill !== 'Others');
+                          const hasOthers = profileData.skills.includes('Others');
+                          const displaySkills = [...standardSkills];
+                          if (hasOthers) {
+                            displaySkills.push('Others');
+                          }
+                          return displaySkills.join(', ');
+                        })()
                       : 'Select skills'
                     }
                   </Text>
@@ -995,24 +1224,35 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
         visible={showCalendar}
         transparent={true}
         animationType="fade"
-        onRequestClose={() => setShowCalendar(false)}
+        onRequestClose={() => {
+          setShowCalendar(false);
+          setCalendarView('calendar');
+        }}
         statusBarTranslucent={true}
       >
         <View className="flex-1 bg-black/50 justify-center items-center p-4" style={{ pointerEvents: 'auto' }}>
           <View className="bg-[#FBFFF0] rounded-3xl w-full max-w-sm border-4 border-[#71DFB1] p-6 shadow-lg" style={{ pointerEvents: 'auto' }}>
-            {/* Header */}
-            <View className="flex-row justify-between items-center mb-6">
+            
+            {calendarView === 'calendar' ? (
+              // Calendar View
+              <>
+                {/* Header */}
+                <View className="flex-row justify-between items-center mb-6">
               <View className="flex-row items-center">
                 <Text className="text-lg font-bold text-black mr-2">
                   {monthNames[currentMonth]}
                 </Text>
                 <TouchableOpacity 
                   onPress={() => {
-                    console.log('Year button pressed, opening year picker');
-                    setShowYearPicker(true);
+                    console.log('Year button pressed, switching to year picker');
+                    console.log('Available years:', availableYears.length, 'years');
+                    console.log('Current year:', currentYear);
+                    setCalendarView('yearPicker');
                   }}
                   className="bg-[#71DFB1] px-3 py-1 rounded-full"
                   activeOpacity={0.7}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  style={{ minWidth: 50, minHeight: 25 }}
                 >
                   <Text className="text-white font-semibold text-sm">{currentYear}</Text>
                 </TouchableOpacity>
@@ -1094,92 +1334,96 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
               })}
             </View>
 
-            {/* Action Buttons */}
-            <View className="flex-row gap-x-3">
-              <TouchableOpacity
-                onPress={() => setShowCalendar(false)}
-                className="flex-1 bg-gray-100 rounded-full py-3"
-              >
-                <Text className="text-gray-700 text-center font-semibold">Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleDateUpdate}
-                className={`flex-1 rounded-full py-3 ${
-                  selectedDate ? 'bg-[#71DFB1]' : 'bg-gray-300'
-                }`}
-                disabled={!selectedDate}
-              >
-                <Text className={`text-center font-semibold ${
-                  selectedDate ? 'text-white' : 'text-gray-500'
-                }`}>Update</Text>
-              </TouchableOpacity>
-            </View>
+                {/* Action Buttons */}
+                <View className="flex-row gap-x-3">
+                  <TouchableOpacity
+                    onPress={() => setShowCalendar(false)}
+                    className="flex-1 bg-gray-100 rounded-full py-3"
+                  >
+                    <Text className="text-gray-700 text-center font-semibold">Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={handleDateUpdate}
+                    className={`flex-1 rounded-full py-3 ${
+                      selectedDate ? 'bg-[#71DFB1]' : 'bg-gray-300'
+                    }`}
+                    disabled={!selectedDate}
+                  >
+                    <Text className={`text-center font-semibold ${
+                      selectedDate ? 'text-white' : 'text-gray-500'
+                    }`}>Update</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : (
+              // Year Picker View
+              <>
+                <View className="flex-row justify-between items-center mb-4">
+                  <TouchableOpacity 
+                    onPress={() => setCalendarView('calendar')}
+                    className="flex-row items-center"
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Text className="text-[#71DFB1] text-lg mr-2">‹</Text>
+                    <Text className="text-lg font-bold text-black">Select Year</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    onPress={() => {
+                      setShowCalendar(false);
+                      setCalendarView('calendar');
+                    }}
+                    className="w-8 h-8 bg-gray-100 rounded-full items-center justify-center"
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Text className="text-gray-600 text-lg">×</Text>
+                  </TouchableOpacity>
+                </View>
+                
+                <ScrollView 
+                  ref={yearScrollViewRef}
+                  className="max-h-64" 
+                  showsVerticalScrollIndicator={false}
+                  nestedScrollEnabled={true}
+                >
+                  <View className="flex-wrap flex-row justify-between">
+                    {availableYears.map((year) => (
+                      <TouchableOpacity
+                        key={year}
+                        onPress={() => {
+                          console.log(`Year ${year} selected`);
+                          handleYearSelect(year);
+                        }}
+                        className={`w-[30%] m-1 py-3 rounded-xl items-center ${
+                          year === currentYear 
+                            ? 'bg-[#71DFB1]' 
+                            : 'bg-white border border-gray-300'
+                        }`}
+                        hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                        activeOpacity={0.7}
+                      >
+                        <Text className={`font-semibold ${
+                          year === currentYear ? 'text-white' : 'text-black'
+                        }`}>
+                          {year}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </ScrollView>
+                
+                <TouchableOpacity
+                  onPress={() => setCalendarView('calendar')}
+                  className="mt-4 bg-gray-200 rounded-full py-3"
+                  activeOpacity={0.7}
+                >
+                  <Text className="text-gray-700 text-center font-semibold">Back to Calendar</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         </View>
       </Modal>
 
-      {/* Year Picker Modal */}
-      {showYearPicker && (
-        <Modal
-          visible={showYearPicker}
-          transparent={true}
-          animationType="slide"
-          onRequestClose={() => setShowYearPicker(false)}
-          statusBarTranslucent={true}
-        >
-          <TouchableOpacity 
-            className="flex-1 bg-black/50 justify-center items-center p-4"
-            activeOpacity={1}
-            onPress={() => setShowYearPicker(false)}
-            style={{ pointerEvents: 'auto' }}
-          >
-            <TouchableOpacity 
-              className="bg-[#FBFFF0] rounded-3xl w-full max-w-sm border-4 border-[#71DFB1] p-6 shadow-lg"
-              activeOpacity={1}
-              onPress={() => {}}
-              style={{ pointerEvents: 'auto' }}
-            >
-              <View className="flex-row justify-between items-center mb-4">
-                <Text className="text-lg font-bold text-black">Select Year</Text>
-                <TouchableOpacity 
-                  onPress={() => {
-                    console.log('Closing year picker');
-                    setShowYearPicker(false);
-                  }}
-                  className="w-8 h-8 bg-gray-100 rounded-full items-center justify-center"
-                >
-                  <Text className="text-gray-600 text-lg">×</Text>
-                </TouchableOpacity>
-              </View>
-              
-              <ScrollView className="max-h-64" showsVerticalScrollIndicator={false}>
-                <View className="flex-wrap flex-row">
-                  {availableYears.map((year) => (
-                    <TouchableOpacity
-                      key={year}
-                      onPress={() => {
-                        console.log(`Year ${year} selected`);
-                        handleYearSelect(year);
-                      }}
-                      className={`w-[30%] m-1 py-3 rounded-xl items-center ${
-                        year === currentYear 
-                          ? 'bg-[#71DFB1]' 
-                          : 'bg-white border border-gray-200'
-                      }`}
-                    >
-                      <Text className={`font-semibold ${
-                        year === currentYear ? 'text-white' : 'text-black'
-                      }`}>
-                        {year}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </ScrollView>
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </Modal>
-      )}
 
       {/* Skills Dropdown Modal */}
       <Modal
@@ -1241,7 +1485,7 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
           style={{ pointerEvents: 'auto' }}
         >
           <View className="bg-[#FBFFF0] rounded-3xl max-w-sm mx-auto w-full max-h-96 border-4 border-[#71DFB1]" style={{ pointerEvents: 'auto' }}>
-            <View className="py-4 border-b border-gray-200">
+            <View className="py-4 border-b border-gray-300">
               <Text className="text-lg font-semibold text-black text-center">
                 Select Country (Call)
               </Text>
@@ -1281,7 +1525,7 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
           style={{ pointerEvents: 'auto' }}
         >
           <View className="bg-[#FBFFF0] rounded-3xl max-w-sm mx-auto w-full max-h-96 border-4 border-[#71DFB1]" style={{ pointerEvents: 'auto' }}>
-            <View className="py-4 border-b border-gray-200">
+            <View className="py-4 border-b border-gray-300">
               <Text className="text-lg font-semibold text-black text-center">
                 Select Country (Text)
               </Text>
@@ -1316,7 +1560,7 @@ export function UpdateProfileModal({ visible, onClose, onUpdate, initialData }: 
       >
         <View className="flex-1 bg-black/50">
           <View className="flex-1 bg-[#FBFFF0] mt-20 rounded-t-3xl">
-            <View className="flex-row justify-between items-center p-6 border-b border-gray-200">
+            <View className="flex-row justify-between items-center p-6 border-b border-gray-300">
               <Text className="text-xl font-bold text-gray-800">Search Address</Text>
               <TouchableOpacity onPress={() => setShowAddressModal(false)}>
                 <Text className="text-gray-500 text-lg">✕</Text>

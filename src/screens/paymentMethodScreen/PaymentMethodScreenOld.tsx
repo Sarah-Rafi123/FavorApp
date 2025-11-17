@@ -624,7 +624,7 @@ This is a backend configuration issue.`;
               Name on card
             </Text>
             <TextInput
-              className="bg-gray-100 border border-gray-200 rounded-xl px-4 text-base text-gray-600 mb-4"
+              className="bg-gray-100 border border-gray-300 rounded-xl px-4 text-base text-gray-600 mb-4"
               style={{ height: 56, lineHeight: 20, textAlignVertical: 'center', paddingTop: 18, paddingBottom: 18 }}
               value={nameOnCard}
               editable={false}
@@ -635,7 +635,7 @@ This is a backend configuration issue.`;
               Card number
             </Text>
             <TextInput
-              className="bg-gray-100 border border-gray-200 rounded-xl px-4 text-base text-gray-600 mb-4"
+              className="bg-gray-100 border border-gray-300 rounded-xl px-4 text-base text-gray-600 mb-4"
               style={{ height: 56, lineHeight: 20, textAlignVertical: 'center', paddingTop: 18, paddingBottom: 18 }}
               value={cardNumber}
               editable={false}
@@ -646,7 +646,7 @@ This is a backend configuration issue.`;
               Expiration date
             </Text>
             <TextInput
-              className="bg-gray-100 border border-gray-200 rounded-xl px-4 text-base text-gray-600 mb-4"
+              className="bg-gray-100 border border-gray-300 rounded-xl px-4 text-base text-gray-600 mb-4"
               style={{ height: 56, lineHeight: 20, textAlignVertical: 'center', paddingTop: 18, paddingBottom: 18 }}
               value={expirationDate}
               editable={false}
@@ -670,7 +670,7 @@ This is a backend configuration issue.`;
               Name on card
             </Text>
             <TextInput
-              className={`bg-white border rounded-xl px-4 text-base text-black ${nameError ? 'border-red-500' : 'border-gray-200'}`}
+              className={`bg-white border rounded-xl px-4 text-base text-black ${nameError ? 'border-red-500' : 'border-gray-300'}`}
               style={{ height: 56, lineHeight: 20, textAlignVertical: 'center', paddingTop: 18, paddingBottom: 18 }}
               value={nameOnCard}
               onChangeText={validateName}
