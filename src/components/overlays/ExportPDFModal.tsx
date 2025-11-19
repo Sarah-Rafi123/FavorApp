@@ -109,7 +109,7 @@ export function ExportPDFModal({ visible, onClose, onExport, isExporting = false
       onRequestClose={onClose}
     >
       <View className="flex-1 bg-black/50 justify-center items-center p-4">
-        <View className="bg-white rounded-3xl w-full max-w-sm mx-4 p-6">
+        <View className="bg-white rounded-3xl w-full max-w-md mx-4 p-6">
           {/* Header */}
           <View className="flex-row justify-between items-center mb-6">
             <Text className="text-xl font-bold text-black">Export PDF</Text>

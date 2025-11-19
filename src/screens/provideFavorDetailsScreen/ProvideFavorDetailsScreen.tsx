@@ -860,7 +860,6 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
                       {review.given_by?.full_name || 'Anonymous'}
                     </Text>
                     <View className="flex-row items-center">
-                      {/* Star Rating */}
                       <View className="flex-row mr-2">
                         {[1, 2, 3, 4, 5].map((star) => (
                           <Text key={star} className="text-yellow-400 text-sm">
@@ -874,8 +873,6 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
                     </View>
                   </View>
                 </View>
-                
-                {/* Review Text */}
                 {review.description && (
                   <Text className="text-gray-700 text-base leading-5 mb-2">
                     {review.description}
@@ -886,8 +883,6 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
           </View>
         )}
       </ScrollView>
-
-      {/* Submit Review Modal */}
       <Modal
         visible={showReviewModal}
         transparent
@@ -905,16 +900,13 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
             >
-              <View className="bg-[#FBFFF0] rounded-3xl p-6 max-w-screen-2xl w-full border-4 border-[#71DFB1] relative my-4">
-                {/* Close Button */}
+              <View className="bg-[#FBFFF0] rounded-3xl p-6 max-w-6xl w-full border-4 border-[#71DFB1] relative my-4">
                 <TouchableOpacity 
                   className="absolute top-4 right-4 w-6 h-6 bg-black rounded-full items-center justify-center z-10"
                   onPress={handleReviewModalClose}
                 >
                   <Text className="text-white font-bold text-base">×</Text>
                 </TouchableOpacity>
-
-                {/* Modal Title */}
                 <Text className="text-gray-800 text-lg font-semibold text-center mb-6 mt-4">
                   Give "{favor.user.full_name}" Feedback
                 </Text>
@@ -972,7 +964,7 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
                 textAlignVertical="top"
                 value={reviewText}
                 onChangeText={setReviewText}
-                maxLength={250} // Allow slight overage for better UX
+                maxLength={250}
               />
               {reviewText.length > 200 && (
                 <Text className="text-red-500 text-sm mt-1">
@@ -980,9 +972,6 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
                 </Text>
               )}
             </View>
-
-
-                {/* Submit Button */}
                 <TouchableOpacity 
                   className={`rounded-full py-4 mt-6 ${isSubmittingReview || rating === 0 || !reviewText.trim() || reviewText.length > 200 ? 'bg-gray-400' : 'bg-green-500'}`}
                   onPress={handleReviewSubmit}

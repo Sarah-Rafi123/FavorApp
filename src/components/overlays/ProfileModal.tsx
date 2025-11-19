@@ -6,7 +6,6 @@ import {
   Modal,
   Image,
 } from 'react-native';
-import { BlurView } from '@react-native-community/blur';
 interface ProfileModalProps {
   visible: boolean;
   onClose: () => void;

@@ -9,7 +9,6 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
-import { BlurView } from '@react-native-community/blur';
 import { useFavor } from '../../services/queries/FavorQueries';
 import { useApplyToFavor } from '../../services/mutations/FavorMutations';
 import { usePublicUserProfileQuery } from '../../services/queries/ProfileQueries';
@@ -36,16 +35,15 @@ const BlurredText = ({ children }: { children: string }) => (
     }}>
       {children}
     </Text>
-    <BlurView
+    <View
       style={{
         position: 'absolute',
         top: 0,
         left: 0,
         right: 0,
         bottom: 0,
+        backgroundColor: 'rgba(255, 255, 255, 0.8)',
       }}
-      blurType="light"
-      blurAmount={30}
     />
   </View>
 );

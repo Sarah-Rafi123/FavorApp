@@ -2,7 +2,7 @@
   "expo": {
     "name": "FavorApp",
     "slug": "favorapp",
-    "version": "1.0.16",
+    "version": "1.0.18",
     "orientation": "portrait",
     "icon": "./assets/AppLogo.png",
     "userInterfaceStyle": "light",
@@ -12,6 +12,7 @@
       "icon": "./assets/AppLogo.png",
       "supportsTablet": true,
       "bundleIdentifier": "com.favorappllc.mobile",
+      "deploymentTarget": "13.4",
       "config": {
         "googleMapsApiKey": "$EXPO_PUBLIC_GOOGLE_MAPS_API_KEY"
       },
@@ -72,11 +73,6 @@
         }
       ]
     ],
-    "extra": {
-      "eas": {
-        "projectId": "7ce5bc8d-1a94-401a-9641-3f0ee27fb437"
-      }
-    },
     "submit": {
       "ios": {
         "appleId": "favorapp@yahoo.com",
@@ -87,6 +83,12 @@
         "serviceAccountKeyPath": "./google-service-account.json",
         "track": "internal"
       }
-    }
+    },
+    "extra": {
+    "eas": {
+        "projectId": "a43836c9-fe6b-4e8c-90a5-902d788b8718"
+      }
+    },
+    "owner": "brianandrews"
   }
 }

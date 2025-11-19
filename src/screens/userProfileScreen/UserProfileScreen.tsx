@@ -11,7 +11,6 @@ import {
   Alert,
   Linking,
 } from 'react-native';
-import { BlurView } from '@react-native-community/blur';
 import BackSvg from '../../assets/icons/Back';
 import UserSvg from '../../assets/icons/User';
 import { usePublicUserProfileQuery, useUserReviewsQuery } from '../../services/queries/ProfileQueries';
@@ -48,16 +47,15 @@ const BlurredContactInfo = ({ children, shouldBlur }: { children: string; should
       <Text className="text-gray-800 text-base" numberOfLines={1} ellipsizeMode="tail">
         {children}
       </Text>
-      <BlurView
+      <View
         style={{
           position: 'absolute',
           top: 0,
           left: 0,
           right: 0,
           bottom: 0,
+          backgroundColor: 'rgba(255, 255, 255, 0.8)',
         }}
-        blurType="light"
-        blurAmount={30}
       />
     </View>
   );
