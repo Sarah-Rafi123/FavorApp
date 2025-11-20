@@ -9,7 +9,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import useAuthStore from './src/store/useAuthStore';
 import { useEffect } from 'react';
 import './global.css';
-
+import { Platform } from 'react-native';
+import Purchases, {LOG_LEVEL} from 'react-native-purchases';
 // Polyfill for crypto.getRandomValues() required by react-native-google-places-autocomplete
 if (typeof global.crypto !== 'object') {
   global.crypto = {} as any;
@@ -46,7 +47,33 @@ export default function App() {
     isLiveKey: stripePublishableKey.startsWith('pk_live_'),
     hasExtraSpaces: stripePublishableKey.includes(' ')
   });
+   useEffect(() => {
+    Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
+    if (Platform.OS === 'ios') {
+       Purchases.configure({apiKey: "appl_IWbQrglUqqvMAVfsxJOynJvxdQV"});
+    } else if (Platform.OS === 'android') {
+       Purchases.configure({apiKey: "goog_njtAypPNxFIYcZOcwxmshnJeyyb"})
+    }
+    getCustomerInfo();
+  }, []);
 
+async function getCustomerInfo() {
+    try {
+      const customerInfo = await Purchases.getCustomerInfo();
+      console.log("Customer Info:", customerInfo);
+    } catch (e) {
+      console.log("Error fetching customer info:", e);
+    }
+    async function getOfferings() {
+    try {
+      const offerings = await Purchases.getOfferings();
+      console.log("Offerings:", offerings);
+    }
+   catch (e) {
+      console.log("Error fetching offerings:", e);
+    }
+  }
+}
   return (
     <SafeAreaProvider>
       <StripeProvider publishableKey={stripePublishableKey}>

@@ -122,6 +122,12 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
           
           <SettingItem
             icon={<GetCertifiedSvg />}
+            title="Get Subscribed"
+            onPress={() => navigation?.navigate('SubscriptionsScreen')}
+          />
+
+          <SettingItem
+            icon={<GetCertifiedSvg />}
             title="Get Certified"
             onPress={() => navigation?.navigate('GetCertifiedScreen')}
           />

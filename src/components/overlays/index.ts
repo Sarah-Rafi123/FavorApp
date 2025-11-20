@@ -6,3 +6,4 @@ export * from "./CountryDropdown";
 export * from "./FavorDetailsModal";
 export * from "./FavorMapPreviewModal";
 export * from "./StripeConnectWebView";
+export * from "./ShuftiProWebView";

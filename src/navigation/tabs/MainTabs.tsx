@@ -6,6 +6,7 @@ import { HomeScreen, ProvideFavorScreen, ProfileScreen, SettingsScreen, FilterSc
 import { NotificationsScreen } from '../../screens/notificationsScreen/NotificationsScreen';
 import { CreateFavorScreen } from '../../screens/createFavorScreen/CreateFavorScreen';
 import { GetCertifiedScreen } from '../../screens/getCertifiedScreen/GetCertifiedScreen';
+import { SubscriptionsScreen } from '../../screens/subscriptionsScreen/SubscriptionsScreen';
 import { PaymentMethodScreen } from '../../screens/paymentMethodScreen/PaymentMethodScreen';
 import { PaymentMethodsScreen } from '../../screens/paymentMethodsScreen/PaymentMethodsScreen';
 import { StripePaymentScreen } from '../../screens/stripePaymentScreen/StripePaymentScreen';
@@ -119,6 +120,10 @@ function SettingsStack() {
       <Stack.Screen 
         name="GetCertifiedScreen" 
         component={GetCertifiedScreen}
+      />
+      <Stack.Screen 
+        name="SubscriptionsScreen" 
+        component={SubscriptionsScreen}
       />
       <Stack.Screen 
         name="PaymentMethodScreen" 
