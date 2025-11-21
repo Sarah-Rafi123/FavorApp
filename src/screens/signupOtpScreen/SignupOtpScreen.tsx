@@ -233,7 +233,7 @@ export function SignupOtpScreen({ onBack, onVerifySuccess, onBackToLogin, email,
       <View className="flex-1 px-6 pt-20">
         
         {/* Back Button */}
-        <View className="mb-4">
+        {/* <View className="mb-4">
           <TouchableOpacity 
             onPress={handleBackWithDataClear}
             className="flex-row items-center"
@@ -241,7 +241,7 @@ export function SignupOtpScreen({ onBack, onVerifySuccess, onBackToLogin, email,
             <Text className="text-lg mr-1">←</Text>
             <Text className="text-base text-gray-600">Back</Text>
           </TouchableOpacity>
-        </View>
+        </View> */}
 
         {/* Lock Icon */}
         <View className="items-center mb-8 mt-8">

@@ -7,6 +7,9 @@ import {
   ScrollView,
   Switch,
   ImageBackground,
+  Platform,
+  Share,
+  Alert,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import useAuthStore from '../../store/useAuthStore';
@@ -23,6 +26,7 @@ import AboutAppSvg from '../../assets/icons/AboutApp';
 import PrivacyPolicySvg from '../../assets/icons/PrivacyPolicy';
 import TermsansConditionsSvg from '../../assets/icons/TermsansConditions';
 import DeleteAccountSvg from '../../assets/icons/DeleteAccount';
+import ShareAppSvg from '../../assets/icons/ShareApp';
 import LogoutIconSvg from '../../assets/icons/LogoutIcon';
 import BlackArrowSvg from '../../assets/icons/BlackArrow';
 
@@ -47,6 +51,86 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
 
   const cancelLogout = () => {
     setShowLogoutModal(false);
+  };
+
+  const shareStoreLink = async (url: string, label: string) => {
+    try {
+      const result = await Share.share({
+        message: `${label} link for FavorApp: ${url}`,
+        url: Platform.OS === 'ios' ? url : undefined,
+        title: `FavorApp - ${label}`
+      });
+      
+      if (result.action === Share.sharedAction) {
+        console.log('Link shared successfully');
+      }
+    } catch (error) {
+      console.error('Error sharing link:', error);
+      Alert.alert('Error', 'Failed to share link. Please try again.');
+    }
+  };
+
+  const showStoreLinks = () => {
+    const playStoreUrl = 'https://play.google.com/store/apps/details?id=com.favorappllc.mobile';
+    const appStoreUrl = 'https://apps.apple.com/app/favorapp/id1234567890'; // Replace with actual App Store ID
+
+    Alert.alert(
+      'FavorApp Store Links',
+      `📱 App Store Links:\n\n🤖 Play Store:\n${playStoreUrl}\n\n🍎 App Store:\n${appStoreUrl}\n\nTap below to share a link:`,
+      [
+        {
+          text: 'Share Play Store Link',
+          onPress: () => shareStoreLink(playStoreUrl, 'Play Store')
+        },
+        {
+          text: 'Share App Store Link', 
+          onPress: () => shareStoreLink(appStoreUrl, 'App Store')
+        },
+        {
+          text: 'Close',
+          style: 'cancel'
+        }
+      ]
+    );
+  };
+
+  const handleShareApp = () => {
+    const playStoreUrl = 'https://play.google.com/store/apps/details?id=com.favorappllc.mobile';
+    const appStoreUrl = 'https://apps.apple.com/app/favorapp/id1234567890'; // Replace with actual App Store ID
+    
+    const shareMessage = Platform.OS === 'ios' 
+      ? `Check out FavorApp - the best app for connecting with your community!\n\n${appStoreUrl}`
+      : `Check out FavorApp - the best app for connecting with your community!\n\n${playStoreUrl}`;
+
+    Alert.alert(
+      'Share FavorApp',
+      'How would you like to share the app?',
+      [
+        {
+          text: 'Show Links',
+          onPress: showStoreLinks
+        },
+        {
+          text: 'Share',
+          onPress: async () => {
+            try {
+              await Share.share({
+                message: shareMessage,
+                url: Platform.OS === 'ios' ? appStoreUrl : undefined,
+                title: 'Check out FavorApp!'
+              });
+            } catch (error) {
+              console.error('Error sharing:', error);
+              Alert.alert('Error', 'Failed to share the app. Please try again.');
+            }
+          }
+        },
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        }
+      ]
+    );
   };
 
   const SettingItem = ({ 
@@ -186,6 +270,12 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
             icon={<TermsansConditionsSvg />}
             title="Terms and conditions"
             onPress={() => navigation?.navigate('TermsConditionsScreen')}
+          />
+
+          <SettingItem
+            icon={<ShareAppSvg />}
+            title="Share App"
+            onPress={handleShareApp}
           />
 
           <SettingItem
