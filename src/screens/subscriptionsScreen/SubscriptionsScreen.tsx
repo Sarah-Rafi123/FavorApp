@@ -15,6 +15,7 @@ import Svg, { Path, Circle } from 'react-native-svg';
 // Using main app logo for consistency
 import BackSvg from '../../assets/icons/Back';
 import FIcon from '../../assets/icons/FIcon';
+import useAuthStore from '../../store/useAuthStore';
 
 interface SubscriptionsScreenProps {
   navigation?: any;
@@ -40,6 +41,9 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
   const [offerings, setOfferings] = useState<PurchasesOffering | null>(null);
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState<string | null>(null);
+  const [revenueCatLoginLoading, setRevenueCatLoginLoading] = useState(false);
+
+  const { user } = useAuthStore();
 
   const features = [
     "Unlock premium subscription features",
@@ -48,8 +52,50 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
   ];
 
   useEffect(() => {
-    loadOfferings();
-  }, []);
+    initializeRevenueCatAndLoadOfferings();
+  }, [user]);
+
+  const initializeRevenueCatAndLoadOfferings = async () => {
+    if (!user?.id) {
+      console.warn('⚠️ No user ID available for RevenueCat login');
+      await loadOfferings();
+      return;
+    }
+
+    try {
+      setRevenueCatLoginLoading(true);
+      
+      // Log in user to RevenueCat with their user ID
+      console.log('🔗 Logging in to RevenueCat with user ID:', user.id);
+      const customerInfo = await Purchases.logIn(user.id);
+      
+      console.log('✅ RevenueCat login successful:', {
+        originalAppUserId: customerInfo.customerInfo.originalAppUserId,
+        isAnonymous: customerInfo.customerInfo.originalAppUserId.startsWith('$RCAnonymousID'),
+        activeEntitlements: Object.keys(customerInfo.customerInfo.entitlements.active),
+        hasActiveSubscriptions: Object.keys(customerInfo.customerInfo.entitlements.active).length > 0,
+        customerInfoCreated: customerInfo.created
+      });
+
+      // Log webhook-related info
+      console.log('📡 RevenueCat Webhook Integration Info:');
+      console.log('  - User ID for webhook:', user.id);
+      console.log('  - App User ID (should match):', customerInfo.customerInfo.originalAppUserId);
+      console.log('  - This will be sent as app_user_id in webhook events');
+      
+    } catch (error) {
+      console.error('❌ RevenueCat login failed:', error);
+      Alert.alert(
+        'Setup Error',
+        'Failed to initialize subscription system. Please try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setRevenueCatLoginLoading(false);
+      // Always load offerings regardless of login success/failure
+      await loadOfferings();
+    }
+  };
 
   const loadOfferings = async () => {
     try {
@@ -78,29 +124,81 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
   };
 
   const handlePurchase = async (packageToPurchase: PurchasesPackage) => {
+    if (!user?.id) {
+      Alert.alert(
+        'Login Required',
+        'Please log in to subscribe to premium features.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
     try {
       setPurchasing(packageToPurchase.identifier);
-      const { customerInfo } = await Purchases.purchasePackage(packageToPurchase);
+      
+      console.log('\n🛒 STARTING SUBSCRIPTION PURCHASE:');
+      console.log('📦 Package:', {
+        identifier: packageToPurchase.identifier,
+        packageType: packageToPurchase.packageType,
+        productId: packageToPurchase.product.identifier,
+        price: packageToPurchase.product.priceString
+      });
+      console.log('👤 User ID:', user.id);
+      console.log('🔗 This purchase will trigger RevenueCat webhook with:');
+      console.log('  - event.type: INITIAL_PURCHASE');
+      console.log('  - event.app_user_id:', user.id);
+      console.log('  - event.product_id:', packageToPurchase.product.identifier);
+      console.log('  - Backend will look for user with ID:', user.id);
+
+      const { customerInfo, productIdentifier } = await Purchases.purchasePackage(packageToPurchase);
+      
+      console.log('\n✅ PURCHASE COMPLETED:');
+      console.log('📱 Product purchased:', productIdentifier);
+      console.log('👤 Customer ID:', customerInfo.originalAppUserId);
+      console.log('🎫 Active entitlements:', Object.keys(customerInfo.entitlements.active));
+      console.log('📅 Latest expiration:', customerInfo.latestExpirationDate);
+      console.log('🔔 Management URL:', customerInfo.managementURL);
+
+      console.log('\n📡 WEBHOOK SHOULD BE TRIGGERED:');
+      console.log('  - RevenueCat will send INITIAL_PURCHASE webhook to backend');
+      console.log('  - Backend will find user by ID:', user.id);
+      console.log('  - Backend will set user.is_certified = true');
+      console.log('  - Backend will create subscription record with source: revenue_cat');
       
       // Check for premium entitlement or any active entitlements
       if (customerInfo.entitlements.active['premium'] || 
           Object.keys(customerInfo.entitlements.active).length > 0) {
+        console.log('🎉 Entitlements active - subscription confirmed');
         Alert.alert(
           'Success!', 
-          'You are now subscribed! Enjoy your premium features.',
+          'You are now subscribed! Your account has been upgraded to premium. The backend will automatically sync your subscription status.',
           [{ text: 'OK', onPress: () => navigation?.goBack() }]
         );
       } else {
+        console.log('⏳ No active entitlements yet - webhook may be processing');
         Alert.alert(
           'Purchase Complete', 
-          'Your purchase was successful! Premium features will be activated shortly.',
+          'Your purchase was successful! Your premium features will be activated shortly via our backend webhook system.',
           [{ text: 'OK', onPress: () => navigation?.goBack() }]
         );
       }
     } catch (error: any) {
-      console.error('Purchase error:', error);
+      console.error('\n❌ PURCHASE FAILED:', error);
+      console.log('📋 Error details:', {
+        message: error.message,
+        userCancelled: error.userCancelled,
+        code: error.code,
+        domain: error.domain
+      });
+      
       if (!error.userCancelled) {
-        Alert.alert('Purchase Error', error.message || 'Failed to complete purchase');
+        Alert.alert(
+          'Purchase Error', 
+          error.message || 'Failed to complete purchase. Please try again.',
+          [{ text: 'OK' }]
+        );
+      } else {
+        console.log('👤 User cancelled purchase');
       }
     } finally {
       setPurchasing(null);

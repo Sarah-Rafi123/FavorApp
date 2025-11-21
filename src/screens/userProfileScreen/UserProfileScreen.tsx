@@ -15,6 +15,7 @@ import BackSvg from '../../assets/icons/Back';
 import UserSvg from '../../assets/icons/User';
 import { usePublicUserProfileQuery, useUserReviewsQuery } from '../../services/queries/ProfileQueries';
 import { PublicUserProfile } from '../../services/apis/ProfileApis';
+import { BlurredEmail, BlurredPhone } from '../../components/common';
 
 interface UserProfileScreenProps {
   navigation?: any;
@@ -36,6 +37,14 @@ const BlurredContactInfo = ({ children, shouldBlur }: { children: string; should
     );
   }
 
+  // Use the new advanced blur components based on content type
+  if (children.includes('@')) {
+    return <BlurredEmail style={{ fontSize: 16, color: '#1F2937' }}>{children}</BlurredEmail>;
+  } else if (children.match(/^\+?[\d\s\-\(\)]+$/)) {
+    return <BlurredPhone style={{ fontSize: 16, color: '#1F2937' }}>{children}</BlurredPhone>;
+  }
+
+  // For other content, use a generic blur
   return (
     <View style={{
       position: 'relative',

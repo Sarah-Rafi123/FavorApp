@@ -829,8 +829,7 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
                      !failedImages.has(review.given_by.image_url) ? (
                       <Image
                         source={{ 
-                          uri: review.given_by.image_url,
-                          cache: 'force-cache'
+                          uri: review.given_by.image_url
                         }}
                         className="w-full h-full"
                         resizeMode="cover"
@@ -844,7 +843,6 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
                         onLoad={() => {
                           console.log('✅ Successfully loaded review image for', review.given_by?.full_name);
                         }}
-                        style={{ width: '100%', height: '100%' }}
                       />
                     ) : (
                       <Text className="text-white font-bold text-sm">

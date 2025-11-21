@@ -14,39 +14,13 @@ import { useApplyToFavor } from '../../services/mutations/FavorMutations';
 import { usePublicUserProfileQuery } from '../../services/queries/ProfileQueries';
 import { StripeConnectManager } from '../../services/StripeConnectManager';
 import { StripeConnectWebView } from './StripeConnectWebView';
+import { BlurredEmail, BlurredPhone } from '../common';
 
 interface FavorDetailsModalProps {
   visible: boolean;
   onClose: () => void;
   favorId: number | null;
 }
-
-const BlurredText = ({ children }: { children: string }) => (
-  <View style={{
-    position: 'relative',
-    borderRadius: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    overflow: 'hidden',
-  }}>
-    <Text style={{ 
-      fontSize: 16,
-      color: '#374151',
-    }}>
-      {children}
-    </Text>
-    <View
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(255, 255, 255, 0.8)',
-      }}
-    />
-  </View>
-);
 
 export function FavorDetailsModal({ visible, onClose, favorId }: FavorDetailsModalProps) {
   const [showStripeWebView, setShowStripeWebView] = useState(false);
@@ -386,9 +360,9 @@ export function FavorDetailsModal({ visible, onClose, favorId }: FavorDetailsMod
                     </View>
                     <View className="flex-1">
                       <Text className="text-gray-600 font-bold text-sm">Email</Text>
-                      <BlurredText>
+                      <BlurredEmail style={{ fontSize: 14 }}>
                         {userProfile?.email || favor.user.email}
-                      </BlurredText>
+                      </BlurredEmail>
                     </View>
                   </View>
 
@@ -404,9 +378,9 @@ export function FavorDetailsModal({ visible, onClose, favorId }: FavorDetailsMod
                       </View>
                       <View className="flex-1 ml-2">
                         <Text className="text-gray-600 font-bold text-sm mb-1">Phone number (call)</Text>
-                        <BlurredText>
+                        <BlurredPhone style={{ fontSize: 14 }}>
                           {userProfile?.phone_no_call || '** *** ****'}
-                        </BlurredText>
+                        </BlurredPhone>
                       </View>
                     </View>
                     
@@ -420,9 +394,9 @@ export function FavorDetailsModal({ visible, onClose, favorId }: FavorDetailsMod
                       </View>
                       <View className="flex-1 ml-2">
                         <Text className="text-gray-600 font-bold text-sm mb-1">Phone number (text)</Text>
-                        <BlurredText>
+                        <BlurredPhone style={{ fontSize: 14 }}>
                           {userProfile?.phone_no_text || '** *** ****'}
-                        </BlurredText>
+                        </BlurredPhone>
                       </View>
                     </View>
                     

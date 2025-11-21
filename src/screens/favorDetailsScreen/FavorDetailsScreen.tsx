@@ -82,6 +82,19 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
     { enabled: !!favorResponse?.data.favor?.accepted_response }
   );
 
+  // Debug logging for provider profile response
+  React.useEffect(() => {
+    if (providerProfileResponse) {
+      console.log('📊 PROVIDER PROFILE API RESPONSE:', {
+        hasResponse: !!providerProfileResponse,
+        responseStructure: Object.keys(providerProfileResponse),
+        userData: providerProfileResponse?.data?.user,
+        userImageUrl: providerProfileResponse?.data?.user?.image_url,
+        userFullName: providerProfileResponse?.data?.user?.full_name
+      });
+    }
+  }, [providerProfileResponse]);
+
   // Fetch user contact details immediately
   const { data: userContactResponse } = usePublicUserProfileQuery(
     favorResponse?.data.favor?.user?.id || null,
@@ -93,6 +106,20 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
     favorResponse?.data.favor?.accepted_response?.user?.id || null,
     { enabled: !!favorResponse?.data.favor?.accepted_response?.user?.id }
   );
+
+  // Debug logging for provider contact response
+  React.useEffect(() => {
+    if (providerContactResponse) {
+      console.log('📊 PROVIDER CONTACT API RESPONSE:', {
+        hasResponse: !!providerContactResponse,
+        responseStructure: Object.keys(providerContactResponse),
+        userData: providerContactResponse?.data?.user,
+        userImageUrl: providerContactResponse?.data?.user?.image_url,
+        userFullName: providerContactResponse?.data?.user?.full_name
+      });
+    }
+  }, [providerContactResponse]);
+
   
   // Fetch user profile data when needed (for modal)
   const { data: userProfileResponse, isLoading: userProfileLoading } = usePublicUserProfileQuery(
@@ -125,6 +152,31 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
     favorResponse?.data.favor?.accepted_response?.user?.id || null,
     { enabled: !!favorResponse?.data.favor?.accepted_response?.user?.id && isRequestMode }
   );
+
+  // Debug API calls
+  React.useEffect(() => {
+    console.log('\n🔍 API QUERY DEBUG:');
+    console.log('📋 isRequestMode:', isRequestMode);
+    console.log('🎯 Favor Data:', {
+      favorId: favorResponse?.data.favor?.id,
+      requesterUserId: favorResponse?.data.favor?.user?.id,
+      requesterName: favorResponse?.data.favor?.user?.full_name,
+      providerUserId: favorResponse?.data.favor?.accepted_response?.user?.id,
+      providerName: favorResponse?.data.favor?.accepted_response?.user?.full_name,
+      hasAcceptedResponse: !!favorResponse?.data.favor?.accepted_response
+    });
+    console.log('📞 API Queries Being Made:');
+    console.log('  - userReviewStatisticsQuery (requester):', {
+      userId: favorResponse?.data.favor?.user?.id || null,
+      enabled: !!favorResponse?.data.favor?.user?.id && !isRequestMode,
+      willExecute: !!favorResponse?.data.favor?.user?.id && !isRequestMode
+    });
+    console.log('  - providerReviewStatisticsQuery (provider):', {
+      userId: favorResponse?.data.favor?.accepted_response?.user?.id || null,
+      enabled: !!favorResponse?.data.favor?.accepted_response?.user?.id && isRequestMode,
+      willExecute: !!favorResponse?.data.favor?.accepted_response?.user?.id && isRequestMode
+    });
+  }, [favorResponse, isRequestMode]);
 
   // Debug logging for review statistics
   React.useEffect(() => {
@@ -167,6 +219,53 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
   const providerProfile = providerProfileResponse?.data.user;
   const providerContact = providerContactResponse?.data.user; // Contact details for the provider
 
+  // Debug logging for ALL provider review API responses (moved after variable declarations)
+  React.useEffect(() => {
+    console.log('\n🔍 COMPREHENSIVE PROVIDER REVIEW COUNT DEBUG:');
+    console.log('📊 Provider Name:', favor?.accepted_response?.user?.full_name);
+    console.log('📊 Provider ID:', favor?.accepted_response?.user?.id);
+    console.log('📊 isRequestMode:', isRequestMode);
+    
+    console.log('\n📊 PROVIDER REVIEW STATISTICS API RESPONSE:');
+    console.log('  - Response exists:', !!providerReviewStatisticsResponse);
+    console.log('  - Response loading:', providerReviewStatisticsLoading);
+    console.log('  - Full response:', JSON.stringify(providerReviewStatisticsResponse, null, 2));
+    console.log('  - Review count from statistics API:', providerReviewStatisticsResponse?.data?.total?.count);
+    
+    console.log('\n📊 PROVIDER REVIEWS API RESPONSE (OLD):');
+    console.log('  - Response exists:', !!providerReviewsResponse);
+    console.log('  - Response loading:', providerReviewsLoading);
+    console.log('  - Full response:', JSON.stringify(providerReviewsResponse, null, 2));
+    console.log('  - Review count from old API:', providerReviewsResponse?.data?.statistics?.total_reviews);
+    
+    console.log('\n📊 PROVIDER PROFILE FALLBACK:');
+    console.log('  - Profile exists:', !!providerProfile);
+    console.log('  - Full profile:', JSON.stringify(providerProfile, null, 2));
+    console.log('  - Review count from profile:', providerProfile?.total_reviews);
+    
+    const finalCount = providerReviewStatisticsResponse?.data?.total?.count || 
+                      providerReviewsResponse?.data?.statistics?.total_reviews || 
+                      providerProfile?.total_reviews || 0;
+    
+    console.log('\n🎯 FINAL COUNT CALCULATION:');
+    console.log('  - New API count:', providerReviewStatisticsResponse?.data?.total?.count);
+    console.log('  - Old API count:', providerReviewsResponse?.data?.statistics?.total_reviews);
+    console.log('  - Fallback count:', providerProfile?.total_reviews);
+    console.log('  - FINAL COUNT DISPLAYED:', finalCount);
+    
+    if (finalCount === 19) {
+      console.log('🎯 SOURCE OF "19 REVIEWS": Found the source!');
+      if (providerReviewStatisticsResponse?.data?.total?.count === 19) {
+        console.log('   ✅ Coming from providerReviewStatisticsResponse.data.total.count');
+      } else if (providerReviewsResponse?.data?.statistics?.total_reviews === 19) {
+        console.log('   ✅ Coming from providerReviewsResponse.data.statistics.total_reviews');
+      } else if (providerProfile?.total_reviews === 19) {
+        console.log('   ✅ Coming from providerProfile.total_reviews');
+      }
+    }
+    
+  }, [favor, providerReviewStatisticsResponse, providerReviewsResponse, providerProfile, isRequestMode, providerReviewStatisticsLoading, providerReviewsLoading]);
+
   // Debug logging to check contact information
   React.useEffect(() => {
     if (userContact) {
@@ -177,6 +276,7 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
       console.log('  - Has Text Number:', !!userContact.phone_no_text);
       console.log('  - Email:', userContact.email);
       console.log('  - Full Name:', userContact.full_name);
+      console.log('  - Image URL:', userContact.image_url);
     }
     if (providerContact) {
       console.log('📞 Provider Contact Info:');
@@ -186,8 +286,36 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
       console.log('  - Has Text Number:', !!providerContact.phone_no_text);
       console.log('  - Email:', providerContact.email);
       console.log('  - Full Name:', providerContact.full_name);
+      console.log('  - Image URL:', providerContact.image_url);
     }
   }, [userContact, providerContact]);
+
+  // Debug logging for provider profile vs contact data
+  React.useEffect(() => {
+    if (favor?.accepted_response) {
+      console.log('🔍 PROVIDER PROFILE DEBUG:');
+      console.log('  - Favor Provider Name:', favor.accepted_response.user.full_name);
+      console.log('  - Provider Profile Response:', {
+        exists: !!providerProfile,
+        loading: providerProfileLoading,
+        name: providerProfile?.full_name,
+        image_url: providerProfile?.image_url
+      });
+      console.log('  - Provider Contact Response:', {
+        exists: !!providerContact,
+        name: providerContact?.full_name,
+        image_url: providerContact?.image_url
+      });
+      console.log('  - Image URL Priority:');
+      console.log('    1. providerProfile?.image_url:', providerProfile?.image_url);
+      console.log('    2. providerContact?.image_url:', providerContact?.image_url);
+      console.log('    3. favor.accepted_response.user (basic):', favor.accepted_response.user);
+      
+      // Check which image URL will be used
+      const finalImageUrl = providerProfile?.image_url || providerContact?.image_url;
+      console.log('  - FINAL IMAGE URL TO USE:', finalImageUrl);
+    }
+  }, [favor, providerProfile, providerContact, providerProfileLoading]);
 
   // Debug logging for reviews data
   React.useEffect(() => {
@@ -655,7 +783,27 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
                     ⭐ {(() => {
                       const newApiRating = userReviewStatisticsResponse?.data?.total?.average_rating;
                       const oldApiRating = userReviewsResponse?.data?.statistics?.average_rating;
-                      console.log(`🔍 User Rating display - New API: ${newApiRating}, Old API: ${oldApiRating}`);
+                      
+                      console.log('\n🌟 USER (REQUESTER) RATING DISPLAY DEBUG:');
+                      console.log('📊 User Name:', favor.user.full_name);
+                      console.log('📊 User ID:', favor.user.id);
+                      console.log('🔄 API Responses:');
+                      console.log('  - userReviewStatisticsResponse:', {
+                        exists: !!userReviewStatisticsResponse,
+                        loading: userReviewStatisticsLoading,
+                        data: userReviewStatisticsResponse?.data,
+                        rating: newApiRating,
+                        count: userReviewStatisticsResponse?.data?.total?.count
+                      });
+                      console.log('  - userReviewsResponse (OLD API):', {
+                        exists: !!userReviewsResponse,
+                        loading: userReviewsLoading,
+                        statistics: userReviewsResponse?.data?.statistics,
+                        rating: oldApiRating,
+                        count: userReviewsResponse?.data?.statistics?.total_reviews
+                      });
+                      console.log('🎯 FINAL USER RATING DISPLAYED:', newApiRating?.toFixed(1) || oldApiRating?.toFixed(1) || '0.0');
+                      
                       return newApiRating?.toFixed(1) || oldApiRating?.toFixed(1) || '0.0';
                     })()}
                   </Text>
@@ -663,7 +811,12 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
                     | {(() => {
                       const newApiCount = userReviewStatisticsResponse?.data?.total?.count;
                       const oldApiCount = userReviewsResponse?.data?.statistics?.total_reviews;
-                      console.log(`🔍 User Review count display - New API: ${newApiCount}, Old API: ${oldApiCount}`);
+                      
+                      console.log('📊 USER (REQUESTER) COUNT DISPLAY DEBUG:');
+                      console.log('  - New API count:', newApiCount);
+                      console.log('  - Old API count:', oldApiCount);
+                      console.log('🎯 FINAL USER COUNT DISPLAYED:', newApiCount || oldApiCount || 0);
+                      
                       return newApiCount || oldApiCount || 0;
                     })()} Reviews
                   </Text>
@@ -771,21 +924,71 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
             <View className="flex-row items-center bg-white border rounded-2xl border-gray-300 p-4 border-1 mb-4">
               <View className="relative">
                 <View className="w-16 h-16 rounded-full overflow-hidden items-center justify-center">
-                  {(providerProfile?.image_url || providerContact?.image_url) ? (
-                    <Image
-                      source={{ uri: providerProfile?.image_url || providerContact?.image_url }}
-                      className="w-full h-full"
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <View className="w-full h-full bg-[#44A27B] items-center justify-center">
-                      <Text className="text-white text-lg font-bold">
-                        {getUserInitials(favor.accepted_response.user.full_name)}
-                      </Text>
-                    </View>
-                  )}
+                  {(() => {
+                    // Get the provider's image URL with priority: 
+                    // 1. Use providerContact if name matches (more reliable for correct person)
+                    // 2. Fall back to providerProfile if name matches
+                    // 3. Use any available image as last resort
+                    const expectedName = favor?.accepted_response?.user?.full_name;
+                    
+                    let providerImageUrl = null;
+                    
+                    // First, check if providerContact has the correct person
+                    if (providerContact?.full_name === expectedName && providerContact?.image_url) {
+                      providerImageUrl = providerContact.image_url;
+                    }
+                    // Then check if providerProfile has the correct person
+                    else if (providerProfile?.full_name === expectedName && providerProfile?.image_url) {
+                      providerImageUrl = providerProfile.image_url;
+                    }
+                    // Last resort: use any available image
+                    else {
+                      providerImageUrl = providerContact?.image_url || providerProfile?.image_url;
+                    }
+                    
+                    const hasValidImage = providerImageUrl && providerImageUrl.trim() !== '' && !failedImages.has(providerImageUrl);
+                    
+                    console.log('🖼️ Provider Image Render Logic:', {
+                      expectedProviderName: expectedName,
+                      providerContactName: providerContact?.full_name,
+                      providerProfileName: providerProfile?.full_name,
+                      providerContactImageUrl: providerContact?.image_url,
+                      providerProfileImageUrl: providerProfile?.image_url,
+                      finalImageUrl: providerImageUrl,
+                      hasValidImage,
+                      isInFailedSet: providerImageUrl ? failedImages.has(providerImageUrl) : false
+                    });
+
+                    if (hasValidImage) {
+                      return (
+                        <Image
+                          source={{ uri: providerImageUrl }}
+                          className="w-full h-full"
+                          resizeMode="cover"
+                          onError={(error) => {
+                            console.log('❌ Failed to load provider image:', providerImageUrl);
+                            console.log('Error details:', error.nativeEvent?.error);
+                            if (providerImageUrl) {
+                              setFailedImages(prev => new Set(prev).add(providerImageUrl));
+                            }
+                          }}
+                          onLoad={() => {
+                            console.log('✅ Successfully loaded provider image for', expectedName, ':', providerImageUrl);
+                          }}
+                        />
+                      );
+                    } else {
+                      return (
+                        <View className="w-full h-full bg-[#44A27B] items-center justify-center">
+                          <Text className="text-white text-lg font-bold">
+                            {getUserInitials(expectedName || 'Provider')}
+                          </Text>
+                        </View>
+                      );
+                    }
+                  })()}
                 </View>
-                {providerProfile?.is_certified && (
+                {(providerProfile?.is_certified || providerContact?.is_certified) && (
                   <View className="absolute -top-1 -right-1">
                     <VerifiedIcon />
                   </View>
@@ -802,7 +1005,32 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
                       const newApiRating = providerReviewStatisticsResponse?.data?.total?.average_rating;
                       const oldApiRating = providerReviewsResponse?.data?.statistics?.average_rating;
                       const fallbackRating = providerProfile?.average_rating;
-                      console.log(`🔍 Provider Rating display - New API: ${newApiRating}, Old API: ${oldApiRating}, Fallback: ${fallbackRating}`);
+                      
+                      console.log('\n🌟 PROVIDER RATING DISPLAY DEBUG:');
+                      console.log('📊 Provider Name:', favor.accepted_response.user.full_name);
+                      console.log('📊 Provider ID:', favor.accepted_response.user.id);
+                      console.log('🔄 API Responses:');
+                      console.log('  - providerReviewStatisticsResponse:', {
+                        exists: !!providerReviewStatisticsResponse,
+                        loading: providerReviewStatisticsLoading,
+                        data: providerReviewStatisticsResponse?.data,
+                        rating: newApiRating,
+                        count: providerReviewStatisticsResponse?.data?.total?.count
+                      });
+                      console.log('  - providerReviewsResponse (OLD API):', {
+                        exists: !!providerReviewsResponse,
+                        loading: providerReviewsLoading,
+                        statistics: providerReviewsResponse?.data?.statistics,
+                        rating: oldApiRating,
+                        count: providerReviewsResponse?.data?.statistics?.total_reviews
+                      });
+                      console.log('  - providerProfile fallback:', {
+                        exists: !!providerProfile,
+                        rating: fallbackRating,
+                        count: providerProfile?.total_reviews
+                      });
+                      console.log('🎯 FINAL RATING DISPLAYED:', newApiRating?.toFixed(1) || oldApiRating?.toFixed(1) || fallbackRating?.toFixed(1) || '0.0');
+                      
                       return newApiRating?.toFixed(1) || oldApiRating?.toFixed(1) || fallbackRating?.toFixed(1) || '0.0';
                     })()}
                   </Text>
@@ -811,7 +1039,13 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
                       const newApiCount = providerReviewStatisticsResponse?.data?.total?.count;
                       const oldApiCount = providerReviewsResponse?.data?.statistics?.total_reviews;
                       const fallbackCount = providerProfile?.total_reviews;
-                      console.log(`🔍 Provider Review count display - New API: ${newApiCount}, Old API: ${oldApiCount}, Fallback: ${fallbackCount}`);
+                      
+                      console.log('📊 PROVIDER COUNT DISPLAY DEBUG:');
+                      console.log('  - New API count:', newApiCount);
+                      console.log('  - Old API count:', oldApiCount);
+                      console.log('  - Fallback count:', fallbackCount);
+                      console.log('🎯 FINAL COUNT DISPLAYED:', newApiCount || oldApiCount || fallbackCount || 0);
+                      
                       return newApiCount || oldApiCount || fallbackCount || 0;
                     })()} Reviews
                   </Text>

@@ -6,6 +6,8 @@ import {
   Modal,
   Image,
 } from 'react-native';
+import { BlurredEmail, BlurredPhone } from '../common';
+
 interface ProfileModalProps {
   visible: boolean;
   onClose: () => void;
@@ -22,19 +24,6 @@ interface ProfileModalProps {
     providedHours: string;
   };
 }
-
-const BlurredText = ({ children }: { children: string }) => (
-  <Text style={{ 
-    fontSize: 16,
-    color: '#9CA3AF',
-    opacity: 0.4,
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 8,
-  }}>
-    {children}
-  </Text>
-);
 
 export function ProfileModal({ visible, onClose, user }: ProfileModalProps) {
   return (
@@ -76,7 +65,7 @@ export function ProfileModal({ visible, onClose, user }: ProfileModalProps) {
             <View className="mb-3">
               <View className="flex-row items-center">
                 <Text className="text-gray-700 text-base">Email : </Text>
-                <BlurredText>{user.email}</BlurredText>
+                <BlurredEmail style={{ fontSize: 16 }}>{user.email}</BlurredEmail>
               </View>
             </View>
 
@@ -89,21 +78,21 @@ export function ProfileModal({ visible, onClose, user }: ProfileModalProps) {
             <View className="mb-3">
               <View className="flex-row items-center">
                 <Text className="text-gray-700 text-base">Call : </Text>
-                <BlurredText>{user.phone}</BlurredText>
+                <BlurredPhone style={{ fontSize: 16 }}>{user.phone}</BlurredPhone>
               </View>
             </View>
 
             <View className="mb-3">
               <View className="flex-row items-center">
                 <Text className="text-gray-700 text-base">Text : </Text>
-                <BlurredText>{user.textNumber}</BlurredText>
+                <BlurredPhone style={{ fontSize: 16 }}>{user.textNumber}</BlurredPhone>
               </View>
             </View>
 
             <View className="mb-3">
               <View className="flex-row items-center">
                 <Text className="text-gray-700 text-base">Since : </Text>
-                <BlurredText>{user.since}</BlurredText>
+                <BlurredEmail style={{ fontSize: 16 }}>{user.since}</BlurredEmail>
               </View>
             </View>
           </View>
