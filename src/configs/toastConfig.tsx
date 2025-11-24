@@ -14,9 +14,9 @@ export const toastConfig = {
         <View style={{  borderRadius: 12, padding: 4, marginRight: 8, alignItems: "center", justifyContent: "center" }}>
           <Image source={require('../../assets/icon.png')} style={{ height: 40, width: 40, objectFit: 'contain' }} />
         </View>
-        <View>
-          <Text style={[styles.title]}>{text1}</Text>
-          <Text style={[styles.subtitle, { width: '100%' }]}>{text2}</Text>
+        <View style={{ flex: 1, paddingRight: 8 }}>
+          <Text style={[styles.title]} numberOfLines={1} ellipsizeMode="tail">{text1}</Text>
+          <Text style={[styles.subtitle]} numberOfLines={2} ellipsizeMode="tail">{text2}</Text>
         </View>
       </View>
     );
@@ -51,13 +51,6 @@ const createStyles = (theme: ThemeTypes) => StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
-    // borderColor: theme.primary,
-    // borderWidth: 1
-    // shadowColor: theme.primary,
-    // shadowOpacity: 0.1,
-    // shadowRadius: 10,
-    // shadowOffset: { width: 0, height: 4 },
-    // elevation: 5,
   },
   title: {
     fontSize: font_size.M,

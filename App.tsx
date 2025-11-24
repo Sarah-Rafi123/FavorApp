@@ -49,10 +49,15 @@ export default function App() {
   });
    useEffect(() => {
     Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
+    
     if (Platform.OS === 'ios') {
-       Purchases.configure({apiKey: "appl_IWbQrglUqqvMAVfsxJOynJvxdQV"});
+       Purchases.configure({
+         apiKey: "appl_IWbQrglUqqvMAVfsxJOynJvxdQV"
+       });
     } else if (Platform.OS === 'android') {
-       Purchases.configure({apiKey: "goog_njtAypPNxFIYcZOcwxmshnJeyyb"})
+       Purchases.configure({
+         apiKey: "goog_njtAypPNxFIYcZOcwxmshnJeyyb"
+       });
     }
     getCustomerInfo();
   }, []);
@@ -60,19 +65,22 @@ export default function App() {
 async function getCustomerInfo() {
     try {
       const customerInfo = await Purchases.getCustomerInfo();
-      console.log("Customer Info:", customerInfo);
-    } catch (e) {
-      console.log("Error fetching customer info:", e);
-    }
-    async function getOfferings() {
-    try {
+      console.log("💰 RevenueCat Customer Info:", customerInfo);
+      
+      // Also get offerings to test configuration
       const offerings = await Purchases.getOfferings();
-      console.log("Offerings:", offerings);
+      console.log("📦 RevenueCat Offerings:", offerings);
+      console.log("🔍 Available offering identifiers:", Object.keys(offerings.all));
+      
+      if (offerings.current) {
+        console.log("✅ Current offering found:", offerings.current.identifier);
+        console.log("📱 Available packages:", offerings.current.availablePackages.length);
+      } else {
+        console.log("⚠️ No current offering available");
+      }
+    } catch (e) {
+      console.log("❌ Error fetching RevenueCat data:", e);
     }
-   catch (e) {
-      console.log("Error fetching offerings:", e);
-    }
-  }
 }
   return (
     <SafeAreaProvider>

@@ -544,7 +544,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
                       {applicant.user.full_name || `${applicant.user.first_name} ${applicant.user.last_name}`}
                     </Text>
                     <ApplicantReviewInfo applicant={applicant} />
-                    <TouchableOpacity onPress={() => navigation?.navigate('UserProfileScreen', { userId: applicant.user.id, favorStatus: favor.status })}>
+                    <TouchableOpacity onPress={() => navigation?.navigate('UserProfileScreen', { userId: applicant.user.id, favorStatus: favor.status, forcePrivacyMode: true })}>
                       <Text className="text-[#44A27B] text-base font-medium">View Profile</Text>
                     </TouchableOpacity>
                   </View>
@@ -680,7 +680,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
                 {applicant.user.full_name || `${applicant.user.first_name} ${applicant.user.last_name}`}
               </Text>
               <ApplicantReviewInfo applicant={applicant} />
-              <TouchableOpacity onPress={() => navigation?.navigate('UserProfileScreen', { userId: applicant.user.id, favorStatus: favor.status })}>
+              <TouchableOpacity onPress={() => navigation?.navigate('UserProfileScreen', { userId: applicant.user.id, favorStatus: favor.status, forcePrivacyMode: true })}>
                 <Text className="text-[#44A27B] text-base font-medium">View Profile</Text>
               </TouchableOpacity>
             </View>

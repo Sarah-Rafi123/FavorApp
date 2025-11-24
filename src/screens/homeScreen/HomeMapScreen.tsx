@@ -48,6 +48,7 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
     longitudeDelta: 5.0,
   });
   const [mapReady, setMapReady] = useState(false);
+  const [favorLoadingTimeout, setFavorLoadingTimeout] = useState(false);
   const mapRef = useRef<MapView>(null);
 
   // Use browseFavors when filters are active, useFavors when not
@@ -76,12 +77,45 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
 
   // Use the appropriate data source
   const currentData = useFilteredData ? browseFavorsData : favorsData;
-  const isLoading = useFilteredData ? browseFavorsLoading : favorsLoading;
+  const rawIsLoading = useFilteredData ? browseFavorsLoading : favorsLoading;
   const error = useFilteredData ? browseFavorsError : favorsError;
+  
+  // Improved loading state: hide loading after timeout or when we have data
+  const isLoading = rawIsLoading && !favorLoadingTimeout && !currentData?.data?.favors;
+  
+  // Debug loading state
+  useEffect(() => {
+    console.log('🔍 Loading state debug:', {
+      useFilteredData,
+      browseFavorsLoading,
+      favorsLoading,
+      rawIsLoading,
+      favorLoadingTimeout,
+      isLoading,
+      hasData: !!currentData?.data?.favors,
+      favorCount: currentData?.data?.favors?.length || 0,
+      mapReady
+    });
+  }, [useFilteredData, browseFavorsLoading, favorsLoading, rawIsLoading, favorLoadingTimeout, isLoading, currentData?.data?.favors, mapReady]);
 
   useEffect(() => {
     checkLocationPermission();
   }, []);
+
+  // Add loading timeout to prevent infinite loading
+  useEffect(() => {
+    if (rawIsLoading) {
+      setFavorLoadingTimeout(false);
+      const timeout = setTimeout(() => {
+        console.log('⏰ Favor loading timeout reached - hiding loading indicator');
+        setFavorLoadingTimeout(true);
+      }, 10000); // 10 second timeout
+      
+      return () => clearTimeout(timeout);
+    } else {
+      setFavorLoadingTimeout(false);
+    }
+  }, [rawIsLoading]);
 
 
   // Update allFavors when new data arrives - prevent infinite loops
@@ -320,7 +354,9 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
       {isLoading && (
         <View className="absolute top-40 left-6 right-6 z-10 bg-white rounded-lg p-3 shadow-lg flex-row items-center">
           <ActivityIndicator size="small" color="#44A27B" />
-          <Text className="ml-3 text-gray-600">Loading favors...</Text>
+          <Text className="ml-3 text-gray-600">
+            {mapReady ? 'Loading favors...' : 'Loading map and favors...'}
+          </Text>
         </View>
       )}
 

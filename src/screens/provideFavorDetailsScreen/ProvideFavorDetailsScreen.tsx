@@ -898,7 +898,7 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
             >
-              <View className="bg-[#FBFFF0] rounded-3xl p-6 max-w-6xl w-full border-4 border-[#71DFB1] relative my-4">
+              <View className="bg-[#FBFFF0] rounded-3xl p-6 w-screen max-w-[95%] border-4 border-[#71DFB1] relative m-4">
                 <TouchableOpacity 
                   className="absolute top-4 right-4 w-6 h-6 bg-black rounded-full items-center justify-center z-10"
                   onPress={handleReviewModalClose}

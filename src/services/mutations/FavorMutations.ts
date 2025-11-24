@@ -569,12 +569,11 @@ export const useCreateReview = () => {
       queryClient.invalidateQueries({ queryKey: ['favors', 'my'] });
       queryClient.invalidateQueries({ queryKey: ['favor', favorId] });
       
-      const tipMessage = response.data.tip_sent ? ' and tip sent' : '';
       Toast.show({
         type: 'success',
         text1: 'Review Submitted! ⭐',
-        text2: `${response.message}${tipMessage}`,
-        visibilityTime: 4000,
+        text2: response.data.tip_sent ? 'Review submitted and tip sent!' : 'Review submitted successfully!',
+        visibilityTime: 3000,
       });
     },
     onError: (error) => {

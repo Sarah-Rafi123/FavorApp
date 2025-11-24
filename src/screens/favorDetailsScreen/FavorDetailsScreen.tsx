@@ -1319,13 +1319,13 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
         >
-          <View className="flex-1 bg-black/50 justify-center items-center">
+          <View className="flex-1 bg-black/50   justify-center items-center">
             <ScrollView
               contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center' }}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
             >
-              <View className="bg-[#FBFFF0] rounded-3xl w-full mx-4 border-4 border-[#71DFB1] my-4">
+              <View className="bg-[#FBFFF0] rounded-3xl  w-screen max-w-[95%] border-4 border-[#71DFB1] my-4">
                 <View className="p-6 relative">
                 {/* Close Button */}
                 <TouchableOpacity 

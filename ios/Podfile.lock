@@ -1664,6 +1664,8 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
+  - react-native-super-ellipse-mask (1.0.7):
+    - React
   - react-native-webview (13.12.5):
     - DoubleConversion
     - glog
@@ -2328,6 +2330,7 @@ DEPENDENCIES:
   - react-native-google-maps (from `/Users/user/Documents/FavorApp/node_modules/react-native-maps`)
   - react-native-maps (from `../node_modules/react-native-maps`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
+  - react-native-super-ellipse-mask (from `../node_modules/react-native-super-ellipse-mask`)
   - react-native-webview (from `../node_modules/react-native-webview`)
   - react-native-worklets-core (from `../node_modules/react-native-worklets-core`)
   - React-nativeconfig (from `../node_modules/react-native/ReactCommon`)
@@ -2512,6 +2515,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-maps"
   react-native-safe-area-context:
     :path: "../node_modules/react-native-safe-area-context"
+  react-native-super-ellipse-mask:
+    :path: "../node_modules/react-native-super-ellipse-mask"
   react-native-webview:
     :path: "../node_modules/react-native-webview"
   react-native-worklets-core:
@@ -2656,6 +2661,7 @@ SPEC CHECKSUMS:
   react-native-google-maps: a3a01acdc5e15d1b74d600ba270c454bac6239b4
   react-native-maps: 3b0c8378ff774053bdd8954c820e987fdd7b4d72
   react-native-safe-area-context: cd916088cac5300c3266876218377518987b995e
+  react-native-super-ellipse-mask: bdfc9a07d7f804779862b97457b331faa92f6881
   react-native-webview: 6b9fc65c1951203a3e958ff3cc0a858d4b6be901
   react-native-worklets-core: 1ca7988edb1deef9a8c0b19d24b96c0eded51d03
   React-nativeconfig: 8efdb1ef1e9158c77098a93085438f7e7b463678

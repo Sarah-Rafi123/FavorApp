@@ -76,6 +76,7 @@ export function UserProfileScreen({ navigation, route }: UserProfileScreenProps)
   // Get user ID and favor status from route params
   const userId = route?.params?.userId;
   const favorStatus = route?.params?.favorStatus;
+  const forcePrivacyMode = route?.params?.forcePrivacyMode; // New parameter to force privacy
   
   // Fetch user profile data
   const { data: userProfileResponse, isLoading: profileLoading, error: profileError } = usePublicUserProfileQuery(
@@ -104,16 +105,18 @@ export function UserProfileScreen({ navigation, route }: UserProfileScreenProps)
   }, [userProfile]);
 
   // Helper to determine if contact info should be visible (not blurred)
-  const shouldShowClearContactInfo = favorStatus === 'in_progress' || favorStatus === 'in-progress' || favorStatus === 'completed';
+  // If forcePrivacyMode is true (from CreateFavorScreen), always hide contact info
+  const shouldShowClearContactInfo = !forcePrivacyMode && (favorStatus === 'in_progress' || favorStatus === 'in-progress' || favorStatus === 'completed');
   
   // Debug: Log favor status to track contact info visibility
   React.useEffect(() => {
     console.log('🎯 UserProfileScreen navigation params:', {
       userId,
       favorStatus,
+      forcePrivacyMode,
       shouldShowClearContactInfo
     });
-  }, [userId, favorStatus, shouldShowClearContactInfo]);
+  }, [userId, favorStatus, forcePrivacyMode, shouldShowClearContactInfo]);
 
   const handleGoBack = () => {
     navigation?.goBack();
@@ -270,6 +273,15 @@ export function UserProfileScreen({ navigation, route }: UserProfileScreenProps)
                 <Text className="text-gray-600 text-base">{statistics.total_reviews || '0'} Reviews</Text>
               </View>
             )}
+            
+            {/* Privacy Mode Notification */}
+            {/* {forcePrivacyMode && (
+              <View className="bg-orange-100 border border-orange-300 rounded-lg px-4 py-2 mt-3">
+                <Text className="text-orange-800 text-sm text-center font-medium">
+                  🔒 Privacy Mode: Contact info and personal details are hidden
+                </Text>
+              </View>
+            )} */}
           </View>
 
           {/* User Details */}
@@ -308,7 +320,8 @@ export function UserProfileScreen({ navigation, route }: UserProfileScreenProps)
               </View>
             </View>
 
-            {userProfile.age && (
+            {/* Hide age in privacy mode to protect personal information */}
+            {!forcePrivacyMode && userProfile.age && (
               <View className="flex-row">
                 <Text className="text-gray-700 text-base w-32">Age</Text>
                 <Text className="text-gray-700 text-base mr-2">:</Text>
@@ -415,7 +428,8 @@ export function UserProfileScreen({ navigation, route }: UserProfileScreenProps)
               </View>
             )}
 
-            {userProfile.first_name && (
+            {/* Hide individual name components in privacy mode to protect personal details */}
+            {!forcePrivacyMode && userProfile.first_name && (
               <View className="flex-row">
                 <Text className="text-gray-700 text-base w-32">First Name</Text>
                 <Text className="text-gray-700 text-base mr-2">:</Text>
@@ -427,7 +441,7 @@ export function UserProfileScreen({ navigation, route }: UserProfileScreenProps)
               </View>
             )}
 
-            {userProfile.last_name && (
+            {!forcePrivacyMode && userProfile.last_name && (
               <View className="flex-row">
                 <Text className="text-gray-700 text-base w-32">Last Name</Text>
                 <Text className="text-gray-700 text-base mr-2">:</Text>
@@ -439,7 +453,7 @@ export function UserProfileScreen({ navigation, route }: UserProfileScreenProps)
               </View>
             )}
 
-            {userProfile.middle_name && (
+            {!forcePrivacyMode && userProfile.middle_name && (
               <View className="flex-row">
                 <Text className="text-gray-700 text-base w-32">Middle Name</Text>
                 <Text className="text-gray-700 text-base mr-2">:</Text>

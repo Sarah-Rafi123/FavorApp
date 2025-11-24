@@ -8,9 +8,9 @@ import {
   ImageBackground,
   ActivityIndicator,
   Alert,
+  Platform,
 } from 'react-native';
 import Purchases, { PurchasesOffering, PurchasesPackage } from 'react-native-purchases';
-import { CarouselButton } from '../../components/buttons';
 import Svg, { Path, Circle } from 'react-native-svg';
 // Using main app logo for consistency
 import BackSvg from '../../assets/icons/Back';
@@ -41,7 +41,6 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
   const [offerings, setOfferings] = useState<PurchasesOffering | null>(null);
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState<string | null>(null);
-  const [revenueCatLoginLoading, setRevenueCatLoginLoading] = useState(false);
 
   const { user } = useAuthStore();
 
@@ -63,8 +62,6 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
     }
 
     try {
-      setRevenueCatLoginLoading(true);
-      
       // Log in user to RevenueCat with their user ID
       console.log('🔗 Logging in to RevenueCat with user ID:', user.id);
       const customerInfo = await Purchases.logIn(user.id);
@@ -91,7 +88,6 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
         [{ text: 'OK' }]
       );
     } finally {
-      setRevenueCatLoginLoading(false);
       // Always load offerings regardless of login success/failure
       await loadOfferings();
     }
@@ -99,25 +95,71 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
 
   const loadOfferings = async () => {
     try {
+      console.log('🔍 Platform:', Platform.OS);
+      console.log('🔍 Getting offerings...');
+      
       const offerings = await Purchases.getOfferings();
       console.log('📦 All offerings:', offerings);
       console.log('📦 Current offering:', offerings.current);
+      console.log('📦 Platform-specific offering keys:', Object.keys(offerings.all));
       
       if (offerings.current !== null) {
         console.log('📦 Available packages:', offerings.current.availablePackages);
+        console.log('📦 Package details:');
+        offerings.current.availablePackages.forEach((pkg, index) => {
+          console.log(`  Package ${index + 1}:`, {
+            identifier: pkg.identifier,
+            packageType: pkg.packageType,
+            product: {
+              identifier: pkg.product.identifier,
+              price: pkg.product.price,
+              priceString: pkg.product.priceString,
+              currencyCode: pkg.product.currencyCode,
+              title: pkg.product.title,
+              description: pkg.product.description
+            }
+          });
+        });
         setOfferings(offerings.current);
       } else {
         console.log('⚠️ No offerings available');
-        // For development, show a message about offerings setup
+        console.log('💡 This might be because:');
+        console.log('   1. Products not configured in RevenueCat dashboard');
+        console.log('   2. Products not configured in Google Play Console');
+        console.log('   3. App not published/uploaded to Google Play Console');
+        console.log('   4. RevenueCat API keys not properly configured');
+        
         Alert.alert(
           'No Subscriptions Found', 
-          'Please configure your subscription offerings in RevenueCat dashboard first.',
+          Platform.OS === 'android' 
+            ? 'Products may not be configured in Google Play Console. For testing on Android, ensure your app is uploaded to Google Play Console (even as draft) and products are created.'
+            : 'Please configure your subscription offerings in RevenueCat dashboard first.',
           [{ text: 'OK' }]
         );
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error loading offerings:', error);
-      Alert.alert('Error', 'Failed to load subscription plans. Please try again later.');
+      console.error('❌ Error details:', {
+        message: error.message,
+        code: error.code,
+        domain: error.domain,
+        userInfo: error.userInfo
+      });
+      
+      let errorMessage = 'Failed to load subscription plans.';
+      if (Platform.OS === 'android') {
+        if (error.message?.includes('BILLING_UNAVAILABLE')) {
+          errorMessage = 'Google Play Billing is unavailable. Make sure Google Play Store is installed and up to date.';
+        } else if (error.message?.includes('SERVICE_UNAVAILABLE')) {
+          errorMessage = 'Google Play Store service is temporarily unavailable. Please try again later.';
+        } else if (error.message?.includes('ITEM_UNAVAILABLE')) {
+          errorMessage = 'Subscription products are not available. The app may need to be published to Google Play Console.';
+        } else {
+          errorMessage = `Android billing error: ${error.message || 'Unknown error'}`;
+        }
+      }
+      
+      Alert.alert('Error', errorMessage);
     } finally {
       setLoading(false);
     }
