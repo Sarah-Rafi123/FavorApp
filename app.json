@@ -2,7 +2,7 @@
   "expo": {
     "name": "FavorApp",
     "slug": "favorapp",
-    "version": "1.0.22",
+    "version": "1.0.23",
     "orientation": "portrait",
     "icon": "./assets/AppLogo.png",
     "userInterfaceStyle": "light",
@@ -85,10 +85,9 @@
       }
     },
     "extra": {
-    "eas": {
-        "projectId": "a43836c9-fe6b-4e8c-90a5-902d788b8718"
+      "eas": {
+        "projectId": "00857594-b551-44da-b9ad-8368bfcc277a"
       }
-    },
-    "owner": "brianandrews"
+    }
   }
 }
