@@ -12,7 +12,7 @@ import {
 import MapView, { Marker, Circle } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
-import { FavorMapPreviewModal } from '../../components/overlays';
+import { FavorMapPopup } from '../../components/overlays';
 import FilterSvg from '../../assets/icons/Filter';
 import { NotificationBell } from '../../components/notifications/NotificationBell';
 import useFilterStore from '../../store/useFilterStore';
@@ -520,17 +520,15 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
       )}
 
 
-      {/* Favor Preview Modal */}
-      {selectedFavor && (
-        <FavorMapPreviewModal
-          visible={showFavorModal}
-          onClose={() => {
-            setShowFavorModal(false);
-            setSelectedFavor(null);
-          }}
-          favor={selectedFavor}
-        />
-      )}
+      {/* Favor Popup Modal */}
+      <FavorMapPopup
+        visible={showFavorModal}
+        onClose={() => {
+          setShowFavorModal(false);
+          setSelectedFavor(null);
+        }}
+        favor={selectedFavor}
+      />
 
       {/* Location Permission Modal */}
       <Modal

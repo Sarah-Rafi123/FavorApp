@@ -20,6 +20,8 @@ import FilterSvg from '../../assets/icons/Filter';
 import { NotificationBell } from '../../components/notifications/NotificationBell';
 import DollarSvg from '../../assets/icons/Dollar';
 import UserSvg from '../../assets/icons/User';
+import { LocationSmallSvg } from '../../assets/icons/LocationSmall';
+import { ClockSmallSvg } from '../../assets/icons/ClockSmall';
 import useFilterStore from '../../store/useFilterStore';
 
 interface HomeListScreenProps {
@@ -314,27 +316,40 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications }: HomeLis
                 <Text className="text-[#D12E34] text-sm font-medium">{formatPriority(favor.priority)}</Text>
               </View>
             </View>
-            <Text className="text-sm text-gray-600 mb-1" numberOfLines={1}>
-              {favor.title || favor.favor_subject.name} | {favor.time_to_complete || 'Time not specified'}
-            </Text>
-            <Text className="text-sm text-gray-600" numberOfLines={1}>
-              {(() => {
-                // Display city and state if both are available
-                if (favor.city && favor.city !== 'undefined' && favor.state && favor.state !== 'undefined') {
-                  return `${favor.city}, ${favor.state}`;
-                }
-                // Display city only if available
-                if (favor.city && favor.city !== 'undefined') {
-                  return favor.city;
-                }
-                // Display state only if available
-                if (favor.state && favor.state !== 'undefined') {
-                  return favor.state;
-                }
-                // Fall back to full address
-                return favor.address || 'Location not specified';
-              })()}
-            </Text>
+            {/* Category and Time row */}
+            <View className="flex-row items-center mb-2">
+              <Text className="text-sm text-gray-600" numberOfLines={1}>
+                • {favor.title || favor.favor_subject.name}
+              </Text>
+              <Text className="text-sm text-gray-600 mx-1">|</Text>
+              <ClockSmallSvg width={12} height={12} color="#6B7280" />
+              <Text className="text-sm text-gray-600 ml-1" numberOfLines={1}>
+                {favor.time_to_complete || 'Time not specified'}
+              </Text>
+            </View>
+            
+            {/* Location row */}
+            <View className="flex-row items-center mb-1">
+              <LocationSmallSvg width={12} height={12} color="#6B7280" />
+              <Text className="text-sm text-gray-600 ml-1" numberOfLines={1}>
+                {(() => {
+                  // Display city and state if both are available
+                  if (favor.city && favor.city !== 'undefined' && favor.state && favor.state !== 'undefined') {
+                    return `${favor.city}, ${favor.state}`;
+                  }
+                  // Display city only if available
+                  if (favor.city && favor.city !== 'undefined') {
+                    return favor.city;
+                  }
+                  // Display state only if available
+                  if (favor.state && favor.state !== 'undefined') {
+                    return favor.state;
+                  }
+                  // Fall back to full address
+                  return favor.address || 'Location not specified';
+                })()}
+              </Text>
+            </View>
             <Text className="text-gray-700 text-sm mb-4 leading-5" numberOfLines={2}>
               {favor.description}
             </Text>

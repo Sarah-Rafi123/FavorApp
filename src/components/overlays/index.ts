@@ -5,5 +5,6 @@ export * from "./LogoutModal";
 export * from "./CountryDropdown";
 export * from "./FavorDetailsModal";
 export * from "./FavorMapPreviewModal";
+export * from "./FavorMapPopup";
 export * from "./StripeConnectWebView";
 export * from "./ShuftiProWebView";

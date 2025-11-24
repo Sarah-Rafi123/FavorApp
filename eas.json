@@ -11,6 +11,21 @@
     "preview": {
       "distribution": "internal"
     },
+    "testing": {
+      "android": {
+        "buildType": "apk",
+        "distribution": "internal",
+        "env": {
+          "EXPO_PUBLIC_ENVIRONMENT": "testing"
+        }
+      },
+      "ios": {
+        "distribution": "internal",
+        "env": {
+          "EXPO_PUBLIC_ENVIRONMENT": "testing"
+        }
+      }
+    },
     "production": {
       "autoIncrement": false
     }

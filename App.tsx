@@ -50,6 +50,11 @@ export default function App() {
    useEffect(() => {
     Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
     
+    // Check if we're in testing environment
+    const isTestingBuild = process.env.EXPO_PUBLIC_ENVIRONMENT === 'testing';
+    console.log('🔧 RevenueCat Environment:', isTestingBuild ? 'TESTING' : 'PRODUCTION');
+    console.log('🔧 Build Environment Variable:', process.env.EXPO_PUBLIC_ENVIRONMENT);
+    
     if (Platform.OS === 'ios') {
        Purchases.configure({
          apiKey: "appl_IWbQrglUqqvMAVfsxJOynJvxdQV"
@@ -59,6 +64,13 @@ export default function App() {
          apiKey: "goog_njtAypPNxFIYcZOcwxmshnJeyyb"
        });
     }
+    
+    // Configure for testing if needed
+    if (isTestingBuild) {
+      console.log('🧪 Enabling RevenueCat testing features for Android test accounts');
+      // RevenueCat automatically handles test accounts when proper test products are configured
+    }
+    
     getCustomerInfo();
   }, []);
 

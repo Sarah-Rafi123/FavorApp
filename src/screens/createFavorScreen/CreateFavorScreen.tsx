@@ -23,6 +23,8 @@ import { NotificationBell } from '../../components/notifications/NotificationBel
 import CancelSvg from '../../assets/icons/Cancel';
 import UserSvg from '../../assets/icons/User';
 import EditSvg from '../../assets/icons/Edit';
+import { LocationSmallSvg } from '../../assets/icons/LocationSmall';
+import { ClockSmallSvg } from '../../assets/icons/ClockSmall';
 import { useMyFavors, useFavorApplicants } from '../../services/queries/FavorQueries';
 import { useDeleteFavor, useAcceptApplicant, useReassignFavor } from '../../services/mutations/FavorMutations';
 import { Favor, FavorApplicant } from '../../services/apis/FavorApis';
@@ -484,14 +486,24 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
             {/* Favor details on the right */}
             <View className="flex-1">
               <Text className="text-[#D12E34] text-sm font-medium mb-1 capitalize">{favor.priority}</Text>
-              <Text className="text-sm text-gray-600 mb-1">
-                {favor.favor_subject.name} | {favor.time_to_complete || '1 Hour'} | {new Date(favor.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-              </Text>
               
-              {/* User who posted the favor */}
+              {/* Category and Time row */}
               <View className="flex-row items-center mb-1">
-                <Text className="text-sm text-gray-600">
-                  {favor.user?.full_name || 'Unknown'} | {favor.city}, {favor.state}
+                <Text className="text-sm text-gray-600" numberOfLines={1}>
+                  • {favor.favor_subject.name}
+                </Text>
+                <Text className="text-sm text-gray-600 mx-1">|</Text>
+                <ClockSmallSvg width={12} height={12} color="#6B7280" />
+                <Text className="text-sm text-gray-600 ml-1" numberOfLines={1}>
+                  {favor.time_to_complete || 'Time not specified'}
+                </Text>
+              </View>
+              
+              {/* Location row */}
+              <View className="flex-row items-center mb-1">
+                <LocationSmallSvg width={12} height={12} color="#6B7280" />
+                <Text className="text-sm text-gray-600 ml-1" numberOfLines={1}>
+                  {favor.city}, {favor.state}
                 </Text>
               </View>
               
@@ -630,14 +642,24 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
             {/* Favor details on the right */}
             <View className="flex-1">
               <Text className="text-[#D12E34] text-sm font-medium mb-1 capitalize">{favor.priority}</Text>
-              <Text className="text-sm text-gray-600 mb-1">
-                {favor.favor_subject.name} | {favor.time_to_complete || '1 Hour'} | {new Date(favor.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-              </Text>
               
-              {/* User who posted the favor */}
+              {/* Category and Time row */}
               <View className="flex-row items-center mb-1">
-                <Text className="text-sm text-gray-600">
-                  {favor.user?.full_name || 'Unknown'} | {favor.city}, {favor.state}
+                <Text className="text-sm text-gray-600" numberOfLines={1}>
+                  • {favor.favor_subject.name}
+                </Text>
+                <Text className="text-sm text-gray-600 mx-1">|</Text>
+                <ClockSmallSvg width={12} height={12} color="#6B7280" />
+                <Text className="text-sm text-gray-600 ml-1" numberOfLines={1}>
+                  {favor.time_to_complete || 'Time not specified'}
+                </Text>
+              </View>
+              
+              {/* Location row */}
+              <View className="flex-row items-center mb-1">
+                <LocationSmallSvg width={12} height={12} color="#6B7280" />
+                <Text className="text-sm text-gray-600 ml-1" numberOfLines={1}>
+                  {favor.city}, {favor.state}
                 </Text>
               </View>
               
@@ -744,10 +766,27 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
             )}
             <View className="flex-1">
               <Text className="text-[#D12E34] text-sm font-medium mb-1 capitalize">{favor.priority}</Text>
-              <Text className="text-sm text-gray-600 mb-1">
-                {favor.favor_subject.name} | {favor.time_to_complete || '1 Hour'} | {new Date(favor.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-              </Text>
-              <Text className="text-sm text-gray-600">{favor.city}, {favor.state}</Text>
+              
+              {/* Category and Time row */}
+              <View className="flex-row items-center mb-1">
+                <Text className="text-sm text-gray-600" numberOfLines={1}>
+                  • {favor.favor_subject.name}
+                </Text>
+                <Text className="text-sm text-gray-600 mx-1">|</Text>
+                <ClockSmallSvg width={12} height={12} color="#6B7280" />
+                <Text className="text-sm text-gray-600 ml-1" numberOfLines={1}>
+                  {favor.time_to_complete || 'Time not specified'}
+                </Text>
+              </View>
+              
+              {/* Location row */}
+              <View className="flex-row items-center mb-1">
+                <LocationSmallSvg width={12} height={12} color="#6B7280" />
+                <Text className="text-sm text-gray-600 ml-1" numberOfLines={1}>
+                  {favor.city}, {favor.state}
+                </Text>
+              </View>
+              
               <Text className="text-gray-700 text-sm mt-2 leading-4">
                 {favor.description}
               </Text>
@@ -871,10 +910,26 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
             )}
             <View className="flex-1">
               <Text className="text-[#D12E34] text-sm font-medium mb-1 capitalize">{favor.priority}</Text>
-              <Text className="text-sm text-gray-600 mb-1">
-                {favor.favor_subject.name} | {favor.time_to_complete || '1 Hour'} | {new Date(favor.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-              </Text>
-              <Text className="text-sm text-gray-600 mb-1">{favor.city}, {favor.state}</Text>
+              
+              {/* Category and Time row */}
+              <View className="flex-row items-center mb-1">
+                <Text className="text-sm text-gray-600" numberOfLines={1}>
+                  • {favor.favor_subject.name}
+                </Text>
+                <Text className="text-sm text-gray-600 mx-1">|</Text>
+                <ClockSmallSvg width={12} height={12} color="#6B7280" />
+                <Text className="text-sm text-gray-600 ml-1" numberOfLines={1}>
+                  {favor.time_to_complete || 'Time not specified'}
+                </Text>
+              </View>
+              
+              {/* Location row */}
+              <View className="flex-row items-center mb-1">
+                <LocationSmallSvg width={12} height={12} color="#6B7280" />
+                <Text className="text-sm text-gray-600 ml-1" numberOfLines={1}>
+                  {favor.city}, {favor.state}
+                </Text>
+              </View>
               {/* Status Badge */}
               <View className="flex-row mb-1">
                 <View className={`px-3 py-1 rounded-xl ${
@@ -941,10 +996,26 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
           )}
           <View className="flex-1">
             <Text className="text-[#D12E34] text-sm font-medium mb-1 capitalize">{favor.priority}</Text>
-            <Text className="text-sm text-gray-600 mb-1">
-              {favor.favor_subject.name} | {favor.time_to_complete || '1 Hour'} | {new Date(favor.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-            </Text>
-            <Text className="text-sm text-gray-600 mb-1">{favor.city}, {favor.state}</Text>
+            
+            {/* Category and Time row */}
+            <View className="flex-row items-center mb-1">
+              <Text className="text-sm text-gray-600" numberOfLines={1}>
+                • {favor.favor_subject.name}
+              </Text>
+              <Text className="text-sm text-gray-600 mx-1">|</Text>
+              <ClockSmallSvg width={12} height={12} color="#6B7280" />
+              <Text className="text-sm text-gray-600 ml-1" numberOfLines={1}>
+                {favor.time_to_complete || 'Time not specified'}
+              </Text>
+            </View>
+            
+            {/* Location row */}
+            <View className="flex-row items-center mb-1">
+              <LocationSmallSvg width={12} height={12} color="#6B7280" />
+              <Text className="text-sm text-gray-600 ml-1" numberOfLines={1}>
+                {favor.city}, {favor.state}
+              </Text>
+            </View>
             {/* Status Badge */}
             <View className="flex-row mb-1">
               <View className={`px-3 py-1 rounded-xl ${

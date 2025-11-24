@@ -96,6 +96,7 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
   const loadOfferings = async () => {
     try {
       console.log('🔍 Platform:', Platform.OS);
+      console.log('🔍 Environment:', process.env.EXPO_PUBLIC_ENVIRONMENT || 'production');
       console.log('🔍 Getting offerings...');
       
       const offerings = await Purchases.getOfferings();
@@ -129,10 +130,14 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
         console.log('   3. App not published/uploaded to Google Play Console');
         console.log('   4. RevenueCat API keys not properly configured');
         
+        const isTestingBuild = process.env.EXPO_PUBLIC_ENVIRONMENT === 'testing';
+        
         Alert.alert(
           'No Subscriptions Found', 
           Platform.OS === 'android' 
-            ? 'Products may not be configured in Google Play Console. For testing on Android, ensure your app is uploaded to Google Play Console (even as draft) and products are created.'
+            ? isTestingBuild
+              ? 'Test subscriptions not available. Make sure:\n\n1. Products are configured in Google Play Console\n2. App is uploaded as Internal Testing\n3. You are added as a test user\n4. Test products are created and published'
+              : 'Products may not be configured in Google Play Console. For testing on Android, ensure your app is uploaded to Google Play Console (even as draft) and products are created.'
             : 'Please configure your subscription offerings in RevenueCat dashboard first.',
           [{ text: 'OK' }]
         );
@@ -310,6 +315,15 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
           <Text className="text-3xl font-bold text-gray-800 mb-2 text-center">
             Get Subscribed
           </Text>
+          
+          {/* Testing Environment Indicator */}
+          {process.env.EXPO_PUBLIC_ENVIRONMENT === 'testing' && (
+            <View className="bg-yellow-100 border border-yellow-400 rounded-lg px-4 py-2 mb-4">
+              <Text className="text-yellow-800 text-sm text-center font-medium">
+                🧪 Testing Build - Google Play test accounts enabled
+              </Text>
+            </View>
+          )}
           
           {/* Subtitle with lines */}
           <View className="flex-row items-center mb-8 w-full px-4">
