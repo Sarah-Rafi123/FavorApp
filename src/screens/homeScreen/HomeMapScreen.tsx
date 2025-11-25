@@ -80,8 +80,8 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
   const rawIsLoading = useFilteredData ? browseFavorsLoading : favorsLoading;
   const error = useFilteredData ? browseFavorsError : favorsError;
   
-  // Improved loading state: hide loading after timeout or when we have data
-  const isLoading = rawIsLoading && !favorLoadingTimeout && !currentData?.data?.favors;
+  // Improved loading state: only show loading for favors if map is ready and we don't have data yet
+  const isLoading = mapReady && rawIsLoading && !favorLoadingTimeout && !currentData?.data?.favors;
   
   // Debug loading state
   useEffect(() => {
@@ -104,18 +104,18 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
 
   // Add loading timeout to prevent infinite loading
   useEffect(() => {
-    if (rawIsLoading) {
+    if (rawIsLoading && mapReady) {
       setFavorLoadingTimeout(false);
       const timeout = setTimeout(() => {
         console.log('⏰ Favor loading timeout reached - hiding loading indicator');
         setFavorLoadingTimeout(true);
-      }, 10000); // 10 second timeout
+      }, 8000); // 8 second timeout
       
       return () => clearTimeout(timeout);
-    } else {
+    } else if (!rawIsLoading) {
       setFavorLoadingTimeout(false);
     }
-  }, [rawIsLoading]);
+  }, [rawIsLoading, mapReady]);
 
 
   // Update allFavors when new data arrives - prevent infinite loops
@@ -354,9 +354,15 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
       {isLoading && (
         <View className="absolute top-40 left-6 right-6 z-10 bg-white rounded-lg p-3 shadow-lg flex-row items-center">
           <ActivityIndicator size="small" color="#44A27B" />
-          <Text className="ml-3 text-gray-600">
-            {mapReady ? 'Loading favors...' : 'Loading map and favors...'}
-          </Text>
+          <Text className="ml-3 text-gray-600">Loading favors...</Text>
+        </View>
+      )}
+      
+      {/* Loading indicator for map */}
+      {!mapReady && (
+        <View className="absolute top-40 left-6 right-6 z-10 bg-white rounded-lg p-3 shadow-lg flex-row items-center">
+          <ActivityIndicator size="small" color="#44A27B" />
+          <Text className="ml-3 text-gray-600">Loading map...</Text>
         </View>
       )}
 
