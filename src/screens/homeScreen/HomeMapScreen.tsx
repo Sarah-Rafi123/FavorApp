@@ -18,15 +18,19 @@ import { NotificationBell } from '../../components/notifications/NotificationBel
 import useFilterStore from '../../store/useFilterStore';
 import { useFavors, useBrowseFavors } from '../../services/queries/FavorQueries';
 import { Favor } from '../../services/apis/FavorApis';
+import { getCertificationStatus } from '../../services/apis/CertificationApis';
+import useAuthStore from '../../store/useAuthStore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface HomeMapScreenProps {
   onListView: () => void;
   onFilter: () => void;
   onNotifications: () => void;
+  navigation?: any;
 }
 
 
-export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMapScreenProps) {
+export function HomeMapScreen({ onListView, onFilter, onNotifications, navigation }: HomeMapScreenProps) {
   const [location, setLocation] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [allFavors, setAllFavors] = useState<Favor[]>([]);
@@ -37,6 +41,13 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
   const [showFavorModal, setShowFavorModal] = useState(false);
   const [showLocationPermissionModal, setShowLocationPermissionModal] = useState(false);
   const [showAddressModal, setShowAddressModal] = useState(false);
+  const [showEncouragementModal, setShowEncouragementModal] = useState(false);
+  const [loadingFavorId, setLoadingFavorId] = useState<number | null>(null);
+  const [verificationStatus, setVerificationStatus] = useState<{
+    isSubscribed: boolean;
+    isKYCVerified: boolean;
+    hasShownEncouragement: boolean;
+  }>({ isSubscribed: false, isKYCVerified: false, hasShownEncouragement: false });
   const [currentAddress, setCurrentAddress] = useState('Getting location...');
   const [tempLocation, setTempLocation] = useState('');
   const [liveLocation, setLiveLocation] = useState<any>(null); // User's actual GPS location
@@ -50,6 +61,7 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
   const [mapReady, setMapReady] = useState(false);
   const [favorLoadingTimeout, setFavorLoadingTimeout] = useState(false);
   const mapRef = useRef<MapView>(null);
+  const { user } = useAuthStore();
 
   // Use browseFavors when filters are active, useFavors when not
   const useFilteredData = hasActiveFilters();
@@ -98,9 +110,62 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
     });
   }, [useFilteredData, browseFavorsLoading, favorsLoading, rawIsLoading, favorLoadingTimeout, isLoading, currentData?.data?.favors, mapReady]);
 
+  // Check verification status and show encouragement if needed
+  const checkVerificationAndShowEncouragement = async () => {
+    try {
+      // Check if we've already shown the encouragement modal in this session
+      const hasShownToday = await AsyncStorage.getItem(`encouragement_shown_${user?.id}_${new Date().toDateString()}`);
+      if (hasShownToday) {
+        setVerificationStatus(prev => ({ ...prev, hasShownEncouragement: true }));
+        return;
+      }
+
+      // Check KYC certification status
+      const certificationResponse = await getCertificationStatus();
+      const isKYCVerified = certificationResponse.data.is_kyc_verified === 'verified';
+      
+      // For now, we'll assume subscription status based on user data
+      // In a real app, you'd have a subscription status API call
+      const isSubscribed = user?.id ? true : false; // Placeholder logic
+      
+      setVerificationStatus({
+        isKYCVerified,
+        isSubscribed,
+        hasShownEncouragement: false
+      });
+      
+      // Show encouragement if user is not fully verified/subscribed
+      if (!isKYCVerified || !isSubscribed) {
+        setShowEncouragementModal(true);
+      }
+    } catch (error) {
+      console.error('Error checking verification status for encouragement:', error);
+    }
+  };
+
+  const handleSkipEncouragement = async () => {
+    try {
+      // Store that we've shown the encouragement today
+      await AsyncStorage.setItem(`encouragement_shown_${user?.id}_${new Date().toDateString()}`, 'true');
+      setShowEncouragementModal(false);
+      setVerificationStatus(prev => ({ ...prev, hasShownEncouragement: true }));
+    } catch (error) {
+      console.error('Error storing encouragement skip status:', error);
+      setShowEncouragementModal(false);
+    }
+  };
+
   useEffect(() => {
     checkLocationPermission();
-  }, []);
+    
+    // Check verification status after a short delay to let the screen load
+    if (user?.id) {
+      const timer = setTimeout(() => {
+        checkVerificationAndShowEncouragement();
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [user?.id]);
 
   // Add loading timeout to prevent infinite loading
   useEffect(() => {
@@ -232,28 +297,45 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
   };
 
   const handleMarkerPress = useCallback((favor: Favor) => {
+    setLoadingFavorId(favor.id);
     setSelectedFavor(favor);
-    setShowFavorModal(true);
+    
+    // Add slight delay to show loading state, then show modal
+    setTimeout(() => {
+      setLoadingFavorId(null);
+      setShowFavorModal(true);
+    }, 300);
   }, []);
 
 
   // Memoized markers to prevent re-rendering on every update
   const favorMarkers = useMemo(() => {
-    return allFavors.map((favor) => {
+    // Remove duplicates by favor ID first
+    const uniqueFavors = allFavors.filter((favor, index, self) => 
+      index === self.findIndex(f => f.id === favor.id)
+    );
+    
+    return uniqueFavors.map((favor, index) => {
       const coordinates = parseLatLng(favor.lat_lng);
       if (!coordinates) return null;
       
       return (
         <Marker
-          key={`favor-${favor.id}`}
+          key={`favor-${favor.id}-${index}`}
           coordinate={coordinates}
           title={favor.title || favor.favor_subject.name}
           description={`$${parseFloat((favor.tip || 0).toString()).toFixed(2)}`}
           onPress={() => handleMarkerPress(favor)}
-        />
+        >
+          {loadingFavorId === favor.id && (
+            <View className="bg-white rounded-full p-2 shadow-lg border-2 border-green-500">
+              <ActivityIndicator size="small" color="#44A27B" />
+            </View>
+          )}
+        </Marker>
       );
     }).filter(Boolean);
-  }, [allFavors, parseLatLng, handleMarkerPress]);
+  }, [allFavors, parseLatLng, handleMarkerPress, loadingFavorId]);
 
   // Memoized current location marker (could be live GPS or selected location)
   const currentLocationMarker = useMemo(() => {
@@ -524,8 +606,6 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
           </Text>
         </View>
       )}
-
-
       {/* Favor Popup Modal */}
       <FavorMapPopup
         visible={showFavorModal}
@@ -534,8 +614,8 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
           setSelectedFavor(null);
         }}
         favor={selectedFavor}
+        navigation={navigation}
       />
-
       {/* Location Permission Modal */}
       <Modal
         visible={showLocationPermissionModal}
@@ -565,6 +645,90 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
                 onPress={requestLocationPermission}
               >
                 <Text className="text-white text-center font-semibold">Allow</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Encouragement Modal */}
+      <Modal
+        visible={showEncouragementModal}
+        transparent
+        animationType="fade"
+        onRequestClose={handleSkipEncouragement}
+      >
+        <View className="flex-1 bg-black/50 justify-center items-center">
+          <View className="bg-white rounded-2xl p-6 mx-6 max-w-sm">
+            <Text className="text-xl font-bold text-gray-800 mb-4 text-center">
+              🚀 Unlock Premium Benefits!
+            </Text>
+            
+            <Text className="text-gray-600 text-center mb-6 leading-6">
+              Get the most out of FavorApp by completing your verification and subscribing to premium features.
+            </Text>
+            
+            <View className="mb-6">
+              {!verificationStatus.isSubscribed && (
+                <View className="flex-row items-center mb-3">
+                  <View className="w-5 h-5 rounded-full mr-3 bg-blue-500">
+                    <Text className="text-white text-xs text-center leading-5">💎</Text>
+                  </View>
+                  <Text className="text-gray-700 flex-1">Premium subscription benefits</Text>
+                </View>
+              )}
+              
+              {!verificationStatus.isKYCVerified && (
+                <View className="flex-row items-center mb-3">
+                  <View className="w-5 h-5 rounded-full mr-3 bg-green-500">
+                    <Text className="text-white text-xs text-center leading-5">✓</Text>
+                  </View>
+                  <Text className="text-gray-700 flex-1">Verified status and security</Text>
+                </View>
+              )}
+              
+              <View className="flex-row items-center mb-3">
+                <View className="w-5 h-5 rounded-full mr-3 bg-yellow-500">
+                  <Text className="text-white text-xs text-center leading-5">⭐</Text>
+                </View>
+                <Text className="text-gray-700 flex-1">Access to premium features</Text>
+              </View>
+            </View>
+            
+            <View className="space-y-3">
+              {!verificationStatus.isSubscribed && (
+                <TouchableOpacity
+                  className="py-3 px-4 bg-blue-500 rounded-xl mb-3"
+                  onPress={() => {
+                    setShowEncouragementModal(false);
+                    navigation?.navigate('Settings', {
+                      screen: 'SubscriptionsScreen'
+                    });
+                  }}
+                >
+                  <Text className="text-white text-center font-semibold">Get Premium Subscription</Text>
+                </TouchableOpacity>
+              )}
+              
+              {!verificationStatus.isKYCVerified && (
+                <TouchableOpacity
+                  className="py-3 px-4 bg-green-500 rounded-xl mb-3"
+                  onPress={() => {
+                    setShowEncouragementModal(false);
+                    navigation?.navigate('Settings', {
+                      screen: 'GetCertifiedScreen'
+                    });
+                  }}
+                >
+                  <Text className="text-white text-center font-semibold">Complete Verification</Text>
+                </TouchableOpacity>
+              )}
+              
+              <TouchableOpacity
+                className="py-3 px-4 border border-gray-300 rounded-xl"
+                onPress={handleSkipEncouragement}
+              >
+                <Text className="text-gray-600 text-center font-semibold">Skip for now</Text>
               </TouchableOpacity>
             </View>
           </View>

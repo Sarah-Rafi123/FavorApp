@@ -10,14 +10,17 @@ import {
   Alert,
   ImageBackground,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import { useCreateFavor, useCreateFavorWithImage, buildFavorFormData } from '../../services/mutations/FavorMutations';
 import { CreateFavorRequest } from '../../services/apis/FavorApis';
 import { usePaymentMethods } from '../../services/queries/PaymentMethodQueries';
+import { getCertificationStatus } from '../../services/apis/CertificationApis';
 import { ImagePickerUtils } from '../../utils/ImagePickerUtils';
 import BackSvg from '../../assets/icons/Back';
+import useAuthStore from '../../store/useAuthStore';
 
 interface AskFavorScreenProps {
   navigation?: any;
@@ -42,6 +45,12 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
   const [showTimeDropdown, setShowTimeDropdown] = useState(false);
   const [showImageOptions, setShowImageOptions] = useState(false);
   const [showAddressModal, setShowAddressModal] = useState(false);
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [verificationStatus, setVerificationStatus] = useState<{
+    isSubscribed: boolean;
+    isKYCVerified: boolean;
+    isLoading: boolean;
+  }>({ isSubscribed: false, isKYCVerified: false, isLoading: false });
   const [selectedImage, setSelectedImage] = useState<{
     uri: string;
     type: string;
@@ -73,6 +82,7 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
   const createFavorMutation = useCreateFavor();
   const createFavorWithImageMutation = useCreateFavorWithImage();
   const { data: paymentMethodsData } = usePaymentMethods();
+  const { user } = useAuthStore();
 
   // Check if user has payment methods for paid favors
   const hasPaymentMethods = paymentMethodsData?.data?.payment_methods && paymentMethodsData.data.payment_methods.length > 0;
@@ -269,12 +279,46 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
     </TouchableOpacity>
   );
 
+  const checkVerificationStatus = async () => {
+    try {
+      setVerificationStatus(prev => ({ ...prev, isLoading: true }));
+      
+      // Check KYC certification status
+      const certificationResponse = await getCertificationStatus();
+      const isKYCVerified = certificationResponse.data.is_kyc_verified === 'verified';
+      
+      // For now, we'll assume subscription status based on user data
+      // In a real app, you'd have a subscription status API call
+      const isSubscribed = user?.id ? true : false; // Placeholder logic
+      
+      setVerificationStatus({
+        isKYCVerified,
+        isSubscribed,
+        isLoading: false
+      });
+      
+      return { isKYCVerified, isSubscribed };
+    } catch (error) {
+      console.error('Error checking verification status:', error);
+      setVerificationStatus(prev => ({ ...prev, isLoading: false }));
+      return { isKYCVerified: false, isSubscribed: false };
+    }
+  };
+
   const handleCreateFavor = async () => {
     console.log('💳 Payment Methods Check:', {
       favorPrice: formData.favorPrice,
       hasPaymentMethods,
       paymentMethodsCount: paymentMethodsData?.data?.payment_methods?.length || 0
     });
+
+    // Check subscription and KYC verification status first
+    const verification = await checkVerificationStatus();
+    
+    if (!verification.isSubscribed || !verification.isKYCVerified) {
+      setShowVerificationModal(true);
+      return;
+    }
 
     // Additional check for paid favors requiring payment methods
     if (formData.favorPrice === 'Paid' && !hasPaymentMethods) {
@@ -849,6 +893,92 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
+      </Modal>
+
+      {/* Verification Status Modal */}
+      <Modal
+        visible={showVerificationModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowVerificationModal(false)}
+      >
+        <View className="flex-1 bg-black/50 justify-center items-center">
+          <View className="bg-white rounded-2xl p-6 mx-6 max-w-sm">
+            <Text className="text-xl font-bold text-gray-800 mb-4 text-center">
+              Verification Required
+            </Text>
+            
+            {verificationStatus.isLoading ? (
+              <View className="flex-row justify-center items-center py-8">
+                <ActivityIndicator size="large" color="#44A27B" />
+                <Text className="ml-3 text-gray-600">Checking verification status...</Text>
+              </View>
+            ) : (
+              <>
+                <Text className="text-gray-600 text-center mb-6 leading-6">
+                  To create a favor, you need to:
+                </Text>
+                
+                <View className="mb-6">
+                  <View className="flex-row items-center mb-3">
+                    <View className={`w-5 h-5 rounded-full mr-3 ${verificationStatus.isSubscribed ? 'bg-green-500' : 'bg-red-500'}`}>
+                      <Text className="text-white text-xs text-center leading-5">
+                        {verificationStatus.isSubscribed ? '✓' : '✗'}
+                      </Text>
+                    </View>
+                    <Text className="text-gray-700 flex-1">Have an active subscription</Text>
+                  </View>
+                  
+                  <View className="flex-row items-center mb-3">
+                    <View className={`w-5 h-5 rounded-full mr-3 ${verificationStatus.isKYCVerified ? 'bg-green-500' : 'bg-red-500'}`}>
+                      <Text className="text-white text-xs text-center leading-5">
+                        {verificationStatus.isKYCVerified ? '✓' : '✗'}
+                      </Text>
+                    </View>
+                    <Text className="text-gray-700 flex-1">Complete KYC verification through Shufti Pro</Text>
+                  </View>
+                </View>
+                
+                <View className="flex-row gap-x-3">
+                  <TouchableOpacity
+                    className="flex-1 py-3 px-4 border border-gray-300 rounded-xl"
+                    onPress={() => setShowVerificationModal(false)}
+                  >
+                    <Text className="text-gray-600 text-center font-semibold">Cancel</Text>
+                  </TouchableOpacity>
+                  
+                  {!verificationStatus.isSubscribed && (
+                    <TouchableOpacity
+                      className="flex-1 py-3 px-4 bg-blue-500 rounded-xl"
+                      onPress={() => {
+                        setShowVerificationModal(false);
+                        navigation?.navigate('Settings', {
+                          screen: 'SubscriptionsScreen'
+                        });
+                      }}
+                    >
+                      <Text className="text-white text-center font-semibold">Get Subscribed</Text>
+                    </TouchableOpacity>
+                  )}
+                  
+                  {!verificationStatus.isKYCVerified && (
+                    <TouchableOpacity
+                      className="flex-1 py-3 px-4 bg-green-500 rounded-xl"
+                      onPress={() => {
+                        setShowVerificationModal(false);
+                        navigation?.navigate('Settings', {
+                          screen: 'GetCertifiedScreen'
+                        });
+                      }}
+                    >
+                      <Text className="text-white text-center font-semibold">Get Certified</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </>
+            )}
+          </View>
+        </View>
       </Modal>
 
       {/* Address Search Modal */}

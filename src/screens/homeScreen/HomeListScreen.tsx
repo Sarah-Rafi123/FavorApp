@@ -10,11 +10,13 @@ import {
   RefreshControl,
   ActivityIndicator,
   Alert,
+  Modal,
 } from 'react-native';
 import { FavorDetailsModal, StripeConnectWebView } from '../../components/overlays';
 import { useFavors, useBrowseFavors } from '../../services/queries/FavorQueries';
 import { Favor } from '../../services/apis/FavorApis';
 import { useApplyToFavor } from '../../services/mutations/FavorMutations';
+import { getCertificationStatus } from '../../services/apis/CertificationApis';
 import { StripeConnectManager } from '../../services/StripeConnectManager';
 import FilterSvg from '../../assets/icons/Filter';
 import { NotificationBell } from '../../components/notifications/NotificationBell';
@@ -23,15 +25,18 @@ import UserSvg from '../../assets/icons/User';
 import { LocationSmallSvg } from '../../assets/icons/LocationSmall';
 import { ClockSmallSvg } from '../../assets/icons/ClockSmall';
 import useFilterStore from '../../store/useFilterStore';
+import useAuthStore from '../../store/useAuthStore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface HomeListScreenProps {
   onMapView: () => void;
   onFilter: () => void;
   onNotifications: () => void;
+  navigation?: any;
 }
 
 
-export function HomeListScreen({ onMapView, onFilter, onNotifications }: HomeListScreenProps) {
+export function HomeListScreen({ onMapView, onFilter, onNotifications, navigation }: HomeListScreenProps) {
   const [selectedFavorId, setSelectedFavorId] = useState<number | null>(null);
   const [showFavorDetailsModal, setShowFavorDetailsModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -40,6 +45,15 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications }: HomeLis
   const [showStripeWebView, setShowStripeWebView] = useState(false);
   const [stripeOnboardingUrl, setStripeOnboardingUrl] = useState<string>('');
   const [pendingFavorAction, setPendingFavorAction] = useState<(() => void) | null>(null);
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [showEncouragementModal, setShowEncouragementModal] = useState(false);
+  const [loadingFavorId, setLoadingFavorId] = useState<number | null>(null);
+  const [verificationStatus, setVerificationStatus] = useState<{
+    isSubscribed: boolean;
+    isKYCVerified: boolean;
+    isLoading: boolean;
+    hasShownEncouragement: boolean;
+  }>({ isSubscribed: false, isKYCVerified: false, isLoading: false, hasShownEncouragement: false });
   
   // Stripe Connect Manager
   const stripeConnectManager = StripeConnectManager.getInstance();
@@ -49,6 +63,7 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications }: HomeLis
 
   // Apply to Favor mutation
   const applyToFavorMutation = useApplyToFavor();
+  const { user } = useAuthStore();
 
   // Use browseFavors when filters are active, useFavors when not
   const useFilteredData = hasActiveFilters();
@@ -82,12 +97,68 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications }: HomeLis
   const error = useFilteredData ? browseFavorsError : favorsError;
   const refetch = useFilteredData ? refetchBrowseFavors : refetchFavors;
 
+  // Check verification status and show encouragement if needed
+  const checkVerificationAndShowEncouragement = async () => {
+    try {
+      // Check if we've already shown the encouragement modal in this session
+      const hasShownToday = await AsyncStorage.getItem(`encouragement_shown_${user?.id}_${new Date().toDateString()}`);
+      if (hasShownToday) {
+        setVerificationStatus(prev => ({ ...prev, hasShownEncouragement: true }));
+        return;
+      }
+
+      // Check KYC certification status
+      const certificationResponse = await getCertificationStatus();
+      const isKYCVerified = certificationResponse.data.is_kyc_verified === 'verified';
+      
+      // For now, we'll assume subscription status based on user data
+      // In a real app, you'd have a subscription status API call
+      const isSubscribed = user?.id ? true : false; // Placeholder logic
+      
+      setVerificationStatus({
+        isKYCVerified,
+        isSubscribed,
+        isLoading: false,
+        hasShownEncouragement: false
+      });
+      
+      // Show encouragement if user is not fully verified/subscribed
+      if (!isKYCVerified || !isSubscribed) {
+        setShowEncouragementModal(true);
+      }
+    } catch (error) {
+      console.error('Error checking verification status for encouragement:', error);
+    }
+  };
+
+  const handleSkipEncouragement = async () => {
+    try {
+      // Store that we've shown the encouragement today
+      await AsyncStorage.setItem(`encouragement_shown_${user?.id}_${new Date().toDateString()}`, 'true');
+      setShowEncouragementModal(false);
+      setVerificationStatus(prev => ({ ...prev, hasShownEncouragement: true }));
+    } catch (error) {
+      console.error('Error storing encouragement skip status:', error);
+      setShowEncouragementModal(false);
+    }
+  };
+
   // Cleanup Stripe Connect listeners on unmount
   useEffect(() => {
     return () => {
       stripeConnectManager.cleanup();
     };
   }, [stripeConnectManager]);
+
+  // Check verification status after screen loads
+  useEffect(() => {
+    if (user?.id) {
+      const timer = setTimeout(() => {
+        checkVerificationAndShowEncouragement();
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [user?.id]);
 
   // Reset data when switching between filtered and unfiltered
   React.useEffect(() => {
@@ -183,9 +254,38 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications }: HomeLis
     setPendingFavorAction(null);
   };
 
+  const checkVerificationStatus = async () => {
+    try {
+      setVerificationStatus(prev => ({ ...prev, isLoading: true }));
+      
+      // Check KYC certification status
+      const certificationResponse = await getCertificationStatus();
+      const isKYCVerified = certificationResponse.data.is_kyc_verified === 'verified';
+      
+      // For now, we'll assume subscription status based on user data
+      // In a real app, you'd have a subscription status API call
+      const isSubscribed = user?.id ? true : false; // Placeholder logic
+      
+      setVerificationStatus({
+        isKYCVerified,
+        isSubscribed,
+        isLoading: false
+      });
+      
+      return { isKYCVerified, isSubscribed };
+    } catch (error) {
+      console.error('Error checking verification status:', error);
+      setVerificationStatus(prev => ({ ...prev, isLoading: false }));
+      return { isKYCVerified: false, isSubscribed: false };
+    }
+  };
+
   const handleProvideFavor = async (favor: Favor) => {
     console.log('🎯 Provide favor clicked for:', favor.user.full_name);
     console.log('💰 Favor tip amount:', favor.tip);
+    
+    // Set loading state
+    setLoadingFavorId(favor.id);
     
     try {
       // Check if this is a paid favor and validate Stripe Connect status
@@ -195,25 +295,44 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications }: HomeLis
         // Free favor - no payment setup needed, proceed directly
         console.log('✅ Free favor, no payment setup required');
         
+        // Clear loading state before showing alert
+        setLoadingFavorId(null);
+        
         Alert.alert(
           'Apply to Favor',
           `Apply to provide favor for ${favor.user.full_name}? This is a volunteer favor.`,
           [
-            { text: 'Cancel', style: 'cancel' },
+            { 
+              text: 'Cancel', 
+              style: 'cancel',
+              onPress: () => setLoadingFavorId(null)
+            },
             { 
               text: 'Apply',
               onPress: async () => {
+                setLoadingFavorId(favor.id);
                 try {
                   console.log('📝 Applying to free favor:', favor.id);
                   await applyToFavorMutation.mutateAsync(favor.id);
                   console.log('✅ Application submitted successfully');
                 } catch (error: any) {
                   console.error('❌ Application failed:', error.message);
+                } finally {
+                  setLoadingFavorId(null);
                 }
               }
             }
           ]
         );
+        return;
+      }
+      
+      // For paid favors, check subscription and KYC verification first
+      const verification = await checkVerificationStatus();
+      
+      if (!verification.isSubscribed || !verification.isKYCVerified) {
+        setLoadingFavorId(null);
+        setShowVerificationModal(true);
         return;
       }
 
@@ -223,21 +342,31 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications }: HomeLis
       if (canReceivePayments) {
         console.log('✅ User can apply to this paid favor');
         
+        // Clear loading state before showing alert
+        setLoadingFavorId(null);
+        
         // Show confirmation dialog and apply to favor
         Alert.alert(
           'Apply to Favor',
           `Apply to provide favor for ${favor.user.full_name}? You'll receive $${tipAmount.toFixed(2)}.`,
           [
-            { text: 'Cancel', style: 'cancel' },
+            { 
+              text: 'Cancel', 
+              style: 'cancel',
+              onPress: () => setLoadingFavorId(null)
+            },
             { 
               text: 'Apply',
               onPress: async () => {
+                setLoadingFavorId(favor.id);
                 try {
                   console.log('📝 Applying to favor:', favor.id);
                   await applyToFavorMutation.mutateAsync(favor.id);
                   console.log('✅ Application submitted successfully');
                 } catch (error: any) {
                   console.error('❌ Application failed:', error.message);
+                } finally {
+                  setLoadingFavorId(null);
                 }
               }
             }
@@ -245,6 +374,9 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications }: HomeLis
         );
       } else {
         console.log('⚠️ Payment account setup required for paid favor');
+        
+        // Clear loading state before showing alert
+        setLoadingFavorId(null);
         
         // Create callback that will apply to favor after payment setup is complete
         const onSetupComplete = async () => {
@@ -272,6 +404,7 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications }: HomeLis
       }
     } catch (error) {
       console.error('❌ Error handling provide favor:', error);
+      setLoadingFavorId(null);
       Alert.alert(
         'Error',
         'Something went wrong. Please try again.',
@@ -358,12 +491,20 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications }: HomeLis
       </TouchableOpacity>
       
       <TouchableOpacity 
-        className="bg-green-500 rounded-full py-3"
+        className={`${loadingFavorId === favor.id ? 'bg-gray-400' : 'bg-green-500'} rounded-full py-3`}
         onPress={() => handleProvideFavor(favor)}
+        disabled={loadingFavorId === favor.id}
       >
-        <Text className="text-white text-center font-semibold text-base">
-          ${parseFloat((favor.tip || 0).toString()).toFixed(2)} | Provide a Favor
-        </Text>
+        {loadingFavorId === favor.id ? (
+          <View className="flex-row justify-center items-center">
+            <ActivityIndicator size="small" color="white" />
+            <Text className="text-white text-center font-semibold text-base ml-2">Loading...</Text>
+          </View>
+        ) : (
+          <Text className="text-white text-center font-semibold text-base">
+            ${parseFloat((favor.tip || 0).toString()).toFixed(2)} | Provide a Favor
+          </Text>
+        )}
       </TouchableOpacity>
     </View>
   );
@@ -489,6 +630,174 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications }: HomeLis
         }}
         favorId={selectedFavorId}
       />
+
+      {/* Encouragement Modal */}
+      <Modal
+        visible={showEncouragementModal}
+        transparent
+        animationType="fade"
+        onRequestClose={handleSkipEncouragement}
+      >
+        <View className="flex-1 bg-black/50 justify-center items-center">
+          <View className="bg-white rounded-2xl p-6 mx-6 max-w-sm">
+            <Text className="text-xl font-bold text-gray-800 mb-4 text-center">
+              🚀 Unlock Premium Benefits!
+            </Text>
+            
+            <Text className="text-gray-600 text-center mb-6 leading-6">
+              Get the most out of FavorApp by completing your verification and subscribing to premium features.
+            </Text>
+            
+            <View className="mb-6">
+              {!verificationStatus.isSubscribed && (
+                <View className="flex-row items-center mb-3">
+                  <View className="w-5 h-5 rounded-full mr-3 bg-blue-500">
+                    <Text className="text-white text-xs text-center leading-5">💎</Text>
+                  </View>
+                  <Text className="text-gray-700 flex-1">Premium subscription benefits</Text>
+                </View>
+              )}
+              
+              {!verificationStatus.isKYCVerified && (
+                <View className="flex-row items-center mb-3">
+                  <View className="w-5 h-5 rounded-full mr-3 bg-green-500">
+                    <Text className="text-white text-xs text-center leading-5">✓</Text>
+                  </View>
+                  <Text className="text-gray-700 flex-1">Verified status and security</Text>
+                </View>
+              )}
+              
+              <View className="flex-row items-center mb-3">
+                <View className="w-5 h-5 rounded-full mr-3 bg-yellow-500">
+                  <Text className="text-white text-xs text-center leading-5">⭐</Text>
+                </View>
+                <Text className="text-gray-700 flex-1">Access to premium features</Text>
+              </View>
+            </View>
+            
+            <View className="space-y-3">
+              {!verificationStatus.isSubscribed && (
+                <TouchableOpacity
+                  className="py-3 px-4 bg-blue-500 rounded-xl mb-3"
+                  onPress={() => {
+                    setShowEncouragementModal(false);
+                    navigation?.navigate('Settings', {
+                      screen: 'SubscriptionsScreen'
+                    });
+                  }}
+                >
+                  <Text className="text-white text-center font-semibold">Get Premium Subscription</Text>
+                </TouchableOpacity>
+              )}
+              
+              {!verificationStatus.isKYCVerified && (
+                <TouchableOpacity
+                  className="py-3 px-4 bg-green-500 rounded-xl mb-3"
+                  onPress={() => {
+                    setShowEncouragementModal(false);
+                    navigation?.navigate('GetCertifiedScreen');
+                  }}
+                >
+                  <Text className="text-white text-center font-semibold">Complete Verification</Text>
+                </TouchableOpacity>
+              )}
+              
+              <TouchableOpacity
+                className="py-3 px-4 border border-gray-300 rounded-xl"
+                onPress={handleSkipEncouragement}
+              >
+                <Text className="text-gray-600 text-center font-semibold">Skip for now</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Verification Status Modal */}
+      <Modal
+        visible={showVerificationModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowVerificationModal(false)}
+      >
+        <View className="flex-1 bg-black/50 justify-center items-center">
+          <View className="bg-white rounded-2xl p-6 mx-6 max-w-sm">
+            <Text className="text-xl font-bold text-gray-800 mb-4 text-center">
+              Verification Required
+            </Text>
+            
+            {verificationStatus.isLoading ? (
+              <View className="flex-row justify-center items-center py-8">
+                <ActivityIndicator size="large" color="#44A27B" />
+                <Text className="ml-3 text-gray-600">Checking verification status...</Text>
+              </View>
+            ) : (
+              <>
+                <Text className="text-gray-600 text-center mb-6 leading-6">
+                  To apply for paid favors, you need to:
+                </Text>
+                
+                <View className="mb-6">
+                  <View className="flex-row items-center mb-3">
+                    <View className={`w-5 h-5 rounded-full mr-3 ${verificationStatus.isSubscribed ? 'bg-green-500' : 'bg-red-500'}`}>
+                      <Text className="text-white text-xs text-center leading-5">
+                        {verificationStatus.isSubscribed ? '✓' : '✗'}
+                      </Text>
+                    </View>
+                    <Text className="text-gray-700 flex-1">Have an active subscription</Text>
+                  </View>
+                  
+                  <View className="flex-row items-center mb-3">
+                    <View className={`w-5 h-5 rounded-full mr-3 ${verificationStatus.isKYCVerified ? 'bg-green-500' : 'bg-red-500'}`}>
+                      <Text className="text-white text-xs text-center leading-5">
+                        {verificationStatus.isKYCVerified ? '✓' : '✗'}
+                      </Text>
+                    </View>
+                    <Text className="text-gray-700 flex-1">Complete KYC verification through Shufti Pro</Text>
+                  </View>
+                </View>
+                
+                <View className="flex-row gap-x-3">
+                  <TouchableOpacity
+                    className="flex-1 py-3 px-4 border border-gray-300 rounded-xl"
+                    onPress={() => setShowVerificationModal(false)}
+                  >
+                    <Text className="text-gray-600 text-center font-semibold">Cancel</Text>
+                  </TouchableOpacity>
+                  
+                  {!verificationStatus.isSubscribed && (
+                    <TouchableOpacity
+                      className="flex-1 py-3 px-4 bg-blue-500 rounded-xl"
+                      onPress={() => {
+                        setShowVerificationModal(false);
+                        navigation?.navigate('Settings', {
+                      screen: 'SubscriptionsScreen'
+                    });
+                      }}
+                    >
+                      <Text className="text-white text-center font-semibold">Get Subscribed</Text>
+                    </TouchableOpacity>
+                  )}
+                  
+                  {!verificationStatus.isKYCVerified && (
+                    <TouchableOpacity
+                      className="flex-1 py-3 px-4 bg-green-500 rounded-xl"
+                      onPress={() => {
+                        setShowVerificationModal(false);
+                        navigation?.navigate('Settings', {
+                          screen: 'GetCertifiedScreen'
+                        });
+                      }}
+                    >
+                      <Text className="text-white text-center font-semibold">Get Certified</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
 
       {/* Stripe Connect WebView */}
       <StripeConnectWebView

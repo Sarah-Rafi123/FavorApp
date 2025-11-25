@@ -23,6 +23,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
         onMapView={() => setViewMode('map')}
         onFilter={handleFilter}
         onNotifications={handleNotifications}
+        navigation={navigation}
       />
     );
   }
@@ -32,6 +33,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
       onListView={() => setViewMode('list')}
       onFilter={handleFilter}
       onNotifications={handleNotifications}
+      navigation={navigation}
     />
   );
 }
