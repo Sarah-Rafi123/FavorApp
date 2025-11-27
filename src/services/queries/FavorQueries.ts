@@ -16,7 +16,7 @@ import useAuthStore from '../../store/useAuthStore';
  */
 export const useFavors = (
   page = 1, 
-  per_page = 12,
+  per_page = 20,
   options?: Partial<UseQueryOptions<ListFavorsResponse, Error>>
 ) => {
   return useQuery<ListFavorsResponse, Error>({

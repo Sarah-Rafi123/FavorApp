@@ -48,6 +48,7 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications, navigatio
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [showEncouragementModal, setShowEncouragementModal] = useState(false);
   const [loadingFavorId, setLoadingFavorId] = useState<number | null>(null);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [verificationStatus, setVerificationStatus] = useState<{
     isSubscribed: boolean;
     isKYCVerified: boolean;
@@ -61,8 +62,44 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications, navigatio
   // Get filter store state
   const { getFilterCount, hasActiveFilters, toBrowseParams } = useFilterStore();
 
-  // Apply to Favor mutation
-  const applyToFavorMutation = useApplyToFavor();
+  // Apply to Favor mutation with Stripe Connect setup callback
+  const applyToFavorMutation = useApplyToFavor({
+    onStripeSetupRequired: (favorId) => {
+      // Show Stripe Connect setup popup
+      Alert.alert(
+        'Stripe Account Setup Required',
+        'To apply to paid favors, you need to set up your Stripe account to receive payments. Would you like to set it up now?',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel'
+          },
+          {
+            text: 'Setup Stripe Account',
+            onPress: () => {
+              // Create callback that will apply to favor after setup
+              const onSetupComplete = async () => {
+                try {
+                  console.log('🎯 Stripe setup completed, now applying to favor:', favorId);
+                  await applyToFavorMutation.mutateAsync(favorId);
+                } catch (error: any) {
+                  console.error('❌ Apply to favor failed after Stripe setup:', error.message);
+                  Alert.alert(
+                    'Error',
+                    'Failed to apply to favor after setup. Please try again.',
+                    [{ text: 'OK' }]
+                  );
+                }
+              };
+              
+              // Start WebView setup
+              handleStripeSetupRequired(onSetupComplete);
+            }
+          }
+        ]
+      );
+    }
+  });
   const { user } = useAuthStore();
 
   // Use browseFavors when filters are active, useFavors when not
@@ -75,7 +112,7 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications, navigatio
     error: browseFavorsError, 
     refetch: refetchBrowseFavors 
   } = useBrowseFavors(
-    toBrowseParams(currentPage, 12),
+    toBrowseParams(currentPage, 20),
     { enabled: useFilteredData }
   );
 
@@ -87,7 +124,7 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications, navigatio
     refetch: refetchFavors 
   } = useFavors(
     currentPage, 
-    12,
+    20,
     { enabled: !useFilteredData }
   );
 
@@ -172,27 +209,41 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications, navigatio
     if (currentData?.data.favors) {
       if (currentPage === 1) {
         // First page - replace all favors
+        console.log('📚 First page loaded:', currentData.data.favors.length, 'favors');
         setAllFavors(currentData.data.favors);
+        setIsLoadingMore(false);
       } else {
         // Additional pages - append to existing favors
-        setAllFavors(prev => [...prev, ...currentData.data.favors]);
+        console.log('📚 Page', currentPage, 'loaded:', currentData.data.favors.length, 'new favors');
+        setAllFavors(prev => {
+          const newFavors = [...prev, ...currentData.data.favors];
+          console.log('📚 Total favors now:', newFavors.length);
+          return newFavors;
+        });
+        setIsLoadingMore(false);
       }
       
       // Check if there are more pages
-      setHasMorePages(currentPage < currentData.data.meta.total_pages);
+      const hasMore = currentPage < currentData.data.meta.total_pages;
+      console.log('📚 Has more pages:', hasMore, `(${currentPage}/${currentData.data.meta.total_pages})`);
+      setHasMorePages(hasMore);
     }
   }, [currentData, currentPage]);
 
   const loadMoreFavors = useCallback(() => {
-    if (!isLoading && hasMorePages) {
+    if (!isLoading && !isLoadingMore && hasMorePages) {
+      console.log('📚 Loading more favors - Current page:', currentPage, 'Has more pages:', hasMorePages);
+      setIsLoadingMore(true);
       setCurrentPage(prev => prev + 1);
     }
-  }, [isLoading, hasMorePages]);
+  }, [isLoading, isLoadingMore, hasMorePages, currentPage]);
 
   const handleRefresh = useCallback(() => {
+    console.log('🔄 Refreshing favor list...');
     setCurrentPage(1);
     setAllFavors([]);
     setHasMorePages(true);
+    setIsLoadingMore(false);
     refetch();
   }, [refetch]);
 
@@ -584,14 +635,14 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications, navigatio
           onEndReached={loadMoreFavors}
           onEndReachedThreshold={0.5}
           ListFooterComponent={
-            isLoading && currentPage > 1 ? (
+            (isLoading && currentPage > 1) || isLoadingMore ? (
               <View className="py-4 items-center">
                 <ActivityIndicator size="small" color="#44A27B" />
-                <Text className="text-gray-500 mt-2">Loading more...</Text>
+                <Text className="text-gray-500 mt-2">Loading more</Text>
               </View>
             ) : !hasMorePages && allFavors.length > 0 ? (
               <View className="py-4 items-center">
-                <Text className="text-gray-500">No more favors to load</Text>
+                <Text className="text-gray-500">No more favors to show</Text>
               </View>
             ) : null
           }

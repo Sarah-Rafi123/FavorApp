@@ -30,7 +30,34 @@ export function FavorMapPopup({ visible, onClose, favor, navigation }: FavorMapP
   }>({ isSubscribed: false, isKYCVerified: false, isLoading: false });
   
   const { user } = useAuthStore();
-  const applyToFavorMutation = useApplyToFavor();
+  const applyToFavorMutation = useApplyToFavor({
+    onStripeSetupRequired: (favorId) => {
+      // For map popup, show simple alert directing to settings
+      Alert.alert(
+        'Stripe Account Setup Required',
+        'To apply to paid favors, you need to set up your Stripe account. Please go to Settings > Payment Methods to set up your account.',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel'
+          },
+          {
+            text: 'Go to Settings',
+            onPress: () => {
+              // Close popup and navigate to settings
+              onClose();
+              // Navigation would be handled by parent component
+              Alert.alert(
+                'Navigate to Settings',
+                'Please go to Settings > Payment Methods to set up your Stripe account.',
+                [{ text: 'OK' }]
+              );
+            }
+          }
+        ]
+      );
+    }
+  });
   const stripeConnectManager = StripeConnectManager.getInstance();
   
   if (!favor) return null;

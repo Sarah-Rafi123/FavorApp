@@ -108,6 +108,27 @@ export function GetCertifiedScreen({ navigation }: GetCertifiedScreenProps) {
   const startVerification = async () => {
     try {
       setIsStarting(true);
+      
+      // Check if user has an active subscription first
+      if (!activeSubscription) {
+        Alert.alert(
+          'Subscription Required',
+          'You need an active subscription before you can start identity verification. Please subscribe to continue.',
+          [
+            {
+              text: 'Cancel',
+              style: 'cancel'
+            },
+            {
+              text: 'Get Subscription',
+              onPress: () => navigation?.navigate('SubscriptionsScreen')
+            }
+          ]
+        );
+        setIsStarting(false);
+        return;
+      }
+      
       const response = await startKYCVerification();
       
       // Set up WebView data
@@ -185,7 +206,7 @@ export function GetCertifiedScreen({ navigation }: GetCertifiedScreenProps) {
     Alert.alert(
       'Verification Complete!',
       'Your identity has been successfully verified. You are now certified!',
-      [{ text: 'OK', onPress: () => navigation?.goBack() }]
+      [{ text: 'OK', onPress: () => navigation?.navigate('SettingsMain') }]
     );
   };
 
@@ -221,7 +242,7 @@ export function GetCertifiedScreen({ navigation }: GetCertifiedScreenProps) {
         return {
           icon: <PendingIcon />,
           title: 'Verification In Progress',
-          subtitle: 'Please wait while we verify your identity',
+          subtitle: 'Please wait while we verify your identity. If you encounter issues, you can restart the verification below.',
           color: 'text-yellow-600',
           bgColor: 'bg-yellow-50',
           borderColor: 'border-yellow-200'
@@ -255,7 +276,7 @@ export function GetCertifiedScreen({ navigation }: GetCertifiedScreenProps) {
         <View className="flex-row items-center">
           <TouchableOpacity 
             className="mr-4"
-            onPress={() => navigation?.goBack()}
+            onPress={() => navigation?.navigate('SettingsMain')}
           >
             <BackSvg />
           </TouchableOpacity>
@@ -434,6 +455,16 @@ export function GetCertifiedScreen({ navigation }: GetCertifiedScreenProps) {
                 </Text>
               </View>
             ))}
+            
+            {/* Additional info for pending verifications */}
+            {kycStatus === 'pending' && (
+              <View className="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-200">
+                <Text className="text-blue-800 font-medium mb-2">💡 Need to restart verification?</Text>
+                <Text className="text-blue-700 text-sm leading-5">
+                  If your verification is taking too long or you encountered technical issues, you can start a new verification process. This will cancel your current pending verification.
+                </Text>
+              </View>
+            )}
           </View>
 
           {/* Loading State */}
@@ -490,14 +521,51 @@ export function GetCertifiedScreen({ navigation }: GetCertifiedScreenProps) {
               )}
 
               {kycStatus === 'pending' && (
-                <TouchableOpacity 
-                  className="rounded-3xl py-4 bg-gray-400"
-                  disabled={true}
-                >
-                  <Text className="text-white text-center font-semibold text-lg">
-                    Verification In Progress...
-                  </Text>
-                </TouchableOpacity>
+                <>
+                  <TouchableOpacity 
+                    className="rounded-3xl py-4 bg-gray-400 mb-3"
+                    disabled={true}
+                  >
+                    <Text className="text-white text-center font-semibold text-lg">
+                      Verification In Progress...
+                    </Text>
+                  </TouchableOpacity>
+                  
+                  {/* Restart KYC Option */}
+                  <TouchableOpacity 
+                    className="rounded-3xl py-4 border-2 border-[#44A27B] bg-transparent"
+                    onPress={() => {
+                      Alert.alert(
+                        'Restart KYC Verification',
+                        'Your current verification is still being processed. Starting a new verification will cancel the current one. Do you want to proceed?',
+                        [
+                          {
+                            text: 'Cancel',
+                            style: 'cancel'
+                          },
+                          {
+                            text: 'Start New Verification',
+                            onPress: startVerification
+                          }
+                        ]
+                      );
+                    }}
+                    disabled={isStarting}
+                  >
+                    {isStarting ? (
+                      <View className="flex-row justify-center items-center">
+                        <ActivityIndicator size="small" color="#44A27B" />
+                        <Text className="text-[#44A27B] text-center font-semibold ml-2">
+                          Starting New Verification...
+                        </Text>
+                      </View>
+                    ) : (
+                      <Text className="text-[#44A27B] text-center font-semibold text-lg">
+                        Start New Verification
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                </>
               )}
 
               {kycStatus === 'verified' && (

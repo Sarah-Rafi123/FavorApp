@@ -305,7 +305,9 @@ export const convertPriority = (priority: string): 'immediate' | 'delayed' | 'no
 /**
  * Hook for applying to a favor
  */
-export const useApplyToFavor = () => {
+export const useApplyToFavor = (options?: {
+  onStripeSetupRequired?: (favorId: number) => void;
+}) => {
   const queryClient = useQueryClient();
 
   return useMutation<ApplyToFavorResponse, Error, number>({
@@ -328,6 +330,28 @@ export const useApplyToFavor = () => {
     },
     onError: (error, favorId) => {
       console.error('Apply to favor failed:', error);
+      
+      // Check if this is a Stripe Connect setup required error
+      if (error.message.toLowerCase().includes('payment setup required') ||
+          error.message.toLowerCase().includes('payment account required') ||
+          error.message.toLowerCase().includes('set up your payment account')) {
+        console.log('🔗 Stripe Connect setup required for favorId:', favorId);
+        
+        // Call the Stripe setup callback if provided
+        if (options?.onStripeSetupRequired) {
+          options.onStripeSetupRequired(favorId);
+          return; // Don't show toast for this case
+        }
+        
+        // Fallback toast message if no callback provided
+        Toast.show({
+          type: 'info',
+          text1: 'Payment Setup Required',
+          text2: 'Please set up your Stripe account to apply to paid favors',
+          visibilityTime: 4000,
+        });
+        return;
+      }
       
       // Determine toast type based on error
       let toastType: 'error' | 'info' = 'error';

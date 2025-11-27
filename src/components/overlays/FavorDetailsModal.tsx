@@ -41,8 +41,44 @@ export function FavorDetailsModal({ visible, onClose, favorId }: FavorDetailsMod
   
   const userProfile = userProfileData?.data?.user;
 
-  // Apply to Favor mutation and Stripe Connect Manager
-  const applyToFavorMutation = useApplyToFavor();
+  // Apply to Favor mutation with Stripe Connect setup callback and Stripe Connect Manager
+  const applyToFavorMutation = useApplyToFavor({
+    onStripeSetupRequired: (favorId) => {
+      // Show Stripe Connect setup popup
+      Alert.alert(
+        'Stripe Account Setup Required',
+        'To apply to paid favors, you need to set up your Stripe account to receive payments. Would you like to set it up now?',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel'
+          },
+          {
+            text: 'Setup Stripe Account',
+            onPress: () => {
+              // Create callback that will apply to favor after setup
+              const onSetupComplete = async () => {
+                try {
+                  console.log('🎯 Stripe setup completed, now applying to favor:', favorId);
+                  await applyToFavorMutation.mutateAsync(favorId);
+                } catch (error: any) {
+                  console.error('❌ Apply to favor failed after Stripe setup:', error.message);
+                  Alert.alert(
+                    'Error',
+                    'Failed to apply to favor after setup. Please try again.',
+                    [{ text: 'OK' }]
+                  );
+                }
+              };
+              
+              // Start WebView setup
+              handleStripeSetupRequired(onSetupComplete);
+            }
+          }
+        ]
+      );
+    }
+  });
   const stripeConnectManager = StripeConnectManager.getInstance();
 
   // Helper function to format priority text

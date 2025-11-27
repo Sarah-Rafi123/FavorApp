@@ -278,6 +278,50 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
     return '';
   };
 
+  const showCustomerCenter = async () => {
+    try {
+      console.log('🛠️ Opening RevenueCat Customer Center...');
+      
+      // Present the RevenueCat Customer Center
+      await Purchases.presentCustomerCenter();
+      
+    } catch (error: any) {
+      console.error('❌ Error opening Customer Center:', error);
+      
+      // Fallback to manual support options if Customer Center fails
+      Alert.alert(
+        'Customer Support',
+        'Choose how you would like to get help with your subscription:',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel'
+          },
+          {
+            text: 'Manage in App Store',
+            onPress: () => {
+              Alert.alert(
+                'Manage Subscription',
+                'Visit your app store (Google Play Store or App Store) to manage your subscription, update payment methods, or cancel if needed.',
+                [{ text: 'OK' }]
+              );
+            }
+          },
+          {
+            text: 'Contact Support',
+            onPress: () => {
+              Alert.alert(
+                'Contact Support',
+                'For subscription issues, billing questions, or technical support, please contact us:\n\nEmail: support@favorapp.com\n\nInclude your user ID for faster assistance.',
+                [{ text: 'OK' }]
+              );
+            }
+          }
+        ]
+      );
+    }
+  };
+
   return (
     <ImageBackground
       source={require('../../assets/images/Wallpaper.png')}
@@ -427,6 +471,29 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
               </TouchableOpacity>
             </View>
           )}
+
+          {/* Customer Support Section */}
+          <View className="w-full mt-6">
+            <View className="flex-row items-center mb-4 w-full px-4">
+              <View className="flex-1 h-px bg-gray-300" />
+              <Text className="text-sm text-gray-500 px-4">
+                Need Help?
+              </Text>
+              <View className="flex-1 h-px bg-gray-300" />
+            </View>
+
+            <TouchableOpacity 
+              className="w-full bg-white border border-gray-300 rounded-2xl p-4 mb-4 shadow-sm"
+              onPress={showCustomerCenter}
+            >
+              <Text className="text-center text-gray-700 font-medium">
+                🛠️ Customer Center
+              </Text>
+              <Text className="text-center text-gray-500 text-sm mt-1">
+                Manage subscription, view purchase history, and get support
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </ImageBackground>

@@ -56,7 +56,7 @@ const useFilterStore = create<FilterStore>((set, get) => ({
     return get().getFilterCount() > 0;
   },
   
-  toBrowseParams: (page = 1, per_page = 12) => {
+  toBrowseParams: (page = 1, per_page = 20) => {
     const { filters } = get();
     const params: BrowseFavorsParams = { page, per_page };
     

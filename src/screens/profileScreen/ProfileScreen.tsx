@@ -52,7 +52,7 @@ export function ProfileScreen() {
     profileResponse?.data?.profile?.id || null,
     { 
       page: 1, 
-      per_page: 10,
+      per_page: 20,
       role: activeReviewTab === 'asked' ? 'requester' : 'provider'
     },
     { enabled: !!profileResponse?.data?.profile?.id && !!user && !!accessToken }

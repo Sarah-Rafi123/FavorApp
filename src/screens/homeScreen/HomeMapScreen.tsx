@@ -8,29 +8,26 @@ import {
   TextInput,
   Modal,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
-import MapView, { Marker, Circle } from 'react-native-maps';
+import MapView, { Marker, Circle, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
-import { FavorMapPopup } from '../../components/overlays';
+import { FavorMapPreviewModal } from '../../components/overlays';
 import FilterSvg from '../../assets/icons/Filter';
 import { NotificationBell } from '../../components/notifications/NotificationBell';
 import useFilterStore from '../../store/useFilterStore';
 import { useFavors, useBrowseFavors } from '../../services/queries/FavorQueries';
 import { Favor } from '../../services/apis/FavorApis';
-import { getCertificationStatus } from '../../services/apis/CertificationApis';
-import useAuthStore from '../../store/useAuthStore';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface HomeMapScreenProps {
   onListView: () => void;
   onFilter: () => void;
   onNotifications: () => void;
-  navigation?: any;
 }
 
 
-export function HomeMapScreen({ onListView, onFilter, onNotifications, navigation }: HomeMapScreenProps) {
+export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMapScreenProps) {
   const [location, setLocation] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [allFavors, setAllFavors] = useState<Favor[]>([]);
@@ -41,13 +38,6 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications, navigatio
   const [showFavorModal, setShowFavorModal] = useState(false);
   const [showLocationPermissionModal, setShowLocationPermissionModal] = useState(false);
   const [showAddressModal, setShowAddressModal] = useState(false);
-  const [showEncouragementModal, setShowEncouragementModal] = useState(false);
-  const [loadingFavorId, setLoadingFavorId] = useState<number | null>(null);
-  const [verificationStatus, setVerificationStatus] = useState<{
-    isSubscribed: boolean;
-    isKYCVerified: boolean;
-    hasShownEncouragement: boolean;
-  }>({ isSubscribed: false, isKYCVerified: false, hasShownEncouragement: false });
   const [currentAddress, setCurrentAddress] = useState('Getting location...');
   const [tempLocation, setTempLocation] = useState('');
   const [liveLocation, setLiveLocation] = useState<any>(null); // User's actual GPS location
@@ -59,9 +49,9 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications, navigatio
     longitudeDelta: 5.0,
   });
   const [mapReady, setMapReady] = useState(false);
-  const [favorLoadingTimeout, setFavorLoadingTimeout] = useState(false);
+  const [mapLoadingTimeout, setMapLoadingTimeout] = useState(false);
   const mapRef = useRef<MapView>(null);
-  const { user } = useAuthStore();
+  const mapReadyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Use browseFavors when filters are active, useFavors when not
   const useFilteredData = hasActiveFilters();
@@ -89,98 +79,27 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications, navigatio
 
   // Use the appropriate data source
   const currentData = useFilteredData ? browseFavorsData : favorsData;
-  const rawIsLoading = useFilteredData ? browseFavorsLoading : favorsLoading;
+  const isLoading = useFilteredData ? browseFavorsLoading : favorsLoading;
   const error = useFilteredData ? browseFavorsError : favorsError;
-  
-  // Improved loading state: only show loading for favors if map is ready and we don't have data yet
-  const isLoading = mapReady && rawIsLoading && !favorLoadingTimeout && !currentData?.data?.favors;
-  
-  // Debug loading state
-  useEffect(() => {
-    console.log('🔍 Loading state debug:', {
-      useFilteredData,
-      browseFavorsLoading,
-      favorsLoading,
-      rawIsLoading,
-      favorLoadingTimeout,
-      isLoading,
-      hasData: !!currentData?.data?.favors,
-      favorCount: currentData?.data?.favors?.length || 0,
-      mapReady
-    });
-  }, [useFilteredData, browseFavorsLoading, favorsLoading, rawIsLoading, favorLoadingTimeout, isLoading, currentData?.data?.favors, mapReady]);
-
-  // Check verification status and show encouragement if needed
-  const checkVerificationAndShowEncouragement = async () => {
-    try {
-      // Check if we've already shown the encouragement modal in this session
-      const hasShownToday = await AsyncStorage.getItem(`encouragement_shown_${user?.id}_${new Date().toDateString()}`);
-      if (hasShownToday) {
-        setVerificationStatus(prev => ({ ...prev, hasShownEncouragement: true }));
-        return;
-      }
-
-      // Check KYC certification status
-      const certificationResponse = await getCertificationStatus();
-      const isKYCVerified = certificationResponse.data.is_kyc_verified === 'verified';
-      
-      // For now, we'll assume subscription status based on user data
-      // In a real app, you'd have a subscription status API call
-      const isSubscribed = user?.id ? true : false; // Placeholder logic
-      
-      setVerificationStatus({
-        isKYCVerified,
-        isSubscribed,
-        hasShownEncouragement: false
-      });
-      
-      // Show encouragement if user is not fully verified/subscribed
-      if (!isKYCVerified || !isSubscribed) {
-        setShowEncouragementModal(true);
-      }
-    } catch (error) {
-      console.error('Error checking verification status for encouragement:', error);
-    }
-  };
-
-  const handleSkipEncouragement = async () => {
-    try {
-      // Store that we've shown the encouragement today
-      await AsyncStorage.setItem(`encouragement_shown_${user?.id}_${new Date().toDateString()}`, 'true');
-      setShowEncouragementModal(false);
-      setVerificationStatus(prev => ({ ...prev, hasShownEncouragement: true }));
-    } catch (error) {
-      console.error('Error storing encouragement skip status:', error);
-      setShowEncouragementModal(false);
-    }
-  };
 
   useEffect(() => {
     checkLocationPermission();
     
-    // Check verification status after a short delay to let the screen load
-    if (user?.id) {
-      const timer = setTimeout(() => {
-        checkVerificationAndShowEncouragement();
-      }, 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [user?.id]);
-
-  // Add loading timeout to prevent infinite loading
-  useEffect(() => {
-    if (rawIsLoading && mapReady) {
-      setFavorLoadingTimeout(false);
-      const timeout = setTimeout(() => {
-        console.log('⏰ Favor loading timeout reached - hiding loading indicator');
-        setFavorLoadingTimeout(true);
-      }, 8000); // 8 second timeout
-      
-      return () => clearTimeout(timeout);
-    } else if (!rawIsLoading) {
-      setFavorLoadingTimeout(false);
-    }
-  }, [rawIsLoading, mapReady]);
+    // Set a timeout for map loading (especially important for Android)
+    mapReadyTimeoutRef.current = setTimeout(() => {
+      if (!mapReady) {
+        console.log('Map loading timeout - forcing ready state (Android workaround)');
+        setMapLoadingTimeout(true);
+        setMapReady(true); // Force map ready for Android
+      }
+    }, 10000); // 10 second timeout
+    
+    return () => {
+      if (mapReadyTimeoutRef.current) {
+        clearTimeout(mapReadyTimeoutRef.current);
+      }
+    };
+  }, [mapReady]);
 
 
   // Update allFavors when new data arrives - prevent infinite loops
@@ -244,11 +163,20 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications, navigatio
 
   const getCurrentLocation = async () => {
     try {
-      const currentLocation = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-        timeInterval: 5000,
-        distanceInterval: 10,
-      });
+      // Different accuracy settings for Android vs iOS
+      const locationOptions = Platform.OS === 'android' 
+        ? {
+            accuracy: Location.Accuracy.Balanced, // Less aggressive for Android
+            timeInterval: 10000,
+            distanceInterval: 50,
+          }
+        : {
+            accuracy: Location.Accuracy.High,
+            timeInterval: 5000,
+            distanceInterval: 10,
+          };
+      
+      const currentLocation = await Location.getCurrentPositionAsync(locationOptions);
       const { latitude, longitude } = currentLocation.coords;
       
       // Set both live location and current viewing location
@@ -297,49 +225,33 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications, navigatio
   };
 
   const handleMarkerPress = useCallback((favor: Favor) => {
-    setLoadingFavorId(favor.id);
     setSelectedFavor(favor);
-    
-    // Add slight delay to show loading state, then show modal
-    setTimeout(() => {
-      setLoadingFavorId(null);
-      setShowFavorModal(true);
-    }, 300);
+    setShowFavorModal(true);
   }, []);
 
 
   // Memoized markers to prevent re-rendering on every update
   const favorMarkers = useMemo(() => {
-    // Remove duplicates by favor ID first
-    const uniqueFavors = allFavors.filter((favor, index, self) => 
-      index === self.findIndex(f => f.id === favor.id)
-    );
-    
-    return uniqueFavors.map((favor, index) => {
+    return allFavors.map((favor) => {
       const coordinates = parseLatLng(favor.lat_lng);
       if (!coordinates) return null;
       
       return (
         <Marker
-          key={`favor-${favor.id}-${index}`}
+          key={`favor-${favor.id}`}
           coordinate={coordinates}
           title={favor.title || favor.favor_subject.name}
           description={`$${parseFloat((favor.tip || 0).toString()).toFixed(2)}`}
           onPress={() => handleMarkerPress(favor)}
-        >
-          {loadingFavorId === favor.id && (
-            <View className="bg-white rounded-full p-2 shadow-lg border-2 border-green-500">
-              <ActivityIndicator size="small" color="#44A27B" />
-            </View>
-          )}
-        </Marker>
+        />
       );
     }).filter(Boolean);
-  }, [allFavors, parseLatLng, handleMarkerPress, loadingFavorId]);
+  }, [allFavors, parseLatLng, handleMarkerPress]);
 
   // Memoized current location marker (could be live GPS or selected location)
   const currentLocationMarker = useMemo(() => {
-    if (!location || !mapReady) return null;
+    // On Android, don't wait for mapReady if we've timed out
+    if (!location || (!mapReady && !mapLoadingTimeout)) return null;
     
     const isLiveLocation = !selectedLocation;
     
@@ -374,11 +286,11 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications, navigatio
         </Marker>
       </>
     );
-  }, [location, mapReady, selectedLocation, currentAddress]);
+  }, [location, mapReady, mapLoadingTimeout, selectedLocation, currentAddress]);
 
   // Memoized live location indicator (small marker when viewing selected location)
   const liveLocationIndicator = useMemo(() => {
-    if (!liveLocation || !mapReady || !selectedLocation) return null;
+    if (!liveLocation || (!mapReady && !mapLoadingTimeout) || !selectedLocation) return null;
     
     return (
       <Marker
@@ -394,7 +306,7 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications, navigatio
         <View className="w-3 h-3 bg-green-400 rounded-full border border-white shadow-lg" />
       </Marker>
     );
-  }, [liveLocation, mapReady, selectedLocation]);
+  }, [liveLocation, mapReady, mapLoadingTimeout, selectedLocation]);
 
   return (
     <View className="flex-1">
@@ -439,19 +351,31 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications, navigatio
           <Text className="ml-3 text-gray-600">Loading favors...</Text>
         </View>
       )}
-      
-      {/* Loading indicator for map */}
-      {!mapReady && (
-        <View className="absolute top-40 left-6 right-6 z-10 bg-white rounded-lg p-3 shadow-lg flex-row items-center">
-          <ActivityIndicator size="small" color="#44A27B" />
-          <Text className="ml-3 text-gray-600">Loading map...</Text>
-        </View>
-      )}
 
       {/* Error indicator for favors */}
       {error && (
         <View className="absolute top-40 left-6 right-6 z-10 bg-red-50 border border-red-200 rounded-lg p-3 shadow-lg">
           <Text className="text-red-600 text-sm">Failed to load favors</Text>
+        </View>
+      )}
+
+      {/* Android Map Loading Indicator */}
+      {Platform.OS === 'android' && !mapReady && !mapLoadingTimeout && (
+        <View className="absolute inset-0 z-20 bg-gray-100 items-center justify-center">
+          <ActivityIndicator size="large" color="#44A27B" />
+          <Text className="text-gray-600 mt-4 text-lg">Loading Map...</Text>
+          <Text className="text-gray-500 mt-2 text-sm px-6 text-center">
+            This may take a few moments on Android
+          </Text>
+        </View>
+      )}
+
+      {/* Map Timeout Warning */}
+      {mapLoadingTimeout && Platform.OS === 'android' && (
+        <View className="absolute top-64 left-6 right-6 z-10 bg-yellow-50 border border-yellow-200 rounded-lg p-3 shadow-lg">
+          <Text className="text-yellow-800 text-sm">
+            Map loading slowly. Try refreshing the screen or check your internet connection.
+          </Text>
         </View>
       )}
 
@@ -461,12 +385,24 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications, navigatio
           ref={mapRef}
           style={{ flex: 1 }}
           region={mapRegion}
+          provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined} // Explicitly use Google Maps on Android
           showsUserLocation={false}
           showsMyLocationButton={false}
           followsUserLocation={false}
           onMapReady={() => {
-            console.log('Map is ready');
+            console.log(`Map is ready on ${Platform.OS}`);
+            if (mapReadyTimeoutRef.current) {
+              clearTimeout(mapReadyTimeoutRef.current);
+              mapReadyTimeoutRef.current = null;
+            }
             setMapReady(true);
+          }}
+          onMapLoaded={() => {
+            // Additional callback for Android
+            console.log(`Map loaded on ${Platform.OS}`);
+            if (Platform.OS === 'android' && !mapReady) {
+              setMapReady(true);
+            }
           }}
           loadingEnabled={true}
           loadingIndicatorColor="#44A27B"
@@ -476,6 +412,14 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications, navigatio
           rotateEnabled={true}
           scrollEnabled={true}
           zoomEnabled={true}
+          // Android-specific optimizations
+          cacheEnabled={Platform.OS === 'android'}
+          mapPadding={{
+            top: 0,
+            right: 0,
+            bottom: 0,
+            left: 0,
+          }}
         >
           {/* Current Location Marker (live GPS or selected) */}
           {currentLocationMarker}
@@ -606,16 +550,20 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications, navigatio
           </Text>
         </View>
       )}
-      {/* Favor Popup Modal */}
-      <FavorMapPopup
-        visible={showFavorModal}
-        onClose={() => {
-          setShowFavorModal(false);
-          setSelectedFavor(null);
-        }}
-        favor={selectedFavor}
-        navigation={navigation}
-      />
+
+
+      {/* Favor Preview Modal */}
+      {selectedFavor && (
+        <FavorMapPreviewModal
+          visible={showFavorModal}
+          onClose={() => {
+            setShowFavorModal(false);
+            setSelectedFavor(null);
+          }}
+          favor={selectedFavor}
+        />
+      )}
+
       {/* Location Permission Modal */}
       <Modal
         visible={showLocationPermissionModal}
@@ -645,90 +593,6 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications, navigatio
                 onPress={requestLocationPermission}
               >
                 <Text className="text-white text-center font-semibold">Allow</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Encouragement Modal */}
-      <Modal
-        visible={showEncouragementModal}
-        transparent
-        animationType="fade"
-        onRequestClose={handleSkipEncouragement}
-      >
-        <View className="flex-1 bg-black/50 justify-center items-center">
-          <View className="bg-white rounded-2xl p-6 mx-6 max-w-sm">
-            <Text className="text-xl font-bold text-gray-800 mb-4 text-center">
-              🚀 Unlock Premium Benefits!
-            </Text>
-            
-            <Text className="text-gray-600 text-center mb-6 leading-6">
-              Get the most out of FavorApp by completing your verification and subscribing to premium features.
-            </Text>
-            
-            <View className="mb-6">
-              {!verificationStatus.isSubscribed && (
-                <View className="flex-row items-center mb-3">
-                  <View className="w-5 h-5 rounded-full mr-3 bg-blue-500">
-                    <Text className="text-white text-xs text-center leading-5">💎</Text>
-                  </View>
-                  <Text className="text-gray-700 flex-1">Premium subscription benefits</Text>
-                </View>
-              )}
-              
-              {!verificationStatus.isKYCVerified && (
-                <View className="flex-row items-center mb-3">
-                  <View className="w-5 h-5 rounded-full mr-3 bg-green-500">
-                    <Text className="text-white text-xs text-center leading-5">✓</Text>
-                  </View>
-                  <Text className="text-gray-700 flex-1">Verified status and security</Text>
-                </View>
-              )}
-              
-              <View className="flex-row items-center mb-3">
-                <View className="w-5 h-5 rounded-full mr-3 bg-yellow-500">
-                  <Text className="text-white text-xs text-center leading-5">⭐</Text>
-                </View>
-                <Text className="text-gray-700 flex-1">Access to premium features</Text>
-              </View>
-            </View>
-            
-            <View className="space-y-3">
-              {!verificationStatus.isSubscribed && (
-                <TouchableOpacity
-                  className="py-3 px-4 bg-blue-500 rounded-xl mb-3"
-                  onPress={() => {
-                    setShowEncouragementModal(false);
-                    navigation?.navigate('Settings', {
-                      screen: 'SubscriptionsScreen'
-                    });
-                  }}
-                >
-                  <Text className="text-white text-center font-semibold">Get Premium Subscription</Text>
-                </TouchableOpacity>
-              )}
-              
-              {!verificationStatus.isKYCVerified && (
-                <TouchableOpacity
-                  className="py-3 px-4 bg-green-500 rounded-xl mb-3"
-                  onPress={() => {
-                    setShowEncouragementModal(false);
-                    navigation?.navigate('Settings', {
-                      screen: 'GetCertifiedScreen'
-                    });
-                  }}
-                >
-                  <Text className="text-white text-center font-semibold">Complete Verification</Text>
-                </TouchableOpacity>
-              )}
-              
-              <TouchableOpacity
-                className="py-3 px-4 border border-gray-300 rounded-xl"
-                onPress={handleSkipEncouragement}
-              >
-                <Text className="text-gray-600 text-center font-semibold">Skip for now</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -845,6 +709,7 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications, navigatio
                     color: '#6B7280',
                   },
                 }}
+                
               />
             </View>
           </View>

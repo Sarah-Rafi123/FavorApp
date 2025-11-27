@@ -87,7 +87,7 @@ export function UserProfileScreen({ navigation, route }: UserProfileScreenProps)
   // Fetch user reviews with pagination
   const { data: reviewsResponse, isLoading: reviewsLoading, error: reviewsError } = useUserReviewsQuery(
     userId,
-    { page: currentPage, per_page: 10 },
+    { page: currentPage, per_page: 20 },
     { enabled: !!userId && userId !== 49 } // Temporarily disable reviews for user 49
   );
 

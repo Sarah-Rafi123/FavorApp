@@ -7,6 +7,7 @@ import {
   StatusBar,
   ImageBackground,
   ScrollView,
+  FlatList,
   Image,
   ActivityIndicator,
   RefreshControl,
@@ -26,10 +27,11 @@ import EditSvg from '../../assets/icons/Edit';
 import { LocationSmallSvg } from '../../assets/icons/LocationSmall';
 import { ClockSmallSvg } from '../../assets/icons/ClockSmall';
 import { useMyFavors, useFavorApplicants } from '../../services/queries/FavorQueries';
-import { useDeleteFavor, useAcceptApplicant, useReassignFavor } from '../../services/mutations/FavorMutations';
+import { useDeleteFavor, useAcceptApplicant } from '../../services/mutations/FavorMutations';
 import { Favor, FavorApplicant } from '../../services/apis/FavorApis';
 import { useUserReviewsQuery } from '../../services/queries/ProfileQueries';
 import useAuthStore from '../../store/useAuthStore';
+import { ReassignConfirmModal } from '../../components/overlays';
 
 interface CreateFavorScreenProps {
   navigation?: any;
@@ -39,11 +41,19 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
   const [activeTab, setActiveTab] = useState<'All' | 'Active' | 'History'>('All');
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(1);
-  const per_page = 10;
+  const per_page = 20;
+  
+  // Infinite scroll state (similar to HomeListScreen)
+  const [currentPage, setCurrentPage] = useState(1);
+  const [allFavors, setAllFavors] = useState<Favor[]>([]);
+  const [hasMorePages, setHasMorePages] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [favorToCancel, setFavorToCancel] = useState<Favor | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0); // Used to reset carousel states
   const [loadingApplicants, setLoadingApplicants] = useState<Set<string>>(new Set());
+  const [showReassignModal, setShowReassignModal] = useState(false);
+  const [reassignData, setReassignData] = useState<{ favor: Favor; applicant: FavorApplicant } | null>(null);
 
   // Get auth store state
   const { user, accessToken } = useAuthStore();
@@ -72,38 +82,16 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
       });
     }
   });
-  
-  // Reassign favor mutation
-  const reassignFavorMutation = useReassignFavor({
-    onSuccess: (data, variables) => {
-      // Remove from loading state
-      setLoadingApplicants(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(`${variables.favorId}-${variables.newProviderId}`);
-        return newSet;
-      });
-      // Refresh all tabs after successful reassign
-      handleRefreshAllTabs();
-    },
-    onError: (error, variables) => {
-      // Remove from loading state on error too
-      setLoadingApplicants(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(`${variables.favorId}-${variables.newProviderId}`);
-        return newSet;
-      });
-    }
-  });
 
   // API calls for different tabs
-  // All tab: active favors (shows requests)
+  // All tab: active favors (shows requests) - using currentPage for infinite scroll
   const {
     data: allFavorsResponse,
     isLoading: allFavorsLoading,
     error: allFavorsError,
     refetch: refetchAllFavors,
   } = useMyFavors(
-    { type: 'requested', tab: 'active', page, per_page, sort_by: 'updated_at', sort_order: 'asc' },
+    { type: 'requested', tab: 'active', page: currentPage, per_page, sort_by: 'updated_at', sort_order: 'asc' },
     { enabled: activeTab === 'All' && !!user && !!accessToken }
   );
 
@@ -153,7 +141,8 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
   const getCurrentData = () => {
     switch (activeTab) {
       case 'All':
-        return allFavorsResponse?.data.favors || [];
+        // Use accumulated favors for infinite scroll
+        return allFavors.length > 0 ? allFavors : (allFavorsResponse?.data.favors || []);
       case 'Active':
         // Combine active and in-progress favors
         const activeFavors = activeFavorsResponse?.data.favors || [];
@@ -203,20 +192,73 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
     navigation?.navigate('AskFavorScreen');
   };
 
+  // Reset pagination when switching tabs
+  React.useEffect(() => {
+    setCurrentPage(1);
+    setAllFavors([]);
+    setHasMorePages(true);
+    setIsLoadingMore(false);
+  }, [activeTab]);
+
+  // Update allFavors when new data arrives (All tab only)
+  React.useEffect(() => {
+    if (activeTab === 'All' && allFavorsResponse?.data.favors) {
+      if (currentPage === 1) {
+        // First page - replace all favors
+        console.log('📚 First page loaded:', allFavorsResponse.data.favors.length, 'favors');
+        setAllFavors(allFavorsResponse.data.favors);
+        setIsLoadingMore(false);
+      } else {
+        // Additional pages - append to existing favors
+        console.log('📚 Page', currentPage, 'loaded:', allFavorsResponse.data.favors.length, 'new favors');
+        setAllFavors(prev => {
+          const newFavors = [...prev, ...allFavorsResponse.data.favors];
+          console.log('📚 Total favors now:', newFavors.length);
+          return newFavors;
+        });
+        setIsLoadingMore(false);
+      }
+      
+      // Check if there are more pages
+      const hasMore = currentPage < allFavorsResponse.data.meta.total_pages;
+      console.log('📚 Has more pages:', hasMore, `(${currentPage}/${allFavorsResponse.data.meta.total_pages})`);
+      setHasMorePages(hasMore);
+    }
+  }, [allFavorsResponse, currentPage, activeTab]);
+
+  // Load more favors function
+  const loadMoreFavors = useCallback(() => {
+    if (activeTab === 'All' && !allFavorsLoading && !isLoadingMore && hasMorePages) {
+      console.log('📚 Loading more favors - Current page:', currentPage, 'Has more pages:', hasMorePages);
+      setIsLoadingMore(true);
+      setCurrentPage(prev => prev + 1);
+    }
+  }, [activeTab, allFavorsLoading, isLoadingMore, hasMorePages, currentPage]);
+
   // Debug logging
   React.useEffect(() => {
     console.log('🔍 CreateFavorScreen Debug:');
     console.log('Active Tab:', activeTab);
     console.log('Current Favors Count:', currentFavors.length);
+    console.log('All Favors Count (infinite scroll):', allFavors.length);
+    console.log('Current Page:', currentPage);
+    console.log('Has More Pages:', hasMorePages);
     console.log('Is Loading:', isLoading);
+    console.log('Is Loading More:', isLoadingMore);
     console.log('Error:', error?.message || 'No error');
     console.log('User:', !!user, user?.firstName);
     console.log('Access Token:', !!accessToken);
-  }, [activeTab, currentFavors, isLoading, error, user, accessToken]);
+  }, [activeTab, currentFavors, allFavors, currentPage, hasMorePages, isLoading, isLoadingMore, error, user, accessToken]);
 
   const handleRefresh = async () => {
     console.log('🔄 Starting comprehensive refresh of all tabs...');
     setRefreshing(true);
+    
+    // Reset pagination state for infinite scroll
+    setCurrentPage(1);
+    setAllFavors([]);
+    setHasMorePages(true);
+    setIsLoadingMore(false);
     
     try {
       // Reset all local state variables
@@ -323,6 +365,47 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
   const handleCancelModalClose = () => {
     setShowCancelModal(false);
     setFavorToCancel(null);
+  };
+
+  const handleReassignModalClose = () => {
+    setShowReassignModal(false);
+    setReassignData(null);
+  };
+
+  const handleConfirmReassign = async () => {
+    if (!reassignData) return;
+
+    try {
+      const key = `${reassignData.favor.id}-${reassignData.applicant.user.id}`;
+      setLoadingApplicants(prev => new Set(prev).add(key));
+      
+      console.log('🔄 Accepting new applicant for favor:', reassignData.favor.id, 'applicant:', reassignData.applicant.user.full_name);
+      
+      // Use acceptApplicant API instead of reassign
+      await acceptApplicantMutation.mutateAsync({
+        favorId: reassignData.favor.id,
+        applicantId: reassignData.applicant.user.id
+      });
+      
+      // Close modal and reset state
+      setShowReassignModal(false);
+      setReassignData(null);
+      
+      console.log('✅ New applicant accepted successfully');
+      
+    } catch (error: any) {
+      console.error('❌ Accept applicant failed:', error.message);
+      // Remove from loading state on error
+      if (reassignData) {
+        const key = `${reassignData.favor.id}-${reassignData.applicant.user.id}`;
+        setLoadingApplicants(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(key);
+          return newSet;
+        });
+      }
+      // Keep modal open on error so user can try again
+    }
   };
 
 
@@ -566,17 +649,15 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
                 <TouchableOpacity 
                   className="bg-[#44A27B] rounded-full py-4 mt-4"
                   onPress={() => {
-                    const key = `${favor.id}-${applicant.user.id}`;
-                    setLoadingApplicants(prev => new Set(prev).add(key));
-                    
-                    if (favor.accepted_response && favor.status === 'in_progress') {
-                      // Favor already has accepted provider, call reassign API
-                      reassignFavorMutation.mutate({
-                        favorId: favor.id,
-                        newProviderId: applicant.user.id
-                      });
+                    if (favor.accepted_response && favor.status === 'in-progress') {
+                      // Favor already has accepted provider, show confirmation modal for reassign
+                      setReassignData({ favor, applicant });
+                      setShowReassignModal(true);
                     } else {
-                      // No accepted provider yet, call accept API
+                      // No accepted provider yet, call accept API directly
+                      const key = `${favor.id}-${applicant.user.id}`;
+                      setLoadingApplicants(prev => new Set(prev).add(key));
+                      
                       acceptApplicantMutation.mutate({
                         favorId: favor.id,
                         applicantId: applicant.user.id
@@ -587,8 +668,8 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
                 >
                   <Text className="text-white font-bold text-lg text-center">
                     {loadingApplicants.has(`${favor.id}-${applicant.user.id}`)
-                      ? (favor.accepted_response && favor.status === 'in_progress' ? 'Reassigning...' : 'Accepting...') 
-                      : (favor.accepted_response && favor.status === 'in_progress' ? 'Reassign' : 'Accept')
+                      ? (favor.accepted_response && favor.status === 'in-progress' ? 'Reassigning...' : 'Accepting...') 
+                      : (favor.accepted_response && favor.status === 'in-progress' ? 'Reassign' : 'Accept')
                     }
                   </Text>
                 </TouchableOpacity>
@@ -712,17 +793,15 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
           <TouchableOpacity 
             className="bg-[#44A27B] rounded-full py-4 mt-4"
             onPress={() => {
-              const key = `${favor.id}-${applicant.user.id}`;
-              setLoadingApplicants(prev => new Set(prev).add(key));
-              
-              if (favor.accepted_response && favor.status === 'in_progress') {
-                // Favor already has accepted provider, call reassign API
-                reassignFavorMutation.mutate({
-                  favorId: favor.id,
-                  newProviderId: applicant.user.id
-                });
+              if (favor.accepted_response && favor.status === 'in-progress') {
+                // Favor already has accepted provider, show confirmation modal for reassign
+                setReassignData({ favor, applicant });
+                setShowReassignModal(true);
               } else {
-                // No accepted provider yet, call accept API
+                // No accepted provider yet, call accept API directly
+                const key = `${favor.id}-${applicant.user.id}`;
+                setLoadingApplicants(prev => new Set(prev).add(key));
+                
                 acceptApplicantMutation.mutate({
                   favorId: favor.id,
                   applicantId: applicant.user.id
@@ -733,8 +812,8 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
           >
             <Text className="text-white font-bold text-lg text-center">
               {loadingApplicants.has(`${favor.id}-${applicant.user.id}`)
-                ? (favor.accepted_response && favor.status === 'in_progress' ? 'Reassigning...' : 'Accepting...') 
-                : (favor.accepted_response && favor.status === 'in_progress' ? 'Reassign' : 'Accept')
+                ? (favor.accepted_response && favor.status === 'in-progress' ? 'Reassigning...' : 'Accepting...') 
+                : (favor.accepted_response && favor.status === 'in-progress' ? 'Reassign' : 'Accept')
               }
             </Text>
           </TouchableOpacity>
@@ -1137,30 +1216,68 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
           </TouchableOpacity>
         </View>
       ) : currentFavors.length > 0 ? (
-        <ScrollView 
-          className="flex-1"
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingTop: 8, paddingBottom: 120 }}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              colors={['#44A27B']}
-              tintColor="#44A27B"
-            />
-          }
-        >
-          {activeTab === 'All' 
-            ? <AllTabContent favors={currentFavors} navigation={navigation} />
-            : currentFavors.map((favor) => {
-                if (activeTab === 'Active') {
-                  return <ActiveCard key={favor.id} favor={favor} />;
-                } else {
-                  return <HistoryCard key={favor.id} favor={favor} />;
-                }
-              })
-          }
-        </ScrollView>
+        activeTab === 'All' ? (
+          // Use FlatList with infinite scroll for All tab
+          <FlatList
+            data={currentFavors}
+            keyExtractor={(item) => item.id.toString()}
+            renderItem={({ item }) => <FavorWithApplicants key={item.id} favor={item} navigation={navigation} />}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingTop: 8, paddingBottom: 120 }}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing && currentPage === 1}
+                onRefresh={handleRefresh}
+                colors={['#44A27B']}
+                tintColor="#44A27B"
+              />
+            }
+            onEndReached={loadMoreFavors}
+            onEndReachedThreshold={0.5}
+            ListFooterComponent={
+              (allFavorsLoading && currentPage > 1) || isLoadingMore ? (
+                <View className="py-4 items-center">
+                  <ActivityIndicator size="small" color="#44A27B" />
+                  <Text className="text-gray-500 mt-2">Loading more</Text>
+                </View>
+              ) : !hasMorePages && currentFavors.length > 0 ? (
+                <View className="py-4 items-center">
+                  <Text className="text-gray-500">No more favors to show</Text>
+                </View>
+              ) : null
+            }
+          />
+        ) : (
+          // Use ScrollView for Active and History tabs
+          <ScrollView 
+            className="flex-1"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingTop: 8, paddingBottom: 120 }}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+                colors={['#44A27B']}
+                tintColor="#44A27B"
+              />
+            }
+          >
+            {currentFavors.map((favor) => {
+              if (activeTab === 'Active') {
+                return <ActiveCard key={favor.id} favor={favor} />;
+              } else {
+                return <HistoryCard key={favor.id} favor={favor} />;
+              }
+            })}
+            
+            {/* Footer message for Active and History tabs */}
+            {currentFavors.length > 0 && (
+              <View className="py-4 items-center">
+                <Text className="text-gray-500">No more favors to show</Text>
+              </View>
+            )}
+          </ScrollView>
+        )
       ) : (
         /* Empty State */
         <View className="flex-1 items-center justify-center px-6">
@@ -1244,6 +1361,16 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
           </View>
         </View>
       </Modal>
+
+      {/* Reassign Confirmation Modal */}
+      <ReassignConfirmModal
+        visible={showReassignModal}
+        onClose={handleReassignModalClose}
+        onConfirm={handleConfirmReassign}
+        currentProviderName={reassignData?.favor?.accepted_response?.user?.full_name}
+        newProviderName={reassignData?.applicant?.user?.full_name}
+      />
+
 
     </ImageBackground>
   );

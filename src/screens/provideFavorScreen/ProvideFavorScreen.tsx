@@ -68,6 +68,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [allFavors, setAllFavors] = useState<Favor[]>([]);
   const [hasMorePages, setHasMorePages] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   
   // Get auth store state for debugging
   const { user, accessToken } = useAuthStore();
@@ -75,8 +76,44 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
   // Get filter store state
   const { hasActiveFilters, toBrowseParams, getFilterCount } = useFilterStore();
 
-  // Apply to Favor mutation, Cancel Request mutation, Complete Favor mutation, and Stripe Connect Manager
-  const applyToFavorMutation = useApplyToFavor();
+  // Apply to Favor mutation with Stripe Connect setup callback, Cancel Request mutation, Complete Favor mutation, and Stripe Connect Manager
+  const applyToFavorMutation = useApplyToFavor({
+    onStripeSetupRequired: (favorId) => {
+      // Show Stripe Connect setup popup
+      Alert.alert(
+        'Stripe Account Setup Required',
+        'To apply to paid favors, you need to set up your Stripe account to receive payments. Would you like to set it up now?',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel'
+          },
+          {
+            text: 'Setup Stripe Account',
+            onPress: () => {
+              // Create callback that will apply to favor after setup
+              const onSetupComplete = async () => {
+                try {
+                  console.log('🎯 Stripe setup completed, now applying to favor:', favorId);
+                  await applyToFavorMutation.mutateAsync(favorId);
+                } catch (error: any) {
+                  console.error('❌ Apply to favor failed after Stripe setup:', error.message);
+                  Alert.alert(
+                    'Error',
+                    'Failed to apply to favor after setup. Please try again.',
+                    [{ text: 'OK' }]
+                  );
+                }
+              };
+              
+              // Start WebView setup
+              handleStripeSetupRequired(onSetupComplete);
+            }
+          }
+        ]
+      );
+    }
+  });
   const cancelRequestMutation = useCancelRequest();
   const completeFavorMutation = useCompleteFavor();
   const stripeConnectManager = StripeConnectManager.getInstance();
@@ -94,7 +131,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
     error: browseFavorsError,
     refetch: refetchBrowseFavors,
   } = useBrowseFavors(
-    toBrowseParams(currentPage, 12),
+    toBrowseParams(currentPage, 20),
     { enabled: useFilteredData }
   );
 
@@ -106,7 +143,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
     refetch: refetchFavors,
   } = useFavors(
     currentPage, // page - now uses currentPage for pagination
-    12, // per_page 
+    20, // per_page 
     { enabled: !useFilteredData }
   );
 
@@ -120,7 +157,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
       type: 'providing', 
       tab: 'active', 
       page: 1, 
-      per_page: 10,
+      per_page: 20,
       category: selectedCategories.length > 0 ? selectedCategories : undefined,
       sort_by: 'updated_at',
       sort_order: 'asc'
@@ -138,7 +175,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
       type: 'providing', 
       tab: 'in-progress', 
       page: 1, 
-      per_page: 10,
+      per_page: 20,
       category: selectedCategories.length > 0 ? selectedCategories : undefined,
       sort_by: 'updated_at',
       sort_order: 'asc'
@@ -156,7 +193,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
       type: 'providing', 
       tab: 'completed', 
       page: 1, 
-      per_page: 10,
+      per_page: 20,
       category: selectedCategories.length > 0 ? selectedCategories : undefined,
       sort_by: 'updated_at',
       sort_order: 'asc'
@@ -174,7 +211,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
       type: 'providing', 
       tab: 'cancelled', 
       page: 1, 
-      per_page: 10,
+      per_page: 20,
       category: selectedCategories.length > 0 ? selectedCategories : undefined,
       sort_by: 'updated_at',
       sort_order: 'asc'
@@ -349,6 +386,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
     setCurrentPage(1);
     setAllFavors([]);
     setHasMorePages(true);
+    setIsLoadingMore(false);
   }, [useFilteredData]);
 
   // Reset pagination and state when switching to All tab, and trigger refetch
@@ -358,6 +396,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
       setCurrentPage(1);
       setAllFavors([]);
       setHasMorePages(true);
+      setIsLoadingMore(false);
       
       // Trigger refetch to ensure data loads when switching back to All tab
       setTimeout(() => {
@@ -376,17 +415,25 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
       
       if (currentPage === 1) {
         // First page - replace all favors
-        console.log('🔄 First page - replacing all favors');
+        console.log('📚 First page loaded:', currentData.data.favors.length, 'favors');
         setAllFavors(currentData.data.favors);
+        setIsLoadingMore(false);
       } else {
         // Additional pages - append to existing favors
-        console.log('🔄 Additional page - appending favors');
-        setAllFavors(prev => [...prev, ...currentData.data.favors]);
+        console.log('📚 Page', currentPage, 'loaded:', currentData.data.favors.length, 'new favors');
+        setAllFavors(prev => {
+          const newFavors = [...prev, ...currentData.data.favors];
+          console.log('📚 Total favors now:', newFavors.length);
+          return newFavors;
+        });
+        setIsLoadingMore(false);
       }
       
       // Check if there are more pages
       if (currentData.data.meta?.total_pages) {
-        setHasMorePages(currentPage < currentData.data.meta.total_pages);
+        const hasMore = currentPage < currentData.data.meta.total_pages;
+        console.log('📚 Has more pages:', hasMore, `(${currentPage}/${currentData.data.meta.total_pages})`);
+        setHasMorePages(hasMore);
         console.log('📄 Has more pages:', currentPage < currentData.data.meta.total_pages);
       }
     } else if (activeTab === 'All') {
@@ -396,10 +443,12 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
 
   // Load more favors function (same as HomeListScreen)
   const loadMoreFavors = useCallback(() => {
-    if (activeTab === 'All' && !isLoading && hasMorePages) {
+    if (activeTab === 'All' && !isLoading && !isLoadingMore && hasMorePages) {
+      console.log('📚 Loading more favors - Current page:', currentPage, 'Has more pages:', hasMorePages);
+      setIsLoadingMore(true);
       setCurrentPage(prev => prev + 1);
     }
-  }, [activeTab, isLoading, hasMorePages]);
+  }, [activeTab, isLoading, isLoadingMore, hasMorePages, currentPage]);
 
   const handleRefresh = useCallback(async () => {
     console.log('🔄 Handle refresh triggered for tab:', activeTab);
@@ -414,6 +463,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
           // Reset pagination state
           setCurrentPage(1);
           setHasMorePages(true);
+          setIsLoadingMore(false);
           
           console.log('🚀 Calling refetch for All tab');
           const result = await refetchCurrentData();
@@ -1251,14 +1301,14 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
             onEndReached={loadMoreFavors}
             onEndReachedThreshold={0.5}
             ListFooterComponent={
-              isLoading && currentPage > 1 ? (
+              (isLoading && currentPage > 1) || isLoadingMore ? (
                 <View className="py-4 items-center">
                   <ActivityIndicator size="small" color="#44A27B" />
-                  <Text className="text-gray-500 mt-2">Loading more...</Text>
+                  <Text className="text-gray-500 mt-2">Loading more</Text>
                 </View>
               ) : !hasMorePages && currentFavors.length > 0 ? (
                 <View className="py-4 items-center">
-                  <Text className="text-gray-500">No more favors to load</Text>
+                  <Text className="text-gray-500">No more favors to show</Text>
                 </View>
               ) : null
             }
@@ -1281,6 +1331,13 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
             {currentFavors.map((favor) => (
               <FavorCard key={favor.id} favor={favor} />
             ))}
+            
+            {/* Footer message for Active and History tabs */}
+            {currentFavors.length > 0 && (
+              <View className="py-4 items-center">
+                <Text className="text-gray-500">No more favors to show</Text>
+              </View>
+            )}
           </ScrollView>
         )
       ) : (

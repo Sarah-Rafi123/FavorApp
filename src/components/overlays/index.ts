@@ -8,3 +8,5 @@ export * from "./FavorMapPreviewModal";
 export * from "./FavorMapPopup";
 export * from "./StripeConnectWebView";
 export * from "./ShuftiProWebView";
+export * from "./ReassignConfirmModal";
+export * from "./ReassignSuccessModal";

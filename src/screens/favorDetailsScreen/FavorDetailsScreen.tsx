@@ -13,6 +13,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  RefreshControl,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import BackSvg from '../../assets/icons/Back';
@@ -59,6 +60,7 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
   const [isCompletingFavor, setIsCompletingFavor] = useState(false);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+  const [refreshing, setRefreshing] = useState(false);
 
   // Get favor ID from route params
   const favorId = route?.params?.favorId || route?.params?.favor?.id;
@@ -67,17 +69,17 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
   const isRequestMode = route?.params?.source === 'CreateFavorScreen' || route?.name === 'FavorDetailsScreen';
   
   // Fetch favor data using the API
-  const { data: favorResponse, isLoading, error } = useFavor(favorId, {
+  const { data: favorResponse, isLoading, error, refetch: refetchFavor } = useFavor(favorId, {
     enabled: !!favorId
   });
 
   // Fetch favor reviews
-  const { data: reviewsResponse, isLoading: reviewsLoading } = useFavorReviews(favorId, {
+  const { data: reviewsResponse, isLoading: reviewsLoading, refetch: refetchReviews } = useFavorReviews(favorId, {
     enabled: !!favorId
   });
 
   // Fetch provider profile data when there's an accepted response
-  const { data: providerProfileResponse, isLoading: providerProfileLoading } = useFavorProviderProfileQuery(
+  const { data: providerProfileResponse, isLoading: providerProfileLoading, refetch: refetchProviderProfile } = useFavorProviderProfileQuery(
     favorResponse?.data.favor?.accepted_response ? favorId : null,
     { enabled: !!favorResponse?.data.favor?.accepted_response }
   );
@@ -96,13 +98,13 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
   }, [providerProfileResponse]);
 
   // Fetch user contact details immediately
-  const { data: userContactResponse } = usePublicUserProfileQuery(
+  const { data: userContactResponse, refetch: refetchUserContact } = usePublicUserProfileQuery(
     favorResponse?.data.favor?.user?.id || null,
     { enabled: !!favorResponse?.data.favor?.user?.id }
   );
 
   // Fetch provider contact details
-  const { data: providerContactResponse } = usePublicUserProfileQuery(
+  const { data: providerContactResponse, refetch: refetchProviderContact } = usePublicUserProfileQuery(
     favorResponse?.data.favor?.accepted_response?.user?.id || null,
     { enabled: !!favorResponse?.data.favor?.accepted_response?.user?.id }
   );
@@ -614,6 +616,23 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
     setTipAmount('');
   };
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        refetchFavor(),
+        refetchReviews(),
+        refetchProviderProfile(),
+        refetchUserContact(),
+        refetchProviderContact()
+      ]);
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   return (
     <ImageBackground
       source={require('../../assets/images/Wallpaper.png')}
@@ -640,6 +659,14 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
         className="flex-1"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 120 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#44A27B']}
+            tintColor="#44A27B"
+          />
+        }
       >
         {/* Favor Details Card - Matching the image */}
         <View className="mx-4 mb-6 bg-white rounded-3xl p-6 border-4 border-[#71DFB1]">

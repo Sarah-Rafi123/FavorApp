@@ -13,6 +13,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  RefreshControl,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import BackSvg from '../../assets/icons/Back';
@@ -58,6 +59,7 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
   const [tipAmount, setTipAmount] = useState('');
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+  const [refreshing, setRefreshing] = useState(false);
 
   // Get favor ID from route params
   const favorId = route?.params?.favorId || route?.params?.favor?.id;
@@ -84,23 +86,23 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
     checkTokenOnLoad();
   }, [favorId]);
   // Fetch favor data using the API
-  const { data: favorResponse, isLoading, error } = useFavor(favorId, {
+  const { data: favorResponse, isLoading, error, refetch: refetchFavor } = useFavor(favorId, {
     enabled: !!favorId
   });
 
   // Fetch favor reviews
-  const { data: reviewsResponse, isLoading: reviewsLoading } = useFavorReviews(favorId, {
+  const { data: reviewsResponse, isLoading: reviewsLoading, refetch: refetchReviews } = useFavorReviews(favorId, {
     enabled: !!favorId
   });
 
   // Fetch user profile data for the requester
-  const { data: userProfileResponse, isLoading: userProfileLoading } = usePublicUserProfileQuery(
+  const { data: userProfileResponse, isLoading: userProfileLoading, refetch: refetchUserProfile } = usePublicUserProfileQuery(
     favorResponse?.data.favor?.user?.id || null,
     { enabled: !!favorResponse?.data.favor?.user?.id }
   );
 
   // Fetch user review statistics for the requester
-  const { data: reviewStatisticsResponse, isLoading: reviewStatisticsLoading } = useUserReviewStatisticsQuery(
+  const { data: reviewStatisticsResponse, isLoading: reviewStatisticsLoading, refetch: refetchReviewStatistics } = useUserReviewStatisticsQuery(
     favorResponse?.data.favor?.user?.id || null,
     { enabled: !!favorResponse?.data.favor?.user?.id }
   );
@@ -553,6 +555,22 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
     );
   };
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        refetchFavor(),
+        refetchReviews(),
+        refetchUserProfile(),
+        refetchReviewStatistics()
+      ]);
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   return (
     <ImageBackground
       source={require('../../assets/images/Wallpaper.png')}
@@ -578,6 +596,14 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
         className="flex-1"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 120 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#44A27B']}
+            tintColor="#44A27B"
+          />
+        }
       >
         {/* Favor Details Card */}
         <View className="mx-4 mb-6 bg-transparent rounded-3xl p-6 border-4 border-[#71DFB1]">
