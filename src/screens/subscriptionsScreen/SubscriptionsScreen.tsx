@@ -346,6 +346,38 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
     return 'unknown';
   };
 
+  const getStoreName = () => {
+    const platform = getSubscriptionPlatform();
+    switch (platform) {
+      case 'web':
+        return 'Web (Stripe)';
+      case 'android':
+        return 'Google Play Store';
+      case 'ios':
+        return 'Apple App Store';
+      case 'mobile':
+        return Platform.OS === 'android' ? 'Google Play Store' : 'Apple App Store';
+      default:
+        return 'Unknown Store';
+    }
+  };
+
+  const getStoreIcon = () => {
+    const platform = getSubscriptionPlatform();
+    switch (platform) {
+      case 'web':
+        return '🌐';
+      case 'android':
+        return '🤖';
+      case 'ios':
+        return '🍎';
+      case 'mobile':
+        return Platform.OS === 'android' ? '🤖' : '🍎';
+      default:
+        return '🏪';
+    }
+  };
+
   const canUpgradeOnCurrentPlatform = () => {
     const subscriptionPlatform = getSubscriptionPlatform();
     const currentPlatform = Platform.OS;
@@ -598,6 +630,13 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
                         </Text>
                       </View>
                     )}
+
+                    <View className="flex-row justify-between items-center mb-2">
+                      <Text className="text-gray-700 font-medium">Store:</Text>
+                      <Text className="text-gray-600 text-sm">
+                        {getStoreIcon()} {getStoreName()}
+                      </Text>
+                    </View>
 
                     {backendSubscriptionData?.active_subscription?.status && (
                       <View className="flex-row justify-between items-center mb-2">

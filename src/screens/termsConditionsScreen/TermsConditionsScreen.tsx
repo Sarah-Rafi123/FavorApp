@@ -43,91 +43,153 @@ export function TermsConditionsScreen({ navigation }: TermsConditionsScreenProps
         contentContainerStyle={{ paddingBottom: 120 }}
       >
         <View className="px-6 pt-6">
-          <Text className="text-xl font-bold text-gray-800 mb-2">FavorApp Terms of Use Agreement</Text>
-          <Text className="text-sm text-gray-500 mb-6">Updated February 18, 2025</Text>
+          <Text className="text-xl font-bold text-gray-800 mb-2">Terms of Service</Text>
+          <Text className="text-sm text-gray-500 mb-6">Effective Date: December 1, 2025</Text>
           
           <Text className="text-base text-gray-700 leading-6 mb-6">
-            The services offered by FavorApp LLC ("we," "us" or "our") include the www.favorapp.net website (the "Website"), the www.favorapp.net Internet messaging service, and any other features, content, or application offered from time to time by www.favorapp.net in connection with the FavorApp LLC Website (collectively, "FavorApp"). FavorApp is privately owned and hosted in the United States. FavorApp is a social networking service that allows Members to create unique personal profiles online in order to find and communicate with other users on the FavorApp website to provide services.
+            Welcome to FavorApp! These Terms of Service ("Terms") govern your use of the FavorApp mobile application and related services (the "Service") operated by FavorApp LLC ("we," "us," or "our"). By downloading, installing, or using our Service, you agree to be bound by these Terms.
           </Text>
 
+          <Text className="text-lg font-bold text-gray-800 mb-3">1. Acceptance of Terms</Text>
           <Text className="text-base text-gray-700 leading-6 mb-6">
-            This Terms of Use Agreement ("Agreement") sets forth the legally binding terms for your use of FavorApp. By using FavorApp, you agree to be bound by this Agreement, whether you are a "Visitor" (which means that you simply browse the Website) or you are a "Member" (which means that you have registered with www.favorapp.net). The term "User" refers to a Visitor or a Member. You are only authorized to use FavorApp (regardless of whether your access or use is intended) if you agree to abide by all applicable laws and to this Agreement. Please read this Agreement carefully and save it. If you do not agree with it, you should leave the FavorApp Website and discontinue use of FavorApp immediately.
+            By accessing or using FavorApp, you confirm that you are at least 18 years old and have the legal capacity to enter into these Terms. If you disagree with any part of these Terms, you may not use our Service.
           </Text>
 
+          <Text className="text-lg font-bold text-gray-800 mb-3">2. Description of Service</Text>
           <Text className="text-base text-gray-700 leading-6 mb-6">
-            This Agreement includes our policy for acceptable use of FavorApp and Content posted on the Website, your rights, obligations and restrictions regarding your use of FavorApp and www.favorapp.net's Privacy Policy.
+            FavorApp is a mobile platform that connects users who need services ("requesters") with users who can provide those services ("providers"). The platform facilitates the discovery, coordination, and payment for various services and tasks.
           </Text>
 
-          <Text className="text-base text-gray-700 leading-6 mb-6">
-            We may modify this Agreement from time to time, and such modification shall be effective upon posting by www.favorapp.net on the Website. You agree to be bound to any changes to this Agreement when you use FavorApp after any such modification is posted. It is therefore important that you review this Agreement regularly to ensure you are updated as to any changes.
-          </Text>
-
-          <Text className="text-lg font-bold text-gray-800 mb-3">Content Guidelines</Text>
-          <Text className="text-base text-gray-700 leading-6 mb-6">
-            Please choose carefully the information you post on FavorApp and that you provide to other Users. Your FavorApp profile may not include any photographs containing nudity, or obscene, lewd, excessively violent, harassing, sexually explicit or otherwise objectionable subject matter. Despite this prohibition, information provided by other FavorApp Members may contain inaccurate, inappropriate, offensive or sexually explicit material, and we assume no responsibility or liability for this material.
-          </Text>
-
-          <Text className="text-base text-gray-700 leading-6 mb-6">
-            We reserve the right, in our sole and absolute discretion, to reject, refuse to post or remove any posting by you, or to restrict, suspend, or terminate your access to all or any part of FavorApp at any time, for any or no reason, with or without prior notice, and without liability.
-          </Text>
-
-          <Text className="text-lg font-bold text-gray-800 mb-3">Eligibility</Text>
-          <Text className="text-base text-gray-700 leading-6 mb-6">
-            Use of and Membership in FavorApp is void where prohibited. By using FavorApp, you represent and warrant that (a) all registration information you submit is truthful and accurate; (b) you will maintain the accuracy of such information; (c) you are 18 years of age or older; and (d) your use of FavorApp does not violate any applicable law or regulation. Your profile may be deleted and your Membership may be terminated without warning, if we believe that you are less than 18 years of age.
-          </Text>
-
-          <Text className="text-lg font-bold text-gray-800 mb-3">Fees</Text>
-          <Text className="text-base text-gray-700 leading-6 mb-6">
-            A fifteen percent (15%) fee is charged to any user who creates a paid favor. FavorApp may offer enhancements and features which can be added to personal accounts for a fee when selecting such upgrade option. As security is our top priority, there is a $5.00 monthly maintenance fee for identification verification for use on the FavorApp LLC website.
-          </Text>
-
-          <Text className="text-lg font-bold text-gray-800 mb-3">Password Security</Text>
-          <Text className="text-base text-gray-700 leading-6 mb-6">
-            When you sign up to become a Member, you will be asked to choose a password. You are entirely responsible for maintaining the confidentiality of your password. You agree not to use the account, username, or password of another Member at any time or to disclose your password to any third party. You are solely responsible for any and all use of your account.
-          </Text>
-
-          <Text className="text-lg font-bold text-gray-800 mb-3">Classified Posting</Text>
-          <Text className="text-base text-gray-700 leading-6 mb-6">
-            You are completely responsible for the legality of the services you are providing, or the services you are agreeing to receive. You agree that FavorApp is in no way liable whatsoever in any purchase, sale, transfer, or the like involving any product or service. You understand that FavorApp does not become involved in transactions between parties and does not certify, investigate, or in any way guarantee the legal capacity of any party to transact.
-          </Text>
-
-          <Text className="text-lg font-bold text-gray-800 mb-3">Prohibited Content and Activity</Text>
-          <Text className="text-base text-gray-700 leading-6 mb-4">
-            The following types of content and activities are prohibited on FavorApp:
-          </Text>
+          <Text className="text-lg font-bold text-gray-800 mb-3">3. User Accounts and Registration</Text>
           <Text className="text-sm text-gray-700 leading-6 mb-6">
-            • Content that is patently offensive, promotes racism, bigotry, hatred or physical harm{'\n'}
-            • Harassment or advocacy of harassment{'\n'}
-            • Nudity, violence, or offensive subject matter{'\n'}
-            • False or misleading information{'\n'}
-            • Illegal activities{'\n'}
-            • Commercial activities without prior written consent{'\n'}
-            • Automated use of the system{'\n'}
-            • Impersonating another person{'\n'}
-            • Selling or transferring your profile
+            • You must provide accurate and complete information{'\n'}
+            • You are responsible for maintaining account security{'\n'}
+            • One account per person; no sharing accounts{'\n'}
+            • You must verify your identity through our KYC process{'\n'}
+            • We reserve the right to suspend or terminate accounts{'\n'}
+            • Account usernames must be appropriate and non-offensive
           </Text>
 
-          <Text className="text-lg font-bold text-gray-800 mb-3">Disclaimers</Text>
-          <Text className="text-base text-gray-700 leading-6 mb-6">
-            FavorApp is provided "AS-IS" and as available. We are not responsible for incorrect or inaccurate content, third-party websites, advertisements, technical malfunctions, or any loss or damage resulting from use of FavorApp. We expressly disclaim any warranty of fitness for a particular purpose or non-infringement.
+          <Text className="text-lg font-bold text-gray-800 mb-3">4. Subscription Services and Payments</Text>
+          
+          <Text className="text-base font-semibold text-gray-800 mb-2">Premium Subscriptions:</Text>
+          <Text className="text-sm text-gray-700 leading-6 mb-4">
+            • Monthly and annual premium plans available{'\n'}
+            • Subscriptions auto-renew unless cancelled{'\n'}
+            • Payments processed through app stores and Stripe{'\n'}
+            • Refunds subject to app store policies{'\n'}
+            • Premium features include priority support and enhanced functionality
           </Text>
 
-          <Text className="text-lg font-bold text-gray-800 mb-3">Limitation on Liability</Text>
-          <Text className="text-base text-gray-700 leading-6 mb-6">
-            IN NO EVENT SHALL WE BE LIABLE TO YOU OR ANY THIRD PARTY FOR ANY INDIRECT, CONSEQUENTIAL, EXEMPLARY, INCIDENTAL, SPECIAL OR PUNITIVE DAMAGES. OUR LIABILITY TO YOU WILL AT ALL TIMES BE LIMITED TO THE AMOUNT PAID BY YOU TO US FOR FAVORAPP DURING THE TERM OF MEMBERSHIP.
+          <Text className="text-base font-semibold text-gray-800 mb-2">Service Fees:</Text>
+          <Text className="text-sm text-gray-700 leading-6 mb-6">
+            • Platform fee of 15% charged on completed transactions{'\n'}
+            • Payment processing fees may apply{'\n'}
+            • KYC verification may require additional fees{'\n'}
+            • All fees clearly disclosed before transactions
           </Text>
 
-          <Text className="text-lg font-bold text-gray-800 mb-3">Governing Law</Text>
+          <Text className="text-lg font-bold text-gray-800 mb-3">5. User Conduct and Content</Text>
+          
+          <Text className="text-base font-semibold text-gray-800 mb-2">Acceptable Use:</Text>
+          <Text className="text-sm text-gray-700 leading-6 mb-4">
+            • Use the Service only for lawful purposes{'\n'}
+            • Respect other users and their property{'\n'}
+            • Provide accurate service descriptions and pricing{'\n'}
+            • Complete transactions in good faith{'\n'}
+            • Report suspicious or inappropriate behavior
+          </Text>
+
+          <Text className="text-base font-semibold text-gray-800 mb-2">Prohibited Activities:</Text>
+          <Text className="text-sm text-gray-700 leading-6 mb-6">
+            • Illegal activities or services{'\n'}
+            • Adult, sexual, or inappropriate content{'\n'}
+            • Harassment, threats, or abusive behavior{'\n'}
+            • Spam, fraud, or deceptive practices{'\n'}
+            • Unauthorized commercial promotion{'\n'}
+            • Violating others' intellectual property{'\n'}
+            • Circumventing platform safety measures{'\n'}
+            • Creating fake profiles or reviews
+          </Text>
+
+          <Text className="text-lg font-bold text-gray-800 mb-3">6. Safety and Verification</Text>
+          <Text className="text-sm text-gray-700 leading-6 mb-6">
+            • Identity verification required for certain features{'\n'}
+            • Background checks may be conducted{'\n'}
+            • Users are responsible for their own safety{'\n'}
+            • Report safety concerns immediately{'\n'}
+            • We provide safety guidelines and resources{'\n'}
+            • Emergency contact information recommended
+          </Text>
+
+          <Text className="text-lg font-bold text-gray-800 mb-3">7. Privacy and Data</Text>
           <Text className="text-base text-gray-700 leading-6 mb-6">
-            If there is any dispute about or involving FavorApp, you agree that the dispute shall be governed by the laws of the State of Wyoming, USA, and you agree to exclusive personal jurisdiction and venue in the state and federal courts located in the State of Wyoming.
+            Your privacy is important to us. Please review our Privacy Policy, which explains how we collect, use, and protect your information. By using the Service, you consent to our data practices as described in the Privacy Policy.
+          </Text>
+
+          <Text className="text-lg font-bold text-gray-800 mb-3">8. Intellectual Property</Text>
+          <Text className="text-base text-gray-700 leading-6 mb-6">
+            The Service and its content are owned by FavorApp LLC and protected by intellectual property laws. You grant us a license to use content you post on the platform. You retain ownership of your content but must not infringe on others' rights.
+          </Text>
+
+          <Text className="text-lg font-bold text-gray-800 mb-3">9. Disclaimers and Limitation of Liability</Text>
+          <Text className="text-base text-gray-700 leading-6 mb-4">
+            The Service is provided "AS IS" without warranties of any kind. We disclaim all warranties, including:
+          </Text>
+          <Text className="text-sm text-gray-700 leading-6 mb-4">
+            • Merchantability and fitness for a particular purpose{'\n'}
+            • Accuracy or reliability of user content{'\n'}
+            • Uninterrupted or error-free service{'\n'}
+            • Security or privacy of data transmission
+          </Text>
+          <Text className="text-base text-gray-700 leading-6 mb-6">
+            Our liability is limited to the maximum extent permitted by law. We are not liable for indirect, incidental, or consequential damages.
+          </Text>
+
+          <Text className="text-lg font-bold text-gray-800 mb-3">10. Indemnification</Text>
+          <Text className="text-base text-gray-700 leading-6 mb-6">
+            You agree to indemnify and hold harmless FavorApp LLC from any claims, damages, or expenses arising from your use of the Service, violation of these Terms, or infringement of any rights.
+          </Text>
+
+          <Text className="text-lg font-bold text-gray-800 mb-3">11. Termination</Text>
+          <Text className="text-base text-gray-700 leading-6 mb-6">
+            Either party may terminate these Terms at any time. Upon termination, your right to use the Service ends immediately. We may suspend or terminate your account for violations of these Terms.
+          </Text>
+
+          <Text className="text-lg font-bold text-gray-800 mb-3">12. Dispute Resolution</Text>
+          <Text className="text-base text-gray-700 leading-6 mb-6">
+            Disputes will be resolved through binding arbitration in Wyoming, USA, except where prohibited by law. You waive the right to participate in class-action lawsuits against us.
+          </Text>
+
+          <Text className="text-lg font-bold text-gray-800 mb-3">13. App Store Terms</Text>
+          <Text className="text-base text-gray-700 leading-6 mb-6">
+            If you downloaded the app from an app store (Apple App Store, Google Play), you also agree to that platform's terms. In case of conflict between these Terms and app store terms, the app store terms prevail.
+          </Text>
+
+          <Text className="text-lg font-bold text-gray-800 mb-3">14. International Users</Text>
+          <Text className="text-base text-gray-700 leading-6 mb-6">
+            The Service is operated from the United States. If you access the Service from other jurisdictions, you are responsible for compliance with local laws.
+          </Text>
+
+          <Text className="text-lg font-bold text-gray-800 mb-3">15. Changes to Terms</Text>
+          <Text className="text-base text-gray-700 leading-6 mb-6">
+            We may update these Terms periodically. Material changes will be communicated through the app. Continued use after changes constitutes acceptance of the new Terms.
+          </Text>
+
+          <Text className="text-lg font-bold text-gray-800 mb-3">16. Contact Information</Text>
+          <Text className="text-base text-gray-700 leading-6 mb-6">
+            Questions about these Terms? Contact us at:{'\n'}{'\n'}
+            Email: legal@favorapp.net{'\n'}
+            Address: FavorApp LLC, Wyoming, USA{'\n'}
+            App Support: Help & Support section
           </Text>
 
           <Text className="text-base text-gray-700 leading-6 mb-6 font-semibold">
-            YOUR USE OF THE WEBSITE OR REGISTRATION ON THE WEBSITE AFFIRMS THAT YOU HAVE READ THIS AGREEMENT AND AGREE TO ALL OF THE PROVISIONS CONTAINED ABOVE.
+            BY USING FAVORAPP, YOU ACKNOWLEDGE THAT YOU HAVE READ, UNDERSTOOD, AND AGREE TO BE BOUND BY THESE TERMS OF SERVICE.
           </Text>
 
           <Text className="text-sm text-gray-500 text-center mb-6">
-            FavorApp, LLC. A privately owned company in the State of Wyoming, USA.
+            FavorApp LLC - Licensed and operating in Wyoming, USA
           </Text>
         </View>
       </ScrollView>

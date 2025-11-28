@@ -43,48 +43,122 @@ export function PrivacyPolicyScreen({ navigation }: PrivacyPolicyScreenProps) {
         contentContainerStyle={{ paddingBottom: 120 }}
       >
         <View className="px-6 pt-6">
-          <Text className="text-sm text-gray-500 mb-4">Effective date: February 14, 2025</Text>
+          <Text className="text-sm text-gray-500 mb-4">Effective Date: December 1, 2025</Text>
           
           <Text className="text-base text-gray-700 leading-6 mb-6">
-            Thank you for visiting the www.favorapp.net web site. This privacy policy describes you how we use personal information collected at this site. Please read this privacy policy before using the site or submitting any personal information. By using the site, you are accepting the practices described in this privacy policy. These practices may be changed, but any changes will be posted and changes will only apply to activities and information on a going forward, not retroactive basis. You are encouraged to review the privacy policy whenever you visit the site to make sure that you understand how any personal information you provide will be used.
+            FavorApp LLC ("we," "us," "our," or "FavorApp") respects your privacy and is committed to protecting your personal information. This Privacy Policy explains how we collect, use, store, and share information when you use our mobile application and related services (collectively, the "Service").
           </Text>
 
           <Text className="text-base text-gray-700 leading-6 mb-6">
-            Note: the privacy practices set forth in this privacy policy are for the www.favorapp.net web site only. If you link to other web sites, please review the privacy policies posted at those sites.
+            By using our Service, you consent to the collection and use of information in accordance with this policy. This policy applies to the FavorApp mobile application, website (favorapp.net), and all related services.
           </Text>
 
-          <Text className="text-lg font-bold text-gray-800 mb-3">Collection of Information</Text>
-          <Text className="text-base text-gray-700 leading-6 mb-6">
-            We collect personally identifiable information limited to only your email address, and general location (county and postal code), when voluntarily submitted by our visitors upon registration for a personal profile account on the www.favorapp.net website. The email you provide is used to verify that the account registration is from an actual person with verifiable contact, and also used to send activity notifications (which you can optionally choose not to receive in your profile settings), and newsletters and updates from the www.favorapp.net website only. Your email is NEVER made visible or available to any other users of the website, advertisers, or any third party. The general location information you provide is only used to display content on the website relevant to your area.
+          <Text className="text-lg font-bold text-gray-800 mb-3">1. Information We Collect</Text>
+          
+          <Text className="text-base font-semibold text-gray-800 mb-2">Personal Information You Provide:</Text>
+          <Text className="text-sm text-gray-700 leading-6 mb-4">
+            • Account information: Name, email address, phone number, password{'\n'}
+            • Profile information: Photos, bio, preferences{'\n'}
+            • Identity verification: Government-issued ID for KYC compliance{'\n'}
+            • Payment information: Processed securely through Stripe{'\n'}
+            • Communications: Messages between users, support inquiries
           </Text>
 
-          <Text className="text-lg font-bold text-gray-800 mb-3">Publicly Posted Information</Text>
-          <Text className="text-base text-gray-700 leading-6 mb-6">
-            As www.favorapp.net is a social network, we provide many areas for users to voluntarily post information visible to other users of the website, including but not limited to your profile page, blogs, forums, photo albums, etc. Any information, including but not limited to text, photographs, images, etc., posted in these areas will be visible to other members and/or unregistered visitors of the www.favorapp.net website. We STRONGLY encourage you to never post any personal identifiable information in these areas such as your full name, phone number, address, etc.
+          <Text className="text-base font-semibold text-gray-800 mb-2">Information Collected Automatically:</Text>
+          <Text className="text-sm text-gray-700 leading-6 mb-4">
+            • Device information: Device type, OS version, unique identifiers{'\n'}
+            • Usage data: App interactions, features used, time spent{'\n'}
+            • Location data: GPS coordinates when you use location features{'\n'}
+            • Technical data: IP address, browser type, crash logs{'\n'}
+            • Cookies and tracking technologies for app functionality
           </Text>
 
-          <Text className="text-lg font-bold text-gray-800 mb-3">Cookie/Tracking Technology</Text>
-          <Text className="text-base text-gray-700 leading-6 mb-6">
-            The FavorApp Website may use cookie and tracking technology depending on the features offered. Cookie and tracking technology are useful for gathering information such as browser type and operating system, tracking the number of visitors to the FavorApp Website, and understanding how visitors use the FavorApp Website. Cookies can also help customize the FavorApp Website for visitors. Personal information cannot be collected via cookies and other tracking technology, however, if you previously provided personally identifiable information, cookies may be tied to such information.
+          <Text className="text-base font-semibold text-gray-800 mb-2">Third-Party Information:</Text>
+          <Text className="text-sm text-gray-700 leading-6 mb-6">
+            • Social media profile information if you choose to link accounts{'\n'}
+            • Information from identity verification providers{'\n'}
+            • Payment processing data from Stripe and app stores
           </Text>
 
-          <Text className="text-lg font-bold text-gray-800 mb-3">Distribution of Information</Text>
-          <Text className="text-base text-gray-700 leading-6 mb-6">
-            Your confidential personal information will NEVER be sold, shared, or given to any third party without your permission, and will NEVER be made publicly visible or available on the FavorApp website. We may share information with governmental agencies or other companies assisting us in fraud prevention or investigation. We may do so when: (1) permitted or required by law; or, (2) trying to protect against or prevent actual or potential fraud or unauthorized transactions; or, (3) investigating fraud which has already taken place. The information is not provided to these companies for marketing purposes.
+          <Text className="text-lg font-bold text-gray-800 mb-3">2. How We Use Your Information</Text>
+          <Text className="text-sm text-gray-700 leading-6 mb-6">
+            • Provide and maintain our Service{'\n'}
+            • Process payments and transactions{'\n'}
+            • Verify user identity and prevent fraud{'\n'}
+            • Send notifications about app activity and updates{'\n'}
+            • Improve our Service through analytics{'\n'}
+            • Comply with legal obligations{'\n'}
+            • Protect user safety and security{'\n'}
+            • Provide customer support
           </Text>
 
-          <Text className="text-lg font-bold text-gray-800 mb-3">Commitment to Data Security</Text>
-          <Text className="text-base text-gray-700 leading-6 mb-6">
-            Your personally identifiable information is kept secure. Only authorized employees, agents and contractors (who have agreed to keep information secure and confidential) have access to this information.
+          <Text className="text-lg font-bold text-gray-800 mb-3">3. Information Sharing and Disclosure</Text>
+          <Text className="text-base text-gray-700 leading-6 mb-4">
+            We do not sell your personal information. We may share information in these situations:
+          </Text>
+          <Text className="text-sm text-gray-700 leading-6 mb-6">
+            • With other users when you post public content{'\n'}
+            • With service providers (Stripe, RevenueCat, push notification services){'\n'}
+            • When required by law or to protect rights and safety{'\n'}
+            • In connection with business transfers{'\n'}
+            • With your consent for specific purposes{'\n'}
+            • For fraud prevention and identity verification
           </Text>
 
-          <Text className="text-lg font-bold text-gray-800 mb-3">Privacy Contact Information</Text>
+          <Text className="text-lg font-bold text-gray-800 mb-3">4. Data Retention</Text>
           <Text className="text-base text-gray-700 leading-6 mb-6">
-            If you have any questions, concerns, or comments about the FavorApp Website privacy policy you may contact us at www.favorapp.net.
+            We retain personal information as long as necessary to provide our Service, comply with legal obligations, resolve disputes, and enforce agreements. Account information is deleted within 30 days of account closure, except where retention is required by law.
           </Text>
 
+          <Text className="text-lg font-bold text-gray-800 mb-3">5. Data Security</Text>
           <Text className="text-base text-gray-700 leading-6 mb-6">
-            We reserve the right to make changes to this policy without notice to you. Any changes to this policy will be posted.
+            We implement industry-standard security measures including encryption, secure servers, and access controls. However, no method of electronic storage or transmission is 100% secure. We regularly review and update our security practices.
+          </Text>
+
+          <Text className="text-lg font-bold text-gray-800 mb-3">6. Your Privacy Rights</Text>
+          <Text className="text-base text-gray-700 leading-6 mb-4">
+            Depending on your location, you may have the following rights:
+          </Text>
+          <Text className="text-sm text-gray-700 leading-6 mb-6">
+            • Access to your personal information{'\n'}
+            • Correction of inaccurate information{'\n'}
+            • Deletion of your information{'\n'}
+            • Data portability{'\n'}
+            • Objection to processing{'\n'}
+            • Withdrawal of consent{'\n'}
+            • Non-discrimination for exercising rights
+          </Text>
+
+          <Text className="text-lg font-bold text-gray-800 mb-3">7. Location Services</Text>
+          <Text className="text-base text-gray-700 leading-6 mb-6">
+            We use location data to show nearby favors and relevant content. You can disable location services in your device settings, but some features may not work properly. We do not share your precise location with other users.
+          </Text>
+
+          <Text className="text-lg font-bold text-gray-800 mb-3">8. International Data Transfers</Text>
+          <Text className="text-base text-gray-700 leading-6 mb-6">
+            Our servers are located in the United States. If you access our Service from outside the US, your information may be transferred to, stored, and processed in the US where data protection laws may differ from your jurisdiction.
+          </Text>
+
+          <Text className="text-lg font-bold text-gray-800 mb-3">9. Children's Privacy</Text>
+          <Text className="text-base text-gray-700 leading-6 mb-6">
+            Our Service is not intended for children under 18. We do not knowingly collect personal information from children under 18. If we learn we have collected such information, we will delete it immediately.
+          </Text>
+
+          <Text className="text-lg font-bold text-gray-800 mb-3">10. Changes to This Policy</Text>
+          <Text className="text-base text-gray-700 leading-6 mb-6">
+            We may update this Privacy Policy periodically. Material changes will be notified through the app or email. Continued use after changes constitutes acceptance of the updated policy.
+          </Text>
+
+          <Text className="text-lg font-bold text-gray-800 mb-3">11. Contact Us</Text>
+          <Text className="text-base text-gray-700 leading-6 mb-6">
+            For privacy-related questions or to exercise your rights, contact us at:{'\n'}{'\n'}
+            Email: privacy@favorapp.net{'\n'}
+            Address: FavorApp LLC, Wyoming, USA{'\n'}
+            App Settings: Data & Privacy section
+          </Text>
+
+          <Text className="text-sm text-gray-500 text-center mb-6">
+            This policy complies with GDPR, CCPA, and mobile app store requirements.
           </Text>
         </View>
       </ScrollView>
