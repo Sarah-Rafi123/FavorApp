@@ -902,8 +902,8 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
         animationType="fade"
         onRequestClose={() => setShowVerificationModal(false)}
       >
-        <View className="flex-1 bg-black/50 justify-center items-center">
-          <View className="bg-white rounded-2xl p-6 mx-6 max-w-sm">
+        <View className="flex-1 bg-black/50 justify-center items-center px-6">
+          <View className="bg-white rounded-2xl p-6 w-full max-w-md">
             <Text className="text-xl font-bold text-gray-800 mb-4 text-center">
               Verification Required
             </Text>
@@ -939,17 +939,10 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
                   </View>
                 </View>
                 
-                <View className="flex-row gap-x-3">
-                  <TouchableOpacity
-                    className="flex-1 py-3 px-4 border border-gray-300 rounded-xl"
-                    onPress={() => setShowVerificationModal(false)}
-                  >
-                    <Text className="text-gray-600 text-center font-semibold">Cancel</Text>
-                  </TouchableOpacity>
-                  
+                <View className="gap-y-3">
                   {!verificationStatus.isSubscribed && (
                     <TouchableOpacity
-                      className="flex-1 py-3 px-4 bg-blue-500 rounded-xl"
+                      className="w-full py-3 px-4 bg-blue-500 rounded-xl"
                       onPress={() => {
                         setShowVerificationModal(false);
                         navigation?.navigate('Settings', {
@@ -963,7 +956,7 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
                   
                   {!verificationStatus.isKYCVerified && (
                     <TouchableOpacity
-                      className="flex-1 py-3 px-4 bg-green-500 rounded-xl"
+                      className="w-full py-3 px-4 bg-green-500 rounded-xl"
                       onPress={() => {
                         setShowVerificationModal(false);
                         navigation?.navigate('Settings', {
@@ -974,6 +967,13 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
                       <Text className="text-white text-center font-semibold">Get Certified</Text>
                     </TouchableOpacity>
                   )}
+                  
+                  <TouchableOpacity
+                    className="w-full py-3 px-4 border border-gray-300 rounded-xl"
+                    onPress={() => setShowVerificationModal(false)}
+                  >
+                    <Text className="text-gray-600 text-center font-semibold">Cancel</Text>
+                  </TouchableOpacity>
                 </View>
               </>
             )}

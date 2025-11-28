@@ -668,8 +668,8 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
                 >
                   <Text className="text-white font-bold text-lg text-center">
                     {loadingApplicants.has(`${favor.id}-${applicant.user.id}`)
-                      ? (favor.accepted_response && favor.status === 'in-progress' ? 'Reassigning...' : 'Accepting...') 
-                      : (favor.accepted_response && favor.status === 'in-progress' ? 'Reassign' : 'Accept')
+                      ? (favor.accepted_response && favor.status === 'in-progress' ? 'Accepting...' : 'Accepting...') 
+                      : (favor.accepted_response && favor.status === 'in-progress' ? 'Accept' : 'Accept')
                     }
                   </Text>
                 </TouchableOpacity>
@@ -812,8 +812,8 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
           >
             <Text className="text-white font-bold text-lg text-center">
               {loadingApplicants.has(`${favor.id}-${applicant.user.id}`)
-                ? (favor.accepted_response && favor.status === 'in-progress' ? 'Reassigning...' : 'Accepting...') 
-                : (favor.accepted_response && favor.status === 'in-progress' ? 'Reassign' : 'Accept')
+                ? (favor.accepted_response && favor.status === 'in-progress' ? 'Accepting...' : 'Accepting...') 
+                : (favor.accepted_response && favor.status === 'in-progress' ? 'Accept' : 'Accept')
               }
             </Text>
           </TouchableOpacity>

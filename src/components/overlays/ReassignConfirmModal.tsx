@@ -94,25 +94,25 @@ export function ReassignConfirmModal({
             </Text>
           </View>
 
-          {/* Enhanced Buttons with better styling */}
-          <View className="flex-row gap-x-3">
+          {/* Enhanced Buttons with better styling - stacked vertically */}
+          <View className="gap-y-3">
             <TouchableOpacity
-              className="flex-1 border-2 border-gray-200 rounded-2xl py-4 px-6 active:bg-gray-50"
-              onPress={onClose}
-              activeOpacity={0.8}
-            >
-              <Text className="text-gray-700 text-center text-lg font-bold">
-                Cancel
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              className="flex-1 bg-[#44A27B] rounded-2xl py-4 px-6 shadow-lg active:bg-[#3a8f6a]"
+              className="w-full bg-[#44A27B] rounded-2xl py-4 px-6 shadow-lg active:bg-[#3a8f6a]"
               onPress={onConfirm}
               activeOpacity={0.9}
             >
               <Text className="text-white text-center text-lg font-bold">
                 Reassign Provider
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              className="w-full border-2 border-gray-200 rounded-2xl py-4 px-6 active:bg-gray-50"
+              onPress={onClose}
+              activeOpacity={0.8}
+            >
+              <Text className="text-gray-700 text-center text-lg font-bold">
+                Cancel
               </Text>
             </TouchableOpacity>
           </View>
