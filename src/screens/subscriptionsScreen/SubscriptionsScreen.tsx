@@ -6,12 +6,14 @@ import {
   StatusBar,
   ScrollView,
   ImageBackground,
-  ActivityIndicator,
   Alert,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
-import Purchases, { PurchasesOffering, PurchasesPackage } from 'react-native-purchases';
+import Purchases, { CustomerInfo, PurchasesOffering } from 'react-native-purchases';
+import RevenueCatUI from 'react-native-purchases-ui';
 import Svg, { Path, Circle } from 'react-native-svg';
+import { getCertificationStatus, CertificationStatusData } from '../../services/apis/CertificationApis';
 // Using main app logo for consistency
 import BackSvg from '../../assets/icons/Back';
 import FIcon from '../../assets/icons/FIcon';
@@ -20,9 +22,6 @@ import useAuthStore from '../../store/useAuthStore';
 interface SubscriptionsScreenProps {
   navigation?: any;
 }
-
-
-
 
 const CheckIcon = () => (
   <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -38,41 +37,98 @@ const CheckIcon = () => (
 );
 
 export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
+  const [subscriptionDetails, setSubscriptionDetails] = useState<{
+    type: 'monthly' | 'annual' | null;
+    expirationDate: string | null;
+    productId: string | null;
+  }>({ type: null, expirationDate: null, productId: null });
+  const [backendSubscriptionData, setBackendSubscriptionData] = useState<CertificationStatusData | null>(null);
   const [offerings, setOfferings] = useState<PurchasesOffering | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [purchasing, setPurchasing] = useState<string | null>(null);
-
+  const [isUpgrading, setIsUpgrading] = useState(false);
   const { user } = useAuthStore();
 
   const features = [
-    "Unlock premium subscription features",
-    "Priority support for your favor requests", 
-    "Access to exclusive subscriber benefits"
+    "No Admin or Extra Fees",
+    "Free Verification", 
+    "Ask or Do Paid Favors",
   ];
 
   useEffect(() => {
-    initializeRevenueCatAndLoadOfferings();
+    initializeRevenueCat();
   }, [user]);
 
-  const initializeRevenueCatAndLoadOfferings = async () => {
+  const initializeRevenueCat = async () => {
     if (!user?.id) {
       console.warn('⚠️ No user ID available for RevenueCat login');
-      await loadOfferings();
+      setIsInitialized(true);
       return;
     }
 
     try {
+      // Fetch backend subscription data first
+      console.log('🌐 Fetching subscription data from backend...');
+      const backendData = await getCertificationStatus();
+      setBackendSubscriptionData(backendData.data);
+      
+      console.log('✅ Backend subscription data:', {
+        is_certified: backendData.data.is_certified,
+        subscription_source: backendData.data.subscription_source,
+        active_subscription: backendData.data.active_subscription
+      });
+
+      // Determine subscription status from backend data
+      const hasBackendSubscription = backendData.data.is_certified && Boolean(backendData.data.active_subscription?.active);
+      setHasActiveSubscription(hasBackendSubscription);
+
+      // If user has backend subscription, get detailed info
+      if (hasBackendSubscription && backendData.data.active_subscription) {
+        const backendDetails = {
+          type: backendData.data.active_subscription.plan.interval === 'month' ? 'monthly' as const : 'annual' as const,
+          expirationDate: null, // Backend doesn't provide expiration date yet
+          productId: backendData.data.active_subscription.plan.stripe_price_id || backendData.data.active_subscription.transaction_id
+        };
+        setSubscriptionDetails(backendDetails);
+      }
+
       // Log in user to RevenueCat with their user ID
       console.log('🔗 Logging in to RevenueCat with user ID:', user.id);
       const customerInfo = await Purchases.logIn(user.id);
       
+      const activeEntitlements = Object.keys(customerInfo.customerInfo.entitlements.active);
+      const hasRevenueCatSubscription = activeEntitlements.length > 0;
+      
       console.log('✅ RevenueCat login successful:', {
         originalAppUserId: customerInfo.customerInfo.originalAppUserId,
         isAnonymous: customerInfo.customerInfo.originalAppUserId.startsWith('$RCAnonymousID'),
-        activeEntitlements: Object.keys(customerInfo.customerInfo.entitlements.active),
-        hasActiveSubscriptions: Object.keys(customerInfo.customerInfo.entitlements.active).length > 0,
+        activeEntitlements: activeEntitlements,
+        hasActiveSubscriptions: hasRevenueCatSubscription,
         customerInfoCreated: customerInfo.created
       });
+
+      // If RevenueCat has subscription but backend doesn't, prioritize backend
+      // This handles cases where backend is the source of truth
+      if (!hasBackendSubscription && hasRevenueCatSubscription) {
+        console.log('🔄 RevenueCat subscription found, but backend shows no active subscription');
+        // Still set as subscribed and get RevenueCat details
+        setHasActiveSubscription(hasRevenueCatSubscription);
+        const details = getSubscriptionDetails(customerInfo.customerInfo);
+        setSubscriptionDetails(details);
+      } else if (hasRevenueCatSubscription && hasBackendSubscription) {
+        // Both have subscription - get expiration date from RevenueCat
+        const revenueCatDetails = getSubscriptionDetails(customerInfo.customerInfo);
+        setSubscriptionDetails(prev => ({
+          ...prev,
+          expirationDate: revenueCatDetails.expirationDate
+        }));
+      }
+
+      // Load offerings for potential upgrades
+      const offerings = await Purchases.getOfferings();
+      if (offerings.current) {
+        setOfferings(offerings.current);
+      }
 
       // Log webhook-related info
       console.log('📡 RevenueCat Webhook Integration Info:');
@@ -81,246 +137,346 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
       console.log('  - This will be sent as app_user_id in webhook events');
       
     } catch (error) {
-      console.error('❌ RevenueCat login failed:', error);
+      console.error('❌ Initialization failed:', error);
       Alert.alert(
         'Setup Error',
         'Failed to initialize subscription system. Please try again.',
         [{ text: 'OK' }]
       );
     } finally {
-      // Always load offerings regardless of login success/failure
-      await loadOfferings();
+      setIsInitialized(true);
     }
   };
 
-  const loadOfferings = async () => {
-    try {
-      console.log('🔍 Platform:', Platform.OS);
-      console.log('🔍 Environment:', process.env.EXPO_PUBLIC_ENVIRONMENT || 'production');
-      console.log('🔍 Getting offerings...');
-      
-      const offerings = await Purchases.getOfferings();
-      console.log('📦 All offerings:', offerings);
-      console.log('📦 Current offering:', offerings.current);
-      console.log('📦 Platform-specific offering keys:', Object.keys(offerings.all));
-      
-      if (offerings.current !== null) {
-        console.log('📦 Available packages:', offerings.current.availablePackages);
-        console.log('📦 Package details:');
-        offerings.current.availablePackages.forEach((pkg, index) => {
-          console.log(`  Package ${index + 1}:`, {
-            identifier: pkg.identifier,
-            packageType: pkg.packageType,
-            product: {
-              identifier: pkg.product.identifier,
-              price: pkg.product.price,
-              priceString: pkg.product.priceString,
-              currencyCode: pkg.product.currencyCode,
-              title: pkg.product.title,
-              description: pkg.product.description
-            }
-          });
-        });
-        setOfferings(offerings.current);
-      } else {
-        console.log('⚠️ No offerings available');
-        console.log('💡 This might be because:');
-        console.log('   1. Products not configured in RevenueCat dashboard');
-        console.log('   2. Products not configured in Google Play Console');
-        console.log('   3. App not published/uploaded to Google Play Console');
-        console.log('   4. RevenueCat API keys not properly configured');
-        
-        const isTestingBuild = process.env.EXPO_PUBLIC_ENVIRONMENT === 'testing';
-        
-        Alert.alert(
-          'No Subscriptions Found', 
-          Platform.OS === 'android' 
-            ? isTestingBuild
-              ? 'Test subscriptions not available. Make sure:\n\n1. Products are configured in Google Play Console\n2. App is uploaded as Internal Testing\n3. You are added as a test user\n4. Test products are created and published'
-              : 'Products may not be configured in Google Play Console. For testing on Android, ensure your app is uploaded to Google Play Console (even as draft) and products are created.'
-            : 'Please configure your subscription offerings in RevenueCat dashboard first.',
-          [{ text: 'OK' }]
-        );
-      }
-    } catch (error: any) {
-      console.error('❌ Error loading offerings:', error);
-      console.error('❌ Error details:', {
-        message: error.message,
-        code: error.code,
-        domain: error.domain,
-        userInfo: error.userInfo
-      });
-      
-      let errorMessage = 'Failed to load subscription plans.';
-      if (Platform.OS === 'android') {
-        if (error.message?.includes('BILLING_UNAVAILABLE')) {
-          errorMessage = 'Google Play Billing is unavailable. Make sure Google Play Store is installed and up to date.';
-        } else if (error.message?.includes('SERVICE_UNAVAILABLE')) {
-          errorMessage = 'Google Play Store service is temporarily unavailable. Please try again later.';
-        } else if (error.message?.includes('ITEM_UNAVAILABLE')) {
-          errorMessage = 'Subscription products are not available. The app may need to be published to Google Play Console.';
-        } else {
-          errorMessage = `Android billing error: ${error.message || 'Unknown error'}`;
-        }
-      }
-      
-      Alert.alert('Error', errorMessage);
-    } finally {
-      setLoading(false);
+  const getSubscriptionDetails = (customerInfo: CustomerInfo) => {
+    const activeSubscriptions = customerInfo.activeSubscriptions;
+    const entitlements = customerInfo.entitlements.active;
+    
+    // Get the first active subscription
+    const firstActiveSubscription = activeSubscriptions[0];
+    if (!firstActiveSubscription) {
+      return { type: null, expirationDate: null, productId: null };
     }
+
+    // Determine subscription type based on product ID
+    let subscriptionType: 'monthly' | 'annual' | null = null;
+    if (firstActiveSubscription.includes('monthly') || firstActiveSubscription.includes('month')) {
+      subscriptionType = 'monthly';
+    } else if (firstActiveSubscription.includes('annual') || firstActiveSubscription.includes('year')) {
+      subscriptionType = 'annual';
+    }
+
+    // Get expiration date from entitlements
+    const premiumEntitlement = entitlements['premium'];
+    const expirationDate = premiumEntitlement?.expirationDate || customerInfo.latestExpirationDate;
+
+    console.log('📊 Subscription details:', {
+      productId: firstActiveSubscription,
+      type: subscriptionType,
+      expirationDate: expirationDate
+    });
+
+    return {
+      type: subscriptionType,
+      expirationDate: expirationDate,
+      productId: firstActiveSubscription
+    };
   };
 
-  const handlePurchase = async (packageToPurchase: PurchasesPackage) => {
-    if (!user?.id) {
+  const handleRevenueCatError = (error: any) => {
+    console.error('❌ RevenueCat error details:', {
+      message: error.message,
+      code: error.code,
+      underlyingErrorMessage: error.underlyingErrorMessage,
+      domain: error.domain,
+      userInfo: error.userInfo
+    });
+
+    // Handle account conflict scenarios
+    if (error.code === 7 || error.message?.includes('already associated') || 
+        error.message?.includes('store account') || error.code === 'PURCHASE_NOT_ALLOWED') {
       Alert.alert(
-        'Login Required',
-        'Please log in to subscribe to premium features.',
-        [{ text: 'OK' }]
-      );
-      return;
-    }
-
-    try {
-      setPurchasing(packageToPurchase.identifier);
-      
-      console.log('\n🛒 STARTING SUBSCRIPTION PURCHASE:');
-      console.log('📦 Package:', {
-        identifier: packageToPurchase.identifier,
-        packageType: packageToPurchase.packageType,
-        productId: packageToPurchase.product.identifier,
-        price: packageToPurchase.product.priceString
-      });
-      console.log('👤 User ID:', user.id);
-      console.log('🔗 This purchase will trigger RevenueCat webhook with:');
-      console.log('  - event.type: INITIAL_PURCHASE');
-      console.log('  - event.app_user_id:', user.id);
-      console.log('  - event.product_id:', packageToPurchase.product.identifier);
-      console.log('  - Backend will look for user with ID:', user.id);
-
-      const { customerInfo, productIdentifier } = await Purchases.purchasePackage(packageToPurchase);
-      
-      console.log('\n✅ PURCHASE COMPLETED:');
-      console.log('📱 Product purchased:', productIdentifier);
-      console.log('👤 Customer ID:', customerInfo.originalAppUserId);
-      console.log('🎫 Active entitlements:', Object.keys(customerInfo.entitlements.active));
-      console.log('📅 Latest expiration:', customerInfo.latestExpirationDate);
-      console.log('🔔 Management URL:', customerInfo.managementURL);
-
-      console.log('\n📡 WEBHOOK SHOULD BE TRIGGERED:');
-      console.log('  - RevenueCat will send INITIAL_PURCHASE webhook to backend');
-      console.log('  - Backend will find user by ID:', user.id);
-      console.log('  - Backend will set user.is_certified = true');
-      console.log('  - Backend will create subscription record with source: revenue_cat');
-      
-      // Check for premium entitlement or any active entitlements
-      if (customerInfo.entitlements.active['premium'] || 
-          Object.keys(customerInfo.entitlements.active).length > 0) {
-        console.log('🎉 Entitlements active - subscription confirmed');
-        Alert.alert(
-          'Success!', 
-          'You are now subscribed! Your account has been upgraded to premium. The backend will automatically sync your subscription status.',
-          [{ text: 'OK', onPress: () => navigation?.goBack() }]
-        );
-      } else {
-        console.log('⏳ No active entitlements yet - webhook may be processing');
-        Alert.alert(
-          'Purchase Complete', 
-          'Your purchase was successful! Your premium features will be activated shortly via our backend webhook system.',
-          [{ text: 'OK', onPress: () => navigation?.goBack() }]
-        );
-      }
-    } catch (error: any) {
-      console.error('\n❌ PURCHASE FAILED:', error);
-      console.log('📋 Error details:', {
-        message: error.message,
-        userCancelled: error.userCancelled,
-        code: error.code,
-        domain: error.domain
-      });
-      
-      if (!error.userCancelled) {
-        Alert.alert(
-          'Purchase Error', 
-          error.message || 'Failed to complete purchase. Please try again.',
-          [{ text: 'OK' }]
-        );
-      } else {
-        console.log('👤 User cancelled purchase');
-      }
-    } finally {
-      setPurchasing(null);
-    }
-  };
-
-  const formatPrice = (pkg: PurchasesPackage) => {
-    return pkg.product.priceString;
-  };
-
-  const getPackageTitle = (pkg: PurchasesPackage) => {
-    switch (pkg.packageType) {
-      case 'MONTHLY':
-        return '1 Month';
-      case 'ANNUAL':
-        return '1 Year';
-      case 'THREE_MONTH':
-        return '3 Months';
-      case 'SIX_MONTH':
-        return '6 Months';
-      default:
-        return pkg.product.title || 'Subscription';
-    }
-  };
-
-  const getSavingsText = (pkg: PurchasesPackage) => {
-    if (pkg.packageType === 'ANNUAL') {
-      return 'Best Value - Save up to 50%';
-    }
-    return '';
-  };
-
-  const showCustomerCenter = async () => {
-    try {
-      console.log('🛠️ Opening RevenueCat Customer Center...');
-      
-      // Present the RevenueCat Customer Center
-      await Purchases.presentCustomerCenter();
-      
-    } catch (error: any) {
-      console.error('❌ Error opening Customer Center:', error);
-      
-      // Fallback to manual support options if Customer Center fails
-      Alert.alert(
-        'Customer Support',
-        'Choose how you would like to get help with your subscription:',
+        'Account Conflict',
+        'Your device\'s app store account is already linked to a different app account. Would you like to restore your existing purchases or continue with a different store account?',
         [
-          {
-            text: 'Cancel',
-            style: 'cancel'
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Restore Purchases', 
+            onPress: handleRestorePurchases 
           },
-          {
-            text: 'Manage in App Store',
+          { 
+            text: 'Use Different Account', 
             onPress: () => {
               Alert.alert(
-                'Manage Subscription',
-                'Visit your app store (Google Play Store or App Store) to manage your subscription, update payment methods, or cancel if needed.',
-                [{ text: 'OK' }]
-              );
-            }
-          },
-          {
-            text: 'Contact Support',
-            onPress: () => {
-              Alert.alert(
-                'Contact Support',
-                'For subscription issues, billing questions, or technical support, please contact us:\n\nEmail: support@favorapp.com\n\nInclude your user ID for faster assistance.',
+                'Switch Store Account',
+                'To subscribe with a different store account:\n\n1. Sign out of your current Google Play/App Store account\n2. Sign in with a different account\n3. Return to the app and try subscribing again\n\nOr contact support if you need help transferring your subscription.',
                 [{ text: 'OK' }]
               );
             }
           }
         ]
       );
+      return;
+    }
+
+    // Handle other RevenueCat specific errors
+    if (error.code === 1 || error.message?.includes('cancelled')) {
+      console.log('👤 User cancelled purchase');
+      return;
+    }
+
+    if (error.code === 3 || error.message?.includes('network')) {
+      Alert.alert(
+        'Network Error',
+        'Please check your internet connection and try again.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    if (error.code === 4 || error.message?.includes('invalid')) {
+      Alert.alert(
+        'Subscription Error',
+        'The subscription option is not available. Please try again later or contact support.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    // Generic error fallback
+    Alert.alert(
+      'Subscription Error',
+      error.message || 'Failed to process subscription. Please try again or contact support.',
+      [{ text: 'OK' }]
+    );
+  };
+
+  const handleRestorePurchases = async () => {
+    try {
+      console.log('🔄 Restoring purchases...');
+      const customerInfo = await Purchases.restorePurchases();
+      
+      console.log('✅ Restore completed:', {
+        activeEntitlements: Object.keys(customerInfo.entitlements.active),
+        activeSubscriptions: customerInfo.activeSubscriptions
+      });
+
+      const hasRestoredSubscription = Object.keys(customerInfo.entitlements.active).length > 0;
+      
+      if (hasRestoredSubscription) {
+        // Update local state
+        setHasActiveSubscription(true);
+        const details = getSubscriptionDetails(customerInfo);
+        setSubscriptionDetails(details);
+        
+        // Refresh backend data
+        setTimeout(() => {
+          initializeRevenueCat();
+        }, 1000);
+
+        Alert.alert(
+          'Success!',
+          'Your subscription has been restored successfully!',
+          [{ text: 'OK' }]
+        );
+      } else {
+        Alert.alert(
+          'No Purchases Found',
+          'No active subscriptions were found to restore. If you believe this is an error, please contact support.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (restoreError: any) {
+      console.error('❌ Restore failed:', restoreError);
+      Alert.alert(
+        'Restore Failed',
+        'Failed to restore purchases. Please try again or contact support.',
+        [{ text: 'OK' }]
+      );
     }
   };
+
+  const openSubscriptionModal = async () => {
+    try {
+      console.log('🛒 Opening RevenueCat Subscription Modal...');
+      await RevenueCatUI.presentPaywall();
+      // Refresh subscription status after modal closes - check both backend and RevenueCat
+      setTimeout(() => {
+        console.log('🔄 Refreshing subscription data after modal close...');
+        initializeRevenueCat();
+      }, 1000);
+    } catch (error: any) {
+      console.error('❌ Error opening subscription modal:', error);
+      handleRevenueCatError(error);
+    }
+  };
+
+  const openCustomerCenterModal = async () => {
+    try {
+      console.log('🛠️ Opening RevenueCat Customer Center Modal...');
+      await RevenueCatUI.presentCustomerCenter();
+    } catch (error: any) {
+      console.error('❌ Error opening Customer Center:', error);
+      Alert.alert(
+        'Customer Support',
+        'For subscription management, please contact support@favorapp.com',
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
+  const getSubscriptionPlatform = () => {
+    // Check backend subscription source first
+    if (backendSubscriptionData?.subscription_source === 'stripe') {
+      return 'web';
+    } else if (backendSubscriptionData?.subscription_source === 'revenue_cat') {
+      return 'mobile';
+    }
+    
+    // Fallback to checking product ID patterns
+    const productId = subscriptionDetails.productId;
+    if (productId?.includes('google') || productId?.includes('play')) {
+      return 'android';
+    } else if (productId?.includes('apple') || productId?.includes('ios')) {
+      return 'ios';
+    } else if (productId?.includes('stripe') || productId?.includes('price_')) {
+      return 'web';
+    }
+    
+    return 'unknown';
+  };
+
+  const canUpgradeOnCurrentPlatform = () => {
+    const subscriptionPlatform = getSubscriptionPlatform();
+    const currentPlatform = Platform.OS;
+    
+    // If subscription is from web (Stripe), they can't upgrade on mobile
+    if (subscriptionPlatform === 'web') {
+      return false;
+    }
+    
+    // If subscription is from mobile platforms, they should upgrade on the same platform
+    if (subscriptionPlatform === 'android' && currentPlatform !== 'android') {
+      return false;
+    }
+    
+    if (subscriptionPlatform === 'ios' && currentPlatform !== 'ios') {
+      return false;
+    }
+    
+    // If subscription is from RevenueCat mobile, allow upgrade on mobile platforms
+    if (subscriptionPlatform === 'mobile') {
+      return currentPlatform === 'android' || currentPlatform === 'ios';
+    }
+    
+    return true;
+  };
+
+  const getUpgradeRestrictionMessage = () => {
+    const subscriptionPlatform = getSubscriptionPlatform();
+    const currentPlatform = Platform.OS;
+    
+    if (subscriptionPlatform === 'web') {
+      return 'You subscribed through our website. Please visit our web app to manage your subscription and upgrade to the annual plan.';
+    }
+    
+    if (subscriptionPlatform === 'android' && currentPlatform === 'ios') {
+      return 'You originally subscribed through Google Play Store. Please open the app on your Android device to upgrade to the annual plan.';
+    }
+    
+    if (subscriptionPlatform === 'ios' && currentPlatform === 'android') {
+      return 'You originally subscribed through Apple App Store. Please open the app on your iOS device to upgrade to the annual plan.';
+    }
+    
+    return 'Please upgrade your subscription from the same platform where you originally subscribed.';
+  };
+
+  const upgradeToAnnual = async () => {
+    if (!canUpgradeOnCurrentPlatform()) {
+      Alert.alert(
+        'Platform Restriction',
+        getUpgradeRestrictionMessage(),
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    if (!offerings || !user?.id) {
+      Alert.alert('Error', 'Unable to load upgrade options. Please try again.');
+      return;
+    }
+
+    try {
+      setIsUpgrading(true);
+      
+      // Find the annual package
+      const annualPackage = offerings.availablePackages.find(
+        pkg => pkg.packageType === 'ANNUAL' || pkg.product.identifier.includes('annual') || pkg.product.identifier.includes('year')
+      );
+
+      if (!annualPackage) {
+        Alert.alert('Error', 'Annual subscription option not available.');
+        return;
+      }
+
+      console.log('🔄 Starting upgrade to annual subscription:', {
+        fromProduct: subscriptionDetails.productId,
+        toProduct: annualPackage.product.identifier,
+        userId: user.id,
+        subscriptionPlatform: getSubscriptionPlatform(),
+        currentPlatform: Platform.OS
+      });
+
+      // Purchase the annual package (RevenueCat handles the upgrade automatically)
+      const { customerInfo } = await Purchases.purchasePackage(annualPackage);
+
+      console.log('✅ Upgrade successful:', {
+        newProductId: annualPackage.product.identifier,
+        activeEntitlements: Object.keys(customerInfo.entitlements.active),
+        expirationDate: customerInfo.latestExpirationDate
+      });
+
+      // Update local state with new subscription details
+      const newDetails = getSubscriptionDetails(customerInfo);
+      setSubscriptionDetails(newDetails);
+
+      // Refresh backend data after upgrade
+      setTimeout(() => {
+        initializeRevenueCat();
+      }, 2000);
+
+      Alert.alert(
+        'Upgrade Successful!',
+        'You have successfully upgraded to the annual subscription. Your new billing cycle starts now.',
+        [{ text: 'OK' }]
+      );
+
+    } catch (error: any) {
+      console.error('❌ Upgrade failed:', error);
+      handleRevenueCatError(error);
+    } finally {
+      setIsUpgrading(false);
+    }
+  };
+
+  const formatExpirationDate = (dateString: string | null) => {
+    if (!dateString) return 'Unknown';
+    
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  if (!isInitialized) {
+    return (
+      <View className="flex-1 justify-center items-center bg-white">
+        <Text className="text-gray-600">Initializing...</Text>
+      </View>
+    );
+  }
 
   return (
     <ImageBackground
@@ -339,7 +495,9 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
           >
             <BackSvg />
           </TouchableOpacity>
-          <Text className="text-2xl font-bold text-black">Get Subscribed</Text>
+          <Text className="text-2xl font-bold text-black">
+            {hasActiveSubscription ? 'Manage Subscription' : 'Get Subscribed'}
+          </Text>
         </View>
       </View>
 
@@ -357,23 +515,14 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
 
           {/* Title */}
           <Text className="text-3xl font-bold text-gray-800 mb-2 text-center">
-            Get Subscribed
+            {hasActiveSubscription ? 'Premium Member' : 'Get Premium Access'}
           </Text>
-          
-          {/* Testing Environment Indicator */}
-          {process.env.EXPO_PUBLIC_ENVIRONMENT === 'testing' && (
-            <View className="bg-yellow-100 border border-yellow-400 rounded-lg px-4 py-2 mb-4">
-              <Text className="text-yellow-800 text-sm text-center font-medium">
-                🧪 Testing Build - Google Play test accounts enabled
-              </Text>
-            </View>
-          )}
           
           {/* Subtitle with lines */}
           <View className="flex-row items-center mb-8 w-full px-4">
             <View className="flex-1 h-px bg-gray-300" />
             <Text className="text-lg text-gray-600 px-4">
-              Premium Features
+              {hasActiveSubscription ? 'Your Benefits' : 'Premium Features'}
             </Text>
             <View className="flex-1 h-px bg-gray-300" />
           </View>
@@ -392,83 +541,156 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
             ))}
           </View>
 
-          {/* Pricing Cards */}
-          {loading ? (
-            <View className="flex-row justify-center items-center py-8">
-              <ActivityIndicator size="large" color="#44A27B" />
-              <Text className="ml-3 text-gray-600">Loading subscription plans...</Text>
-            </View>
-          ) : offerings && offerings.availablePackages.length > 0 ? (
+          {/* Action Buttons */}
+          {!hasActiveSubscription ? (
             <View className="w-full mb-8">
-              {offerings.availablePackages.map((pkg) => {
-                const isAnnual = pkg.packageType === 'ANNUAL';
-                const savingsText = getSavingsText(pkg);
-                const isPurchasing = purchasing === pkg.identifier;
+              <TouchableOpacity 
+                className="w-full bg-[#44A27B] rounded-3xl py-4 mb-4 shadow-sm"
+                onPress={openSubscriptionModal}
+              >
+                <Text className="text-white text-center font-bold text-lg">
+                  View Subscription Plans
+                </Text>
+              </TouchableOpacity>
+              
+              {/* Restore Purchases Button */}
+              <TouchableOpacity 
+                className="w-full bg-gray-100 border border-gray-300 rounded-3xl py-3 shadow-sm"
+                onPress={handleRestorePurchases}
+              >
+                <Text className="text-gray-700 text-center font-medium">
+                  Restore Purchases
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View className="w-full mb-8">
+              {/* Subscription Details Card */}
+              <View className="w-full bg-[#DCFBCC] rounded-2xl p-6 mb-4 border border-green-600">
+                <Text className="text-center text-green-600 font-semibold mb-3">
+                  ✅ Premium Member
+                </Text>
                 
-                return (
-                  <View 
-                    key={pkg.identifier}
-                    className={`w-full bg-[#FBFFF0] rounded-2xl p-6 mb-4 shadow-sm ${
-                      isAnnual ? 'border-2 border-[#71DFB1]' : 'border border-[#71DFB1]'
-                    }`}
-                  >
-                    {isAnnual && (
-                      <View className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                        <View className="bg-[#44A27B] px-4 py-1 rounded-full">
-                          <Text className="text-white text-sm font-semibold">Most Popular</Text>
-                        </View>
+                {(subscriptionDetails.type || backendSubscriptionData?.active_subscription) && (
+                  <View className=" rounded-lg p-4 mb-3">
+                    <View className="flex-row justify-between items-center mb-2">
+                      <Text className="text-gray-700 font-medium">Plan:</Text>
+                      <Text className="text-green-800 font-semibold capitalize">
+                        {backendSubscriptionData?.active_subscription?.plan.name || 
+                         (subscriptionDetails.type === 'monthly' ? 'Monthly' : 'Annual') + ' Subscription'}
+                      </Text>
+                    </View>
+                    
+                    {backendSubscriptionData?.active_subscription && (
+                      <View className="flex-row justify-between items-center mb-2">
+                        <Text className="text-gray-700 font-medium">Price:</Text>
+                        <Text className="text-gray-600 text-sm">
+                          ₹{(backendSubscriptionData.active_subscription.plan.price_cents / 100).toFixed(2)}/{backendSubscriptionData.active_subscription.plan.interval}
+                        </Text>
+                      </View>
+                    )}
+
+                    {backendSubscriptionData?.subscription_source && (
+                      <View className="flex-row justify-between items-center mb-2">
+                        <Text className="text-gray-700 font-medium">Source:</Text>
+                        <Text className="text-gray-600 text-sm capitalize">
+                          {backendSubscriptionData.subscription_source === 'revenue_cat' ? 'RevenueCat' : 'Stripe'}
+                        </Text>
+                      </View>
+                    )}
+
+                    {backendSubscriptionData?.active_subscription?.status && (
+                      <View className="flex-row justify-between items-center mb-2">
+                        <Text className="text-gray-700 font-medium">Status:</Text>
+                        <Text className={`text-sm font-medium ${
+                          backendSubscriptionData.active_subscription.status === 'paid' ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {backendSubscriptionData.active_subscription.status.charAt(0).toUpperCase() + 
+                           backendSubscriptionData.active_subscription.status.slice(1)}
+                        </Text>
                       </View>
                     )}
                     
-                    <Text className="text-lg font-semibold text-gray-800 text-center mb-2">
-                      {getPackageTitle(pkg)}
-                    </Text>
-                    <Text className="text-3xl font-bold text-gray-800 text-center mb-1">
-                      {formatPrice(pkg)}
-                    </Text>
-                    {savingsText ? (
-                      <Text className="text-sm text-green-600 text-center mb-6 font-semibold">
-                        {savingsText}
-                      </Text>
-                    ) : (
-                      <View className="mb-6" />
+                    {subscriptionDetails.expirationDate && (
+                      <View className="flex-row justify-between items-center">
+                        <Text className="text-gray-700 font-medium">Renews:</Text>
+                        <Text className="text-gray-600 text-sm">
+                          {formatExpirationDate(subscriptionDetails.expirationDate)}
+                        </Text>
+                      </View>
                     )}
-                    
+                  </View>
+                )}
+
+                <Text className="text-center text-green-700 text-sm">
+                  Enjoy all premium features and benefits
+                </Text>
+              </View>
+
+              {/* Upgrade Section for Monthly Subscribers */}
+              {(subscriptionDetails.type === 'monthly' || backendSubscriptionData?.active_subscription?.plan.interval === 'month') && 
+               offerings?.availablePackages?.some(pkg => 
+                 pkg.packageType === 'ANNUAL' || 
+                 pkg.product.identifier.includes('annual') || 
+                 pkg.product.identifier.includes('year')
+               ) && (
+                <View className={`w-full rounded-2xl p-6 border ${
+                  canUpgradeOnCurrentPlatform() 
+                    ? 'bg-[#DCFBCC] border-green-600' 
+                    : 'bg-orange-50 border-orange-300'
+                }`}>
+                  <Text className={`text-center font-semibold mb-2 ${
+                    canUpgradeOnCurrentPlatform() ? 'text-green-600' : 'text-orange-600'
+                  }`}>
+                    {canUpgradeOnCurrentPlatform() ? '💰 Save with Annual Plan' : '⚠️ Platform Restriction'}
+                  </Text>
+                  
+                  <Text className={`text-center text-sm mb-4 ${
+                    canUpgradeOnCurrentPlatform() ? 'text-green-600' : 'text-orange-600'
+                  }`}>
+                    {canUpgradeOnCurrentPlatform() 
+                      ? 'Upgrade to annual billing and save up to 50%'
+                      : getUpgradeRestrictionMessage()
+                    }
+                  </Text>
+                  
+                  {canUpgradeOnCurrentPlatform() ? (
                     <TouchableOpacity 
-                      className={`rounded-3xl py-3 ${isPurchasing ? 'bg-gray-400' : 'bg-[#44A27B]'}`}
-                      onPress={() => handlePurchase(pkg)}
-                      disabled={isPurchasing}
+                      className={`rounded-3xl py-3 ${isUpgrading ? 'bg-gray-400' : 'bg-green-600'}`}
+                      onPress={upgradeToAnnual}
+                      disabled={isUpgrading}
                     >
-                      {isPurchasing ? (
+                      {isUpgrading ? (
                         <View className="flex-row justify-center items-center">
                           <ActivityIndicator size="small" color="white" />
                           <Text className="text-white text-center font-semibold ml-2">
-                            Processing...
+                            Upgrading...
                           </Text>
                         </View>
                       ) : (
                         <Text className="text-white text-center font-semibold">
-                          Subscribe Now
+                          Upgrade to Annual Plan
                         </Text>
                       )}
                     </TouchableOpacity>
-                  </View>
-                );
-              })}
-            </View>
-          ) : (
-            <View className="w-full bg-[#FBFFF0] rounded-2xl p-6 mb-8 border border-gray-300">
-              <Text className="text-center text-gray-600 mb-4">
-                No subscription plans available at the moment.
-              </Text>
-              <TouchableOpacity 
-                className="bg-gray-500 rounded-3xl py-3"
-                onPress={loadOfferings}
-              >
-                <Text className="text-white text-center font-semibold">
-                  Retry
-                </Text>
-              </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity 
+                      className="bg-gray-300 rounded-3xl py-3"
+                      onPress={() => {
+                        Alert.alert(
+                          'Platform Restriction',
+                          getUpgradeRestrictionMessage(),
+                          [{ text: 'OK' }]
+                        );
+                      }}
+                    >
+                      <Text className="text-gray-600 text-center font-semibold">
+                        Cannot Upgrade Here
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
             </View>
           )}
 
@@ -477,20 +699,20 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
             <View className="flex-row items-center mb-4 w-full px-4">
               <View className="flex-1 h-px bg-gray-300" />
               <Text className="text-sm text-gray-500 px-4">
-                Need Help?
+                {hasActiveSubscription ? 'Manage' : 'Need Help?'}
               </Text>
               <View className="flex-1 h-px bg-gray-300" />
             </View>
 
             <TouchableOpacity 
-              className="w-full bg-white border border-gray-300 rounded-2xl p-4 mb-4 shadow-sm"
-              onPress={showCustomerCenter}
+              className="w-full bg-white border border-gray-300 rounded-2xl p-4 shadow-sm"
+              onPress={openCustomerCenterModal}
             >
               <Text className="text-center text-gray-700 font-medium">
                 🛠️ Customer Center
               </Text>
               <Text className="text-center text-gray-500 text-sm mt-1">
-                Manage subscription, view purchase history, and get support
+                {hasActiveSubscription ? 'Manage subscription and billing' : 'Get support and manage subscription'}
               </Text>
             </TouchableOpacity>
           </View>

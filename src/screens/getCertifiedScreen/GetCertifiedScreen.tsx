@@ -235,8 +235,8 @@ export function GetCertifiedScreen({ navigation }: GetCertifiedScreenProps) {
           title: 'Verification Complete',
           subtitle: 'You are now certified!',
           color: 'text-green-600',
-          bgColor: 'bg-green-50',
-          borderColor: 'border-green-200'
+          bgColor: 'bg-[#DCFBCC]',
+          borderColor: 'border-green-600'
         };
       case 'pending':
         return {
@@ -428,10 +428,10 @@ export function GetCertifiedScreen({ navigation }: GetCertifiedScreenProps) {
             {/* Action Buttons for Subscription/Payment */}
             {!isCertified && kycStatus === 'verified' && (
               <TouchableOpacity 
-                className="mt-4 bg-blue-50 border border-blue-200 rounded-xl py-3 px-4"
+                className="mt-4 bg-[#DCFBCC] border border-blue-200 rounded-xl py-3 px-4"
                 onPress={() => navigation?.navigate('SubscriptionsScreen')}
               >
-                <Text className="text-blue-600 text-center font-medium">
+                <Text className="text-green-600 text-center font-medium">
                   Get Subscription to Complete Certification
                 </Text>
               </TouchableOpacity>

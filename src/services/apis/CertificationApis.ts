@@ -30,6 +30,28 @@ export interface CertificationStatusData {
   is_kyc_verified: 'not-verified' | 'pending' | 'verified' | 'failed';
   certification_level?: string;
   verified_at?: string;
+  subscription_source?: 'stripe' | 'revenue_cat';
+  can_subscribe_on_web?: boolean;
+  can_subscribe_on_mobile?: boolean;
+  can_cancel_on_web?: boolean;
+  can_cancel_on_mobile?: boolean;
+  active_subscription?: {
+    plan: {
+      id: number;
+      name: string;
+      interval: 'month' | 'year';
+      price_cents: number;
+      stripe_price_id?: string;
+    };
+    status: 'paid' | 'unpaid' | 'cancelled';
+    transaction_id: string;
+    invoice?: string;
+    active: boolean;
+    source: 'stripe' | 'revenue_cat';
+    manageable_on_web?: boolean;
+  };
+  has_payment_method?: boolean;
+  stripe_customer_id?: string;
 }
 
 export interface CertificationStatusResponse {
