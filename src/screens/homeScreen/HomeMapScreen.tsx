@@ -9,8 +9,9 @@ import {
   Modal,
   ActivityIndicator,
   Platform,
+  Dimensions,
 } from 'react-native';
-import MapView, { Marker, Circle, PROVIDER_GOOGLE } from 'react-native-maps';
+import { WebView } from 'react-native-webview';
 import * as Location from 'expo-location';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import { FavorMapPreviewModal } from '../../components/overlays';
@@ -50,8 +51,9 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
   });
   const [mapReady, setMapReady] = useState(false);
   const [mapLoadingTimeout, setMapLoadingTimeout] = useState(false);
-  const mapRef = useRef<MapView>(null);
+  const webViewRef = useRef<WebView>(null);
   const mapReadyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
   // Use browseFavors when filters are active, useFavors when not
   const useFilteredData = hasActiveFilters();
@@ -129,6 +131,198 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
     return null;
   }, []);
 
+  // Generate HTML for WebView-based Google Maps
+  const generateMapHTML = useCallback(() => {
+    const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY;
+    const centerLat = location?.latitude || mapRegion.latitude;
+    const centerLng = location?.longitude || mapRegion.longitude;
+    const zoom = 13;
+
+    // Generate markers for favors
+    const favorMarkerPoints = allFavors.map(favor => {
+      const coords = parseLatLng(favor.lat_lng);
+      if (!coords) return null;
+      return {
+        lat: coords.latitude,
+        lng: coords.longitude,
+        title: favor.title || favor.favor_subject.name,
+        description: `$${parseFloat((favor.tip || 0).toString()).toFixed(2)}`,
+        id: favor.id
+      };
+    }).filter(Boolean);
+
+    return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        <style>
+            body {
+                margin: 0;
+                padding: 0;
+                height: 100vh;
+                font-family: Arial, sans-serif;
+            }
+            #map {
+                height: 100%;
+                width: 100%;
+            }
+            .info-window {
+                font-size: 14px;
+                max-width: 200px;
+            }
+            .info-title {
+                font-weight: bold;
+                margin-bottom: 5px;
+                color: #333;
+            }
+            .info-price {
+                color: #44A27B;
+                font-weight: bold;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="map"></div>
+        
+        <script async defer 
+            src="https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initMap&libraries=geometry">
+        </script>
+        
+        <script>
+            let map;
+            let markers = [];
+            let currentLocationMarker;
+            let currentLocationCircle;
+            
+            function initMap() {
+                map = new google.maps.Map(document.getElementById('map'), {
+                    center: { lat: ${centerLat}, lng: ${centerLng} },
+                    zoom: ${zoom},
+                    mapTypeControl: false,
+                    streetViewControl: false,
+                    fullscreenControl: false,
+                    zoomControl: true,
+                    gestureHandling: 'greedy',
+                    styles: [
+                        {
+                            featureType: 'poi',
+                            elementType: 'labels',
+                            stylers: [{ visibility: 'off' }]
+                        }
+                    ]
+                });
+
+                // Add current location marker and circle
+                if (${centerLat} && ${centerLng}) {
+                    currentLocationCircle = new google.maps.Circle({
+                        strokeColor: '#44A27B',
+                        strokeOpacity: 0.8,
+                        strokeWeight: 2,
+                        fillColor: '#44A27B',
+                        fillOpacity: 0.1,
+                        map: map,
+                        center: { lat: ${centerLat}, lng: ${centerLng} },
+                        radius: 5000
+                    });
+
+                    currentLocationMarker = new google.maps.Marker({
+                        position: { lat: ${centerLat}, lng: ${centerLng} },
+                        map: map,
+                        title: '${selectedLocation ? 'Selected Location' : 'Your Location'}',
+                        icon: {
+                            path: google.maps.SymbolPath.CIRCLE,
+                            scale: 8,
+                            fillColor: '${selectedLocation ? '#3B82F6' : '#44A27B'}',
+                            fillOpacity: 1,
+                            strokeWeight: 2,
+                            strokeColor: '${selectedLocation ? '#1E40AF' : '#059669'}'
+                        }
+                    });
+                }
+
+                // Add favor markers
+                ${JSON.stringify(favorMarkerPoints)}.forEach(function(favor) {
+                    if (favor) {
+                        const marker = new google.maps.Marker({
+                            position: { lat: favor.lat, lng: favor.lng },
+                            map: map,
+                            title: favor.title,
+                            icon: {
+                                path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+                                scale: 6,
+                                fillColor: '#EF4444',
+                                fillOpacity: 0.9,
+                                strokeWeight: 2,
+                                strokeColor: '#DC2626'
+                            }
+                        });
+
+                        const infoWindow = new google.maps.InfoWindow({
+                            content: \`
+                                <div class="info-window">
+                                    <div class="info-title">\${favor.title}</div>
+                                    <div class="info-price">\${favor.description}</div>
+                                </div>
+                            \`
+                        });
+
+                        marker.addListener('click', function() {
+                            // Close all other info windows
+                            markers.forEach(m => m.infoWindow && m.infoWindow.close());
+                            
+                            infoWindow.open(map, marker);
+                            
+                            // Send message to React Native
+                            window.ReactNativeWebView.postMessage(JSON.stringify({
+                                type: 'marker_clicked',
+                                favor: favor
+                            }));
+                        });
+
+                        markers.push({
+                            marker: marker,
+                            infoWindow: infoWindow,
+                            favor: favor
+                        });
+                    }
+                });
+
+                // Notify React Native that map is ready
+                window.ReactNativeWebView.postMessage(JSON.stringify({
+                    type: 'map_ready'
+                }));
+            }
+
+            // Function to update map center
+            function updateMapCenter(lat, lng, zoom = 13) {
+                if (map) {
+                    map.setCenter({ lat: lat, lng: lng });
+                    map.setZoom(zoom);
+                    
+                    // Update current location marker
+                    if (currentLocationMarker) {
+                        currentLocationMarker.setPosition({ lat: lat, lng: lng });
+                    }
+                    if (currentLocationCircle) {
+                        currentLocationCircle.setCenter({ lat: lat, lng: lng });
+                    }
+                }
+            }
+
+            // Listen for messages from React Native
+            window.addEventListener('message', function(event) {
+                const data = JSON.parse(event.data);
+                if (data.type === 'update_center') {
+                    updateMapCenter(data.lat, data.lng, data.zoom || 13);
+                }
+            });
+        </script>
+    </body>
+    </html>
+    `;
+  }, [location, mapRegion, allFavors, parseLatLng, selectedLocation]);
+
   const checkLocationPermission = async () => {
     try {
       const { status } = await Location.getForegroundPermissionsAsync();
@@ -194,6 +388,11 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
       
       setMapRegion(newRegion);
       
+      // Update WebView map center when ready
+      if (mapReady) {
+        updateMapCenter(latitude, longitude);
+      }
+      
       // Reverse geocode to get address
       try {
         const addresses = await Location.reverseGeocodeAsync({
@@ -229,84 +428,64 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
     setShowFavorModal(true);
   }, []);
 
-
-  // Memoized markers to prevent re-rendering on every update
-  const favorMarkers = useMemo(() => {
-    return allFavors.map((favor) => {
-      const coordinates = parseLatLng(favor.lat_lng);
-      if (!coordinates) return null;
+  // Handle messages from WebView
+  const handleWebViewMessage = useCallback((event: any) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
       
-      return (
-        <Marker
-          key={`favor-${favor.id}`}
-          coordinate={coordinates}
-          title={favor.title || favor.favor_subject.name}
-          description={`$${parseFloat((favor.tip || 0).toString()).toFixed(2)}`}
-          onPress={() => handleMarkerPress(favor)}
-        />
-      );
-    }).filter(Boolean);
-  }, [allFavors, parseLatLng, handleMarkerPress]);
+      switch (data.type) {
+        case 'map_ready':
+          console.log(`WebView Map is ready on ${Platform.OS}`);
+          if (mapReadyTimeoutRef.current) {
+            clearTimeout(mapReadyTimeoutRef.current);
+            mapReadyTimeoutRef.current = null;
+          }
+          setMapReady(true);
+          setMapLoadingTimeout(false);
+          break;
+          
+        case 'marker_clicked':
+          // Find the favor by ID and handle marker press
+          const clickedFavor = allFavors.find(f => f.id === data.favor.id);
+          if (clickedFavor) {
+            handleMarkerPress(clickedFavor);
+          }
+          break;
+          
+        default:
+          console.log('Unknown WebView message:', data);
+      }
+    } catch (error) {
+      console.error('Error parsing WebView message:', error);
+    }
+  }, [allFavors, handleMarkerPress]);
 
-  // Memoized current location marker (could be live GPS or selected location)
-  const currentLocationMarker = useMemo(() => {
-    // On Android, don't wait for mapReady if we've timed out
-    if (!location || (!mapReady && !mapLoadingTimeout)) return null;
-    
-    const isLiveLocation = !selectedLocation;
-    
-    return (
-      <>
-        <Circle
-          key="current-circle"
-          center={{
-            latitude: location.latitude,
-            longitude: location.longitude,
-          }}
-          radius={5000}
-          fillColor={isLiveLocation ? "rgba(68, 162, 123, 0.1)" : "rgba(59, 130, 246, 0.1)"}
-          strokeColor={isLiveLocation ? "rgba(68, 162, 123, 0.8)" : "rgba(59, 130, 246, 0.8)"}
-          strokeWidth={2}
-        />
-        <Marker
-          key="current-marker"
-          coordinate={{
-            latitude: location.latitude,
-            longitude: location.longitude,
-          }}
-          anchor={{ x: 0.5, y: 0.5 }}
-          title={isLiveLocation ? "Your Location" : "Selected Location"}
-          description={currentAddress}
-        >
-          <View className={`w-4 h-4 rounded-full border-2 ${
-            isLiveLocation 
-              ? 'bg-green-500 border-green-600' 
-              : 'bg-blue-500 border-blue-600'
-          }`} />
-        </Marker>
-      </>
-    );
-  }, [location, mapReady, mapLoadingTimeout, selectedLocation, currentAddress]);
+  // Function to update map center via WebView
+  const updateMapCenter = useCallback((lat: number, lng: number, zoom: number = 13) => {
+    if (webViewRef.current) {
+      const message = JSON.stringify({
+        type: 'update_center',
+        lat: lat,
+        lng: lng,
+        zoom: zoom
+      });
+      
+      webViewRef.current.postMessage(message);
+    }
+  }, []);
 
-  // Memoized live location indicator (small marker when viewing selected location)
-  const liveLocationIndicator = useMemo(() => {
-    if (!liveLocation || (!mapReady && !mapLoadingTimeout) || !selectedLocation) return null;
-    
-    return (
-      <Marker
-        key="live-indicator"
-        coordinate={{
-          latitude: liveLocation.latitude,
-          longitude: liveLocation.longitude,
-        }}
-        anchor={{ x: 0.5, y: 0.5 }}
-        title="Your Live Location"
-        description="Tap GPS button to return here"
-      >
-        <View className="w-3 h-3 bg-green-400 rounded-full border border-white shadow-lg" />
-      </Marker>
-    );
-  }, [liveLocation, mapReady, mapLoadingTimeout, selectedLocation]);
+  // Update map center when location changes
+  useEffect(() => {
+    if (location && mapReady) {
+      updateMapCenter(location.latitude, location.longitude);
+    }
+  }, [location, mapReady, updateMapCenter]);
+
+
+  // Memoized HTML for WebView map
+  const mapHTML = useMemo(() => {
+    return generateMapHTML();
+  }, [generateMapHTML]);
 
   return (
     <View className="flex-1">
@@ -371,65 +550,54 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
       )}
 
       {/* Map Timeout Warning */}
-      {mapLoadingTimeout && Platform.OS === 'android' && (
+      {mapLoadingTimeout && (
         <View className="absolute top-64 left-6 right-6 z-10 bg-yellow-50 border border-yellow-200 rounded-lg p-3 shadow-lg">
-          <Text className="text-yellow-800 text-sm">
-            Map loading slowly. Try refreshing the screen or check your internet connection.
+          <Text className="text-yellow-800 text-sm font-medium">
+            Map Loading Issue
+          </Text>
+          <Text className="text-yellow-700 text-xs mt-1">
+            Using WebView for better {Platform.OS} compatibility. Check your internet connection.
           </Text>
         </View>
       )}
 
-      {/* Map */}
+      {/* WebView Map */}
       <View style={{ flex: 1, backgroundColor: '#f0f0f0' }}>
-        <MapView
-          ref={mapRef}
+        <WebView
+          ref={webViewRef}
           style={{ flex: 1 }}
-          region={mapRegion}
-          provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined} // Explicitly use Google Maps on Android
-          showsUserLocation={false}
-          showsMyLocationButton={false}
-          followsUserLocation={false}
-          onMapReady={() => {
-            console.log(`Map is ready on ${Platform.OS}`);
-            if (mapReadyTimeoutRef.current) {
-              clearTimeout(mapReadyTimeoutRef.current);
-              mapReadyTimeoutRef.current = null;
-            }
-            setMapReady(true);
+          originWhitelist={['*']}
+          source={{ html: mapHTML }}
+          onMessage={handleWebViewMessage}
+          javaScriptEnabled={true}
+          domStorageEnabled={true}
+          startInLoadingState={true}
+          renderLoading={() => (
+            <View className="absolute inset-0 bg-gray-100 items-center justify-center">
+              <ActivityIndicator size="large" color="#44A27B" />
+              <Text className="text-gray-600 mt-4 text-lg">Loading Map...</Text>
+              <Text className="text-gray-500 mt-2 text-sm px-6 text-center">
+                {Platform.OS === 'android' ? 'Using WebView for better Android compatibility' : 'Loading Google Maps'}
+              </Text>
+            </View>
+          )}
+          onLoadEnd={() => {
+            console.log(`WebView Map loaded on ${Platform.OS}`);
           }}
-          onMapLoaded={() => {
-            // Additional callback for Android
-            console.log(`Map loaded on ${Platform.OS}`);
-            if (Platform.OS === 'android' && !mapReady) {
-              setMapReady(true);
-            }
+          onError={(syntheticEvent) => {
+            const { nativeEvent } = syntheticEvent;
+            console.error('WebView error:', nativeEvent);
+            setMapLoadingTimeout(true);
           }}
-          loadingEnabled={true}
-          loadingIndicatorColor="#44A27B"
-          loadingBackgroundColor="#f0f0f0"
-          moveOnMarkerPress={false}
-          pitchEnabled={true}
-          rotateEnabled={true}
-          scrollEnabled={true}
-          zoomEnabled={true}
-          // Android-specific optimizations
-          cacheEnabled={Platform.OS === 'android'}
-          mapPadding={{
-            top: 0,
-            right: 0,
-            bottom: 0,
-            left: 0,
-          }}
-        >
-          {/* Current Location Marker (live GPS or selected) */}
-          {currentLocationMarker}
-
-          {/* Live Location Indicator (when viewing selected location) */}
-          {liveLocationIndicator}
-
-          {/* Real Favor Markers */}
-          {favorMarkers}
-        </MapView>
+          // Additional WebView optimizations
+          bounces={false}
+          scrollEnabled={false}
+          showsHorizontalScrollIndicator={false}
+          showsVerticalScrollIndicator={false}
+          overScrollMode="never"
+          nestedScrollEnabled={true}
+          androidLayerType="hardware"
+        />
       </View>
 
       {/* Location Display Field */}
@@ -479,6 +647,7 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
                     longitudeDelta: 0.05,
                   };
                   setMapRegion(newRegion);
+                  updateMapCenter(liveLocation.latitude, liveLocation.longitude);
                 } else {
                   // If no live location, get it fresh
                   getCurrentLocation();
@@ -527,6 +696,7 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
                 longitudeDelta: 0.05,
               };
               setMapRegion(newRegion);
+              updateMapCenter(liveLocation.latitude, liveLocation.longitude);
             } else {
               // If no live location, get it fresh
               getCurrentLocation();
@@ -653,6 +823,7 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
                     };
                     
                     setMapRegion(newRegion);
+                    updateMapCenter(lat, lng);
                     
                     // Close the modal
                     setShowAddressModal(false);
