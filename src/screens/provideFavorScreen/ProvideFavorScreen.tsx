@@ -1389,7 +1389,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
                 />
               ) : (
                 <CarouselButton
-                  title={activeTab === 'All' ? 'Ask Favor' : 'Explore Favors'}
+                  title={activeTab === 'All' ? 'Ask a Favor' : 'Explore Favors'}
                   onPress={activeTab === 'All' ? handleAskFavor : handleExploreFavors}
                 />
               )}

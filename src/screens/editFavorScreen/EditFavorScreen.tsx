@@ -75,13 +75,16 @@ export function EditFavorScreen({ navigation, route }: EditFavorScreenProps) {
 
   // Hardcoded favor subjects with their IDs
   const favorSubjects = [
-    { id: 1, name: 'Lifting' },
-    { id: 2, name: 'Gardening' },
-    { id: 3, name: 'Technical' },
-    { id: 4, name: 'Moving' },
-    { id: 5, name: 'Assisting' },
-    { id: 6, name: 'Opening' },
-    { id: 7, name: 'Maintenance' }
+    { id: 1, name: 'Dump Run/Removal' },
+    { id: 2, name: 'Lawn Care' },
+    { id: 3, name: 'Home Repairs' },
+    { id: 4, name: 'Furniture Assembly' },
+    { id: 5, name: 'Installation' },
+    { id: 6, name: 'Moving' },
+    { id: 7, name: 'Dog Poop Removal' },
+    { id: 8, name: 'Manual Labor' },
+    { id: 9, name: 'Assistance' },
+    { id: 10, name: 'Snow Removal' }
   ];
 
   // Update favor mutations
@@ -110,7 +113,7 @@ export function EditFavorScreen({ navigation, route }: EditFavorScreenProps) {
       });
 
       // Check if this is an "Others" subject - if the subject name is not in our predefined list
-      const predefinedSubjectNames = ['Lifting', 'Gardening', 'Technical', 'Moving', 'Assisting', 'Opening', 'Maintenance'];
+      const predefinedSubjectNames = ['Dump Run/Removal', 'Lawn Care', 'Home Repairs', 'Furniture Assembly', 'Installation', 'Moving', 'Dog Poop Removal', 'Manual Labor', 'Assistance', 'Snow Removal'];
       const isOtherSubject = favor.favor_subject?.name && !predefinedSubjectNames.includes(favor.favor_subject.name);
       
       // For "Other" subjects, the custom name might be in the favor_subject.name or title
@@ -118,7 +121,7 @@ export function EditFavorScreen({ navigation, route }: EditFavorScreenProps) {
 
       setFormData({
         priority: favor.priority || 'delayed',
-        favorSubjectId: isOtherSubject ? 8 : (favor.favor_subject?.id || null),
+        favorSubjectId: isOtherSubject ? 11 : (favor.favor_subject?.id || null),
         otherSubjectName: customSubjectName || '',
         timeToComplete: favor.time_to_complete || '20 minutes',
         favorPrice: !favor.favor_pay ? 'Paid' : 'Free',
@@ -132,7 +135,7 @@ export function EditFavorScreen({ navigation, route }: EditFavorScreenProps) {
       });
 
       console.log('✅ EditFavor - Form data set:', {
-        favorSubjectId: isOtherSubject ? 8 : (favor.favor_subject?.id || null),
+        favorSubjectId: isOtherSubject ? 11 : (favor.favor_subject?.id || null),
         otherSubjectName: customSubjectName || '',
         isOtherSubject,
         customSubjectName
@@ -190,9 +193,9 @@ export function EditFavorScreen({ navigation, route }: EditFavorScreenProps) {
       newErrors.favorSubjectId = 'Please select a favor type';
     }
 
-    if (formData.favorSubjectId === 8 && !formData.otherSubjectName.trim()) {
+    if (formData.favorSubjectId === 11 && !formData.otherSubjectName.trim()) {
       newErrors.otherSubjectName = 'Please specify the subject name';
-    } else if (formData.favorSubjectId === 8 && formData.otherSubjectName.trim().length > 50) {
+    } else if (formData.favorSubjectId === 11 && formData.otherSubjectName.trim().length > 50) {
       newErrors.otherSubjectName = 'Subject name must be 50 characters or less';
     }
 
@@ -239,7 +242,7 @@ export function EditFavorScreen({ navigation, route }: EditFavorScreenProps) {
       };
 
       // Add other subject name if "Other" is selected
-      if (formData.favorSubjectId === 8 && formData.otherSubjectName.trim()) {
+      if (formData.favorSubjectId === 11 && formData.otherSubjectName.trim()) {
         (updateData as any).other_subject_name = formData.otherSubjectName.trim();
       }
 
@@ -405,23 +408,40 @@ export function EditFavorScreen({ navigation, route }: EditFavorScreenProps) {
           <View className="mb-8">
             <Text className="text-xl font-bold text-black mb-6">Priority</Text>
             <View className="flex-row flex-wrap">
-              {priorityOptions.map((option) => (
-                <View key={option.value} className="w-1/3 mb-4">
-                  <TouchableOpacity 
-                    className="flex-row items-center"
-                    onPress={() => updateFormData('priority', option.value)}
-                  >
-                    <View className={`w-6 h-6 rounded-full border-2 mr-3 items-center justify-center ${
-                      formData.priority === option.value ? 'border-[#44A27B]' : 'border-gray-400'
-                    }`}>
-                      {formData.priority === option.value && (
-                        <View className="w-3 h-3 rounded-full bg-[#44A27B]" />
-                      )}
-                    </View>
-                    <Text className="text-black text-base flex-1">{option.label}</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
+              {priorityOptions.map((option) => {
+                const getColorForPriority = (value: string) => {
+                  switch (value) {
+                    case 'immediate':
+                      return { border: 'border-red-500', bg: 'bg-red-500' };
+                    case 'delayed':
+                      return { border: 'border-yellow-500', bg: 'bg-yellow-500' };
+                    case 'no_rush':
+                      return { border: 'border-green-500', bg: 'bg-green-500' };
+                    default:
+                      return { border: 'border-green-500', bg: 'bg-green-500' };
+                  }
+                };
+
+                const colors = getColorForPriority(option.value);
+
+                return (
+                  <View key={option.value} className="w-1/3 mb-4">
+                    <TouchableOpacity 
+                      className="flex-row items-center"
+                      onPress={() => updateFormData('priority', option.value)}
+                    >
+                      <View className={`w-6 h-6 rounded-full border-2 mr-3 items-center justify-center ${
+                        formData.priority === option.value ? colors.border : 'border-gray-400'
+                      }`}>
+                        {formData.priority === option.value && (
+                          <View className={`w-3 h-3 rounded-full ${colors.bg}`} />
+                        )}
+                      </View>
+                      <Text className="text-black text-base flex-1">{option.label}</Text>
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
             </View>
           </View>
 
@@ -449,12 +469,12 @@ export function EditFavorScreen({ navigation, route }: EditFavorScreenProps) {
               <View className="w-1/3 mb-4">
                 <TouchableOpacity 
                   className="flex-row items-center"
-                  onPress={() => updateFormData('favorSubjectId', 8)}
+                  onPress={() => updateFormData('favorSubjectId', 11)}
                 >
                   <View className={`w-6 h-6 rounded-full border-2 mr-3 items-center justify-center ${
-                    formData.favorSubjectId === 8 ? 'border-[#44A27B]' : 'border-gray-400'
+                    formData.favorSubjectId === 11 ? 'border-[#44A27B]' : 'border-gray-400'
                   }`}>
-                    {formData.favorSubjectId === 8 && (
+                    {formData.favorSubjectId === 11 && (
                       <View className="w-3 h-3 rounded-full bg-[#44A27B]" />
                     )}
                   </View>
@@ -467,7 +487,7 @@ export function EditFavorScreen({ navigation, route }: EditFavorScreenProps) {
             ) : null}
             
             {/* Custom Subject Name Input - Only show when Other is selected */}
-            {formData.favorSubjectId === 8 && (
+            {formData.favorSubjectId === 11 && (
               <View className="mt-4">
                 <Text className="text-lg font-semibold text-black mb-3">Please specify:</Text>
                 <View className={`bg-white border-2 rounded-2xl px-4 py-4 ${

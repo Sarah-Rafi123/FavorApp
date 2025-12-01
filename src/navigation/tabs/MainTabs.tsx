@@ -274,6 +274,10 @@ export function MainTabs() {
         name="NotificationsScreen" 
         component={NotificationsScreen}
       />
+      <RootStack.Screen 
+        name="PaymentMethodScreen" 
+        component={PaymentMethodScreen}
+      />
     </RootStack.Navigator>
   );
 }

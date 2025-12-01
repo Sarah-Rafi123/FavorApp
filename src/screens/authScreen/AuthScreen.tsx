@@ -972,7 +972,7 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
 
                 <Text className="text-lg font-bold text-gray-800 mb-3">Fees</Text>
                 <Text className="text-base text-gray-700 leading-6 mb-6">
-                  A fifteen percent (15%) fee is charged to any user who creates a paid favor. FavorApp may offer enhancements and features which can be added to personal accounts for a fee when selecting such upgrade option. As security is our top priority, there is a $5.00 monthly maintenance fee for identification verification for use on the FavorApp LLC website.
+                  A fifteen percent (3%) fee is charged to any user who creates a paid favor. FavorApp may offer enhancements and features which can be added to personal accounts for a fee when selecting such upgrade option. As security is our top priority, there is a $5.00 monthly maintenance fee for identification verification for use on the FavorApp LLC website.
                 </Text>
 
                 <Text className="text-lg font-bold text-gray-800 mb-3">Prohibited Content and Activity</Text>

@@ -58,13 +58,13 @@ const faqData: FAQItem[] = [
   },
   {
     id: 3,
-    question: "Why am I charged 15% to the final amount?",
-    answer: "FavorApp charges 15% to ensure we can keep the platform running and maintain a marketplace for everyone to use. Other similar platforms charge 30-40% but we believe in keeping charges minimal for our community."
+    question: "What fees are charged when I create a favor?",
+    answer: "FavorApp only charges Stripe payment processing fees, which are 3% + $0.30 per transaction. There are no additional platform fees or admin charges. We believe in keeping costs minimal for our community while ensuring secure payment processing."
   },
   {
     id: 4,
-    question: "What to do if my favor costs a lot of money and I dont want to pay the 15% admin fee?",
-    answer: "We encourage that the favor amount is paid through our online system, however, if you are also paying for materials for a contractor/handyman we recommend going offline to pay for materials to save you money and only pay for the labor through our platform."
+    question: "Why do I see a small fee added to my favor payment?",
+    answer: "The small fee you see is only the Stripe payment processing fee (3% + $0.30), which covers secure payment processing and fraud protection. This is the industry standard for payment processing and helps ensure safe transactions for both favor requesters and providers."
   },
   {
     id: 5,
@@ -73,8 +73,18 @@ const faqData: FAQItem[] = [
   },
   {
     id: 6,
+    question: "What happened to the 3% platform fee?",
+    answer: "We now only charge the standard Stripe payment processing fee (3% + $0.30) with no additional charges. This change makes FavorApp more affordable while maintaining secure payment processing."
+  },
+  {
+    id: 7,
+    question: "How much will I pay in total fees for a $100 favor?",
+    answer: "For a $100 favor, you would only pay $3.30 in total fees (3% + $0.30 = $3.00 + $0.30 = $3.30). This is significantly lower than other platforms and covers secure payment processing through Stripe."
+  },
+  {
+    id: 8,
     question: "Will there be an app to download in the iOS and Android store?",
-    answer: "Yes, our next goal is to develop the iOS and Android app by mid year of 2025."
+    answer: "The FavorApp mobile application is already available for both iOS and Android devices. You can download it from the Apple App Store or Google Play Store."
   }
 ];
 
@@ -138,10 +148,10 @@ export function FAQScreen({ navigation }: FAQScreenProps) {
 
       <ScrollView 
         className="flex-1"
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        showsVerticalScrollIndicator={true}
+        contentContainerStyle={{ paddingBottom: 200, paddingTop: 24 }}
       >
-        <View className="px-6 pt-6">
+        <View className="px-6">
           {faqData.map((item) => (
             <FAQItem key={item.id} item={item} />
           ))}   

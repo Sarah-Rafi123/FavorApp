@@ -69,13 +69,16 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
 
   // Hardcoded favor subjects with their IDs
   const favorSubjects = [
-    { id: 1, name: 'Lifting' },
-    { id: 2, name: 'Gardening' },
-    { id: 3, name: 'Technical' },
-    { id: 4, name: 'Moving' },
-    { id: 5, name: 'Assisting' },
-    { id: 6, name: 'Opening' },
-    { id: 7, name: 'Maintenance' }
+    { id: 1, name: 'Dump Run/Removal' },
+    { id: 2, name: 'Lawn Care' },
+    { id: 3, name: 'Home Repairs' },
+    { id: 4, name: 'Furniture Assembly' },
+    { id: 5, name: 'Installation' },
+    { id: 6, name: 'Moving' },
+    { id: 7, name: 'Dog Poop Removal' },
+    { id: 8, name: 'Manual Labor' },
+    { id: 9, name: 'Assistance' },
+    { id: 10, name: 'Snow Removal' }
   ];
 
   // Create favor mutations
@@ -139,7 +142,7 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
         break;
         
       case 'otherSubjectName':
-        if (formData.favorSubjectId === 8 && (!value || !value.trim())) {
+        if (formData.favorSubjectId === 11 && (!value || !value.trim())) {
           newErrors.otherSubjectName = 'Please provide a custom subject name.';
         } else {
           newErrors.otherSubjectName = '';
@@ -260,24 +263,50 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
   const RadioButton = ({ 
     selected, 
     onPress, 
-    label 
+    label,
+    color = 'green'
   }: { 
     selected: boolean; 
     onPress: () => void; 
     label: string;
-  }) => (
-    <TouchableOpacity 
-      className="flex-row items-center mr-6 mb-3"
-      onPress={onPress}
-    >
-      <View className={`w-5 h-5 rounded-full border-2 mr-3 items-center justify-center ${
-        selected ? 'border-green-500' : 'border-gray-400'
-      }`}>
-        {selected && <View className="w-2.5 h-2.5 rounded-full bg-green-500" />}
-      </View>
-      <Text className="text-black text-base">{label}</Text>
-    </TouchableOpacity>
-  );
+    color?: string;
+  }) => {
+    const getColorClass = (colorName: string) => {
+      switch (colorName) {
+        case 'red':
+          return selected ? 'border-red-500' : 'border-gray-400';
+        case 'yellow':
+          return selected ? 'border-yellow-500' : 'border-gray-400';
+        case 'green':
+        default:
+          return selected ? 'border-green-500' : 'border-gray-400';
+      }
+    };
+
+    const getBgColorClass = (colorName: string) => {
+      switch (colorName) {
+        case 'red':
+          return 'bg-red-500';
+        case 'yellow':
+          return 'bg-yellow-500';
+        case 'green':
+        default:
+          return 'bg-green-500';
+      }
+    };
+
+    return (
+      <TouchableOpacity 
+        className="flex-row items-center mr-6 mb-3"
+        onPress={onPress}
+      >
+        <View className={`w-5 h-5 rounded-full border-2 mr-3 items-center justify-center ${getColorClass(color)}`}>
+          {selected && <View className={`w-2.5 h-2.5 rounded-full ${getBgColorClass(color)}`} />}
+        </View>
+        <Text className="text-black text-base">{label}</Text>
+      </TouchableOpacity>
+    );
+  };
 
   const checkVerificationStatus = async () => {
     try {
@@ -360,7 +389,7 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
       hasErrors = true;
     }
     
-    if (formData.favorSubjectId === 8 && !formData.otherSubjectName.trim()) {
+    if (formData.favorSubjectId === 11 && !formData.otherSubjectName.trim()) {
       newErrors.otherSubjectName = 'Please provide a custom subject name.';
       hasErrors = true;
     }
@@ -410,13 +439,13 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
           state: formData.state.trim(),
         },
         priority: formData.priority,
-        favor_subject_id: formData.favorSubjectId === 8 ? 'other' : formData.favorSubjectId!,
+        favor_subject_id: formData.favorSubjectId === 11 ? 'other' : formData.favorSubjectId!,
         favor_pay: formData.favorPrice === 'Paid' ? '0' : '1', // 0 = paid, 1 = free
         time_to_complete: formData.timeToComplete,
         tip: formData.favorPrice === 'Paid' ? formData.tip : 0,
         additional_tip: formData.favorPrice === 'Paid' && formData.additionalTip > 0 ? formData.additionalTip : undefined,
         lat_lng: formData.latLng || undefined,
-        other_subject_name: formData.favorSubjectId === 8 ? formData.otherSubjectName.trim() : undefined,
+        other_subject_name: formData.favorSubjectId === 11 ? formData.otherSubjectName.trim() : undefined,
       };
 
       // Debug logging to verify request format
@@ -481,14 +510,30 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
           <View className="mb-8">
             <Text className="text-xl font-bold text-black mb-6">Priority</Text>
             <View className="flex-row flex-wrap">
-              {priorityOptions.map((option) => (
-                <RadioButton
-                  key={option.value}
-                  selected={formData.priority === option.value}
-                  onPress={() => updateFormData('priority', option.value)}
-                  label={option.label}
-                />
-              ))}
+              {priorityOptions.map((option) => {
+                const getColorForPriority = (value: string) => {
+                  switch (value) {
+                    case 'immediate':
+                      return 'red';
+                    case 'delayed':
+                      return 'yellow';
+                    case 'no_rush':
+                      return 'green';
+                    default:
+                      return 'green';
+                  }
+                };
+
+                return (
+                  <RadioButton
+                    key={option.value}
+                    selected={formData.priority === option.value}
+                    onPress={() => updateFormData('priority', option.value)}
+                    label={option.label}
+                    color={getColorForPriority(option.value)}
+                  />
+                );
+              })}
             </View>
           </View>
 
@@ -516,12 +561,12 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
               <View className="w-1/3 mb-4">
                 <TouchableOpacity 
                   className="flex-row items-center"
-                  onPress={() => updateFormData('favorSubjectId', 8)}
+                  onPress={() => updateFormData('favorSubjectId', 11)}
                 >
                   <View className={`w-6 h-6 rounded-full border-2 mr-3 items-center justify-center ${
-                    formData.favorSubjectId === 8 ? 'border-[#44A27B]' : 'border-gray-400'
+                    formData.favorSubjectId === 11 ? 'border-[#44A27B]' : 'border-gray-400'
                   }`}>
-                    {formData.favorSubjectId === 8 && (
+                    {formData.favorSubjectId === 11 && (
                       <View className="w-3 h-3 rounded-full bg-[#44A27B]" />
                     )}
                   </View>
@@ -534,7 +579,7 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
             ) : null}
             
             {/* Custom Subject Name Input - Only show when Other is selected */}
-            {formData.favorSubjectId === 8 && (
+            {formData.favorSubjectId === 11 && (
               <View className="mt-4">
                 <Text className="text-lg font-semibold text-black mb-3">Please specify:</Text>
                 <View className={`bg-white border-2 rounded-2xl px-4 py-4 ${

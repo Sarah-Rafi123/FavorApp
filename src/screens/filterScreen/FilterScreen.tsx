@@ -173,8 +173,8 @@ export function FilterScreen({ onBack, onApply, navigation }: FilterScreenProps)
         />
 
         <FilterSection
-          title="Payment Type"
-          description="Paid: $1+ tip required. Unpaid: volunteer favors."
+          title="Compensation"
+          description="Paid: $1+ Unpaid: Volunteer Hours"
           options={['Paid', 'Unpaid']}
           section="type"
         />

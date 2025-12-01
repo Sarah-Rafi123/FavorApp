@@ -1292,7 +1292,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
           </View>
           
           <Text className="text-2xl font-bold text-[#000000B8] mb-4 text-center">
-            {activeTab === 'All' && 'No Favor Requests Yet'}
+            {activeTab === 'All' && ''}
             {activeTab === 'Active' && 'No Active Favors'}
             {activeTab === 'History' && 'No History Yet'}
           </Text>
@@ -1305,7 +1305,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
           
           <View className="w-full max-w-sm">
             <CarouselButton
-              title={activeTab === 'All' ? 'Ask Favor' : 'Create Favor'}
+              title={activeTab === 'All' ? 'Ask a Favor' : 'Create Favor'}
               onPress={handleAskFavor}
             />
           </View>

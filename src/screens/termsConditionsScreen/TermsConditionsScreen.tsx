@@ -83,7 +83,7 @@ export function TermsConditionsScreen({ navigation }: TermsConditionsScreenProps
 
           <Text className="text-base font-semibold text-gray-800 mb-2">Service Fees:</Text>
           <Text className="text-sm text-gray-700 leading-6 mb-6">
-            • Platform fee of 15% charged on completed transactions{'\n'}
+            • Platform fee of 3% charged on completed transactions{'\n'}
             • Payment processing fees may apply{'\n'}
             • KYC verification may require additional fees{'\n'}
             • All fees clearly disclosed before transactions
