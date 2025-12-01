@@ -29,9 +29,17 @@ export interface EmailAvailabilityResponse {
   message: string;
 }
 
-export const registerUser = async (data: RegistrationData) => {
+export const registerUser = async (data: RegistrationData | FormData) => {
   console.log(`[INIT] => /auth/register`);
-  const response = await axiosInstance.post('/auth/register', data);
+  
+  // Handle FormData (multipart) vs regular JSON
+  const config = data instanceof FormData ? {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  } : {};
+  
+  const response = await axiosInstance.post('/auth/register', data, config);
   console.log(`[OK] => /auth/register`);
   return response.data;
 };

@@ -10,6 +10,9 @@ import {
   Platform,
   KeyboardAvoidingView,
   ScrollView,
+  Image,
+  Alert,
+  ActionSheetIOS,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
@@ -20,6 +23,7 @@ import { useSkillsQuery } from '../../services/queries/UserQueries';
 import useAuthStore from '../../store/useAuthStore';
 import { CountryCode, RegistrationData } from '../../types';
 import { countryData } from '../../utils/countryData';
+import { ImagePickerUtils, ImageResult } from '../../utils/ImagePickerUtils';
 import CalenderSvg from '../../assets/icons/Calender';
 import Toast from 'react-native-toast-message';
 
@@ -62,6 +66,7 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
     skills: [] as string[],
     otherSkills: '',
     ageConsent: false,
+    profileImage: null as ImageResult | null,
   });
 
   const [selectedCountryCall, setSelectedCountryCall] = useState<CountryCode>(countryData[0]);
@@ -283,6 +288,108 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
     updateFormData('heardAboutUs', option);
     setShowHeardAboutDropdown(false);
   };
+
+  // Image handling functions
+  const handleImageOptions = () => {
+    const options = formData.profileImage 
+      ? ['Take Photo', 'Choose from Library', 'Remove Photo', 'Cancel']
+      : ['Take Photo', 'Choose from Library', 'Cancel'];
+    
+    const cancelButtonIndex = options.length - 1;
+    const destructiveButtonIndex = formData.profileImage ? 2 : -1;
+
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options,
+          cancelButtonIndex,
+          destructiveButtonIndex,
+        },
+        (buttonIndex) => {
+          handleImageAction(buttonIndex, options);
+        }
+      );
+    } else {
+      Alert.alert(
+        'Select Image',
+        'Choose how you would like to add an image',
+        [
+          {
+            text: 'Take Photo',
+            onPress: () => launchCamera()
+          },
+          {
+            text: 'Choose from Library',
+            onPress: () => launchImageLibrary()
+          },
+          ...(formData.profileImage ? [{
+            text: 'Remove Photo',
+            style: 'destructive' as const,
+            onPress: () => handleRemoveImage()
+          }] : []),
+          {
+            text: 'Cancel',
+            style: 'cancel' as const
+          }
+        ]
+      );
+    }
+  };
+
+  const handleImageAction = (buttonIndex: number, options: string[]) => {
+    switch (options[buttonIndex]) {
+      case 'Take Photo':
+        launchCamera();
+        break;
+      case 'Choose from Library':
+        launchImageLibrary();
+        break;
+      case 'Remove Photo':
+        handleRemoveImage();
+        break;
+    }
+  };
+
+  const launchCamera = async () => {
+    try {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      const result = await ImagePickerUtils.openCamera();
+      if (result) {
+        setFormData(prev => ({ ...prev, profileImage: result }));
+      }
+    } catch (error: any) {
+      console.error('Camera launch error:', error);
+      Alert.alert('Error', 'Failed to take photo. Please try again.');
+    }
+  };
+
+  const launchImageLibrary = async () => {
+    try {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      const result = await ImagePickerUtils.openImageLibrary();
+      if (result) {
+        setFormData(prev => ({ ...prev, profileImage: result }));
+      }
+    } catch (error: any) {
+      console.error('Image library launch error:', error);
+      Alert.alert('Error', 'Failed to select image. Please try again.');
+    }
+  };
+
+  const handleRemoveImage = () => {
+    Alert.alert(
+      'Remove Photo',
+      'Are you sure you want to remove your profile photo?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Remove', 
+          style: 'destructive',
+          onPress: () => setFormData(prev => ({ ...prev, profileImage: null }))
+        }
+      ]
+    );
+  };
   
 
   const validateForm = () => {
@@ -433,36 +540,48 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
       return date.toISOString().split('T')[0]; // YYYY-MM-DD format
     };
 
-    const registrationPayload: RegistrationData = {
-      user: {
-        email: registrationData.email,
-        password: registrationData.password,
-        password_confirmation: registrationData.password,
-        first_name: formData.firstName,
-        last_name: formData.lastName,
-        phone_no_call: `${selectedCountryCall.dialCode}${formData.phoneCall.replace(/\D/g, '')}`,
-        phone_no_text: `${selectedCountryText.dialCode}${formData.phoneText.replace(/\D/g, '')}`,
-        date_of_birth: formatDate(formData.dateOfBirth),
-        years_of_experience: formData.yearsOfExperience || "0",
-        about_me: formData.aboutMe || undefined,
-        heard_about_us: formData.heardAboutUs || undefined,
-        birth_day: formData.dateOfBirth.getDate().toString(),
-        birth_month: (formData.dateOfBirth.getMonth() + 1).toString(),
-        birth_year: formData.dateOfBirth.getFullYear().toString(),
-        terms_of_service: registrationData.termsAccepted ? "1" : "0",
-        skills: formData.skills,
-        other_skills: formData.otherSkills || undefined,
-        address_attributes: {
-          full_address: formData.fullAddress,
-          city: formData.city,
-          state: formData.state,
-        },
-      },
-    };
+    // Create FormData for multipart upload
+    const formDataPayload = new FormData();
+    
+    // Add user data fields
+    formDataPayload.append('user[email]', registrationData.email);
+    formDataPayload.append('user[password]', registrationData.password);
+    formDataPayload.append('user[password_confirmation]', registrationData.password);
+    formDataPayload.append('user[first_name]', formData.firstName);
+    formDataPayload.append('user[last_name]', formData.lastName);
+    formDataPayload.append('user[phone_no_call]', `${selectedCountryCall.dialCode}${formData.phoneCall.replace(/\D/g, '')}`);
+    formDataPayload.append('user[phone_no_text]', `${selectedCountryText.dialCode}${formData.phoneText.replace(/\D/g, '')}`);
+    formDataPayload.append('user[birth_day]', formData.dateOfBirth.getDate().toString());
+    formDataPayload.append('user[birth_month]', (formData.dateOfBirth.getMonth() + 1).toString());
+    formDataPayload.append('user[birth_year]', formData.dateOfBirth.getFullYear().toString());
+    formDataPayload.append('user[years_of_experience]', formData.yearsOfExperience || "0");
+    formDataPayload.append('user[about_me]', formData.aboutMe || '');
+    formDataPayload.append('user[heard_about_us]', formData.heardAboutUs || '');
+    formDataPayload.append('user[terms_of_service]', registrationData.termsAccepted ? "1" : "0");
+    formDataPayload.append('user[other_skills]', formData.otherSkills || '');
+    
+    // Add skills array
+    formData.skills.forEach((skill) => {
+      formDataPayload.append('user[skills][]', skill);
+    });
+    
+    // Add address attributes
+    formDataPayload.append('user[address_attributes][full_address]', formData.fullAddress);
+    formDataPayload.append('user[address_attributes][city]', formData.city);
+    formDataPayload.append('user[address_attributes][state]', formData.state);
+    
+    // Add profile image if selected
+    if (formData.profileImage) {
+      formDataPayload.append('user[image]', {
+        uri: formData.profileImage.uri,
+        type: formData.profileImage.type,
+        name: formData.profileImage.name,
+      } as any);
+    }
 
     try {
-      console.log('Registration payload:', JSON.stringify(registrationPayload, null, 2));
-      const response = await registerMutation.mutateAsync(registrationPayload);
+      console.log('Registration payload with image:', formData.profileImage ? 'Image included' : 'No image');
+      const response = await registerMutation.mutateAsync(formDataPayload);
       console.log('Registration response:', response);
       
       Toast.show({
@@ -554,6 +673,7 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
       skills: [],
       otherSkills: '',
       ageConsent: false,
+      profileImage: null,
     });
     
     // Clear all errors
@@ -916,6 +1036,36 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
                     onPress={() => setShowHeardAboutDropdown(true)}
                   >
                     <Text className="text-gray-500">▼</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Profile Image Upload */}
+              <View className="mb-6">
+                <Text className="text-sm font-medium text-gray-700 mb-4">
+                  Profile Photo
+                </Text>
+                <View className="items-center">
+                  <View className="relative mb-4">
+                    {formData.profileImage ? (
+                      <Image
+                        source={{ uri: formData.profileImage.uri }}
+                        className="w-24 h-24 rounded-full bg-gray-100"
+                        style={{ backgroundColor: '#f3f4f6' }}
+                      />
+                    ) : (
+                      <View className="w-24 h-24 rounded-full bg-gray-200 items-center justify-center">
+                        <Text className="text-gray-400 text-xs text-center">No Photo</Text>
+                      </View>
+                    )}
+                  </View>
+                  <TouchableOpacity 
+                    className="bg-transparent border-2 border-[#71DFB1] rounded-full px-4 py-2"
+                    onPress={handleImageOptions}
+                  >
+                    <Text className="text-[#71DFB1] font-medium">
+                      {formData.profileImage ? 'Change Photo' : 'Add Photo'}
+                    </Text>
                   </TouchableOpacity>
                 </View>
               </View>

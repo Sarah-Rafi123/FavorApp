@@ -6,7 +6,7 @@ import useAuthStore from '../../store/useAuthStore';
 
 export const useRegisterMutation = () => {
   return useMutation({
-    mutationFn: (payload: RegistrationData) => registerUser(payload),
+    mutationFn: (payload: RegistrationData | FormData) => registerUser(payload),
   });
 };
 
