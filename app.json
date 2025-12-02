@@ -2,7 +2,7 @@
   "expo": {
     "name": "FavorApp",
     "slug": "favorapp",
-    "version": "1.0.28",
+    "version": "1.0.29",
     "orientation": "portrait",
     "icon": "./assets/AppLogo.png",
     "userInterfaceStyle": "light",
@@ -31,6 +31,12 @@
       "package": "com.favorappllc.mobile",
       "compileSdkVersion": 35,
       "targetSdkVersion": 35,
+      "navigationBar": {
+        "visible": "leanback"
+      },
+      "splash": {
+        "backgroundColor": "#FFFFFF"
+      },
       "privacyManifest": {
         "NSCameraUsageDescription": "This app needs access to camera to take photos for favor requests.",
         "NSPhotoLibraryUsageDescription": "This app needs access to photo library to select images for favor requests."

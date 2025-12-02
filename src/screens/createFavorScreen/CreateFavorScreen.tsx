@@ -1223,7 +1223,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
             keyExtractor={(item) => item.id.toString()}
             renderItem={({ item }) => <FavorWithApplicants key={item.id} favor={item} navigation={navigation} />}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingTop: 8, paddingBottom: 120 }}
+            contentContainerStyle={{ paddingTop: 8, paddingBottom: 160 }}
             refreshControl={
               <RefreshControl
                 refreshing={refreshing && currentPage === 1}
@@ -1252,7 +1252,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
           <ScrollView 
             className="flex-1"
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingTop: 8, paddingBottom: 120 }}
+            contentContainerStyle={{ paddingTop: 8, paddingBottom: 160 }}
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}
@@ -1281,12 +1281,10 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
       ) : (
         /* Empty State */
         <View className="flex-1 items-center justify-center px-6">
-          <View className="items-center mb-8">
-            {activeTab === 'All' && (
-              <View style={{ transform: [{ scale: 2 }] }}>
+          <View className="items-center mb-4">
+            {activeTab === 'All' && 
                 <CreateFavorSvg focused={true} />
-              </View>
-            )}
+             }
             {activeTab === 'Active' && <PersonwithHeartSvg />}
             {activeTab === 'History' && <TimerSvg />}
           </View>
@@ -1297,7 +1295,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
             {activeTab === 'History' && 'No History Yet'}
           </Text>
           
-          <Text className="text-[#000000B] text-center mb-12 leading-6">
+          <Text className="text-[#000000B] text-center mb-4 leading-6">
             {activeTab === 'All' && 'Start by posting your first favor request\nto get help from your community.'}
             {activeTab === 'Active' && "You don't have any ongoing favors right\nnow. Create a favor request to see\nthem here."}
             {activeTab === 'History' && 'Once you create and complete a favor,\nyour history will appear here.'}

@@ -662,7 +662,7 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
       </View>
 
       {/* GPS Location Button */}
-      <View className="absolute bottom-36 right-6 z-10">
+      <View className="absolute bottom-48 left-6 z-10">
         <TouchableOpacity
           onPress={async () => {
             // Return to live GPS location
@@ -714,7 +714,7 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
 
       {/* Favor Counter */}
       {!isLoading && allFavors.length > 0 && (
-        <View className="absolute bottom-28 left-6 z-10 bg-green-500 rounded-full px-3 py-2 shadow-lg">
+        <View className="absolute bottom-36 left-6 z-10 bg-green-500 rounded-full px-3 py-2 shadow-lg">
           <Text className="text-white text-sm font-semibold">
             {allFavors.filter(favor => parseLatLng(favor.lat_lng)).length} favors on map
           </Text>

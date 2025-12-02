@@ -142,7 +142,11 @@ export default function Navigator() {
   if (appIsReady && user && accessToken) {
     return (
       <NavigationContainer>
-        <StatusBar barStyle={'dark-content'} backgroundColor="transparent" translucent />
+        <StatusBar 
+          barStyle={'dark-content'} 
+          backgroundColor="transparent" 
+          translucent 
+        />
         <View className="flex-1">
           <MainTabs />
         </View>

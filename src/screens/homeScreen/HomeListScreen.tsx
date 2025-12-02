@@ -624,7 +624,7 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications, navigatio
           keyExtractor={(item) => item.id.toString()}
           renderItem={({ item }) => <FavorCard favor={item} />}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingTop: 16, paddingBottom: 120 }}
+          contentContainerStyle={{ paddingTop: 16, paddingBottom: 160 }}
           refreshControl={
             <RefreshControl
               refreshing={isLoading && currentPage === 1}
@@ -723,6 +723,27 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications, navigatio
                   <Text className="text-white text-xs text-center leading-5">⭐</Text>
                 </View>
                 <Text className="text-gray-700 flex-1">Access to premium features</Text>
+              </View>
+              
+              <View className="flex-row items-center mb-3">
+                <View className="w-5 h-5 rounded-full mr-3 bg-purple-500">
+                  <Text className="text-white text-xs text-center leading-5">🔒</Text>
+                </View>
+                <Text className="text-gray-700 flex-1">No Admin or Extra Fees</Text>
+              </View>
+              
+              <View className="flex-row items-center mb-3">
+                <View className="w-5 h-5 rounded-full mr-3 bg-cyan-500">
+                  <Text className="text-white text-xs text-center leading-5">✓</Text>
+                </View>
+                <Text className="text-gray-700 flex-1">Free Verification</Text>
+              </View>
+              
+              <View className="flex-row items-center mb-3">
+                <View className="w-5 h-5 rounded-full mr-3 bg-orange-500">
+                  <Text className="text-white text-xs text-center leading-5">💰</Text>
+                </View>
+                <Text className="text-gray-700 flex-1">Ask or Do Paid Favors</Text>
               </View>
             </View>
             

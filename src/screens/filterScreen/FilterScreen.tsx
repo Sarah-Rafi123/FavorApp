@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,6 @@ import {
 } from 'react-native';
 import { CarouselButton } from '../../components/buttons';
 import Svg, { Path } from 'react-native-svg';
-import BackSvg from '../../assets/icons/Back';
 import FIconSmallSvg from '../../assets/icons/FIconSmall';
 import useFilterStore from '../../store/useFilterStore';
 
@@ -34,7 +33,7 @@ const CheckIcon = () => (
 
 
 export function FilterScreen({ onBack, onApply, navigation }: FilterScreenProps) {
-  const { filters, updateFilter, clearFilters, hasActiveFilters } = useFilterStore();
+  const { filters, updateFilter, clearFilters } = useFilterStore();
   
   // Convert store filters to UI format for display
   const uiFilters = {
@@ -135,18 +134,26 @@ export function FilterScreen({ onBack, onApply, navigation }: FilterScreenProps)
   );
 
   return (
-    <ImageBackground
-      source={require('../../assets/images/Wallpaper.png')}
-      className="flex-1"
-      resizeMode="cover"
-    >
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+    <View className="flex-1 bg-black bg-opacity-50">
+      <View className="flex-1 mt-16">
+        <ImageBackground
+          source={require('../../assets/images/Wallpaper.png')}
+          className="flex-1 rounded-t-3xl overflow-hidden"
+          resizeMode="cover"
+        >
+          <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+          
+          {/* Modal Drag Indicator */}
+          <View className="pt-4 pb-2 items-center">
+            <View className="w-12 h-1 bg-gray-400 rounded-full" />
+          </View>
       
       {/* Header */}
-      <View className="pt-16 pb-4 px-6">
-        <View className="flex-row items-center">
+      <View className="pt-8 pb-4 px-6">
+        <View className="flex-row items-center justify-between">
+          <Text className="text-2xl font-bold text-black">Filters</Text>
           <TouchableOpacity 
-            className="mr-4"
+            className="w-8 h-8 bg-gray-200 rounded-full items-center justify-center"
             onPress={onBack || (() => {
               if (navigation?.canGoBack()) {
                 navigation.goBack();
@@ -155,9 +162,8 @@ export function FilterScreen({ onBack, onApply, navigation }: FilterScreenProps)
               }
             })}
           >
-            <BackSvg />
+            <Text className="text-gray-600 text-lg font-bold">×</Text>
           </TouchableOpacity>
-          <Text className="text-2xl font-bold text-black">Filter</Text>
         </View>
       </View>
 
@@ -217,6 +223,8 @@ export function FilterScreen({ onBack, onApply, navigation }: FilterScreenProps)
           </Text>
         </TouchableOpacity>
       </View>
-    </ImageBackground>
+        </ImageBackground>
+      </View>
+    </View>
   );
 }

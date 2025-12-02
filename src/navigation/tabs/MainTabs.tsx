@@ -2,6 +2,8 @@ import React from 'react';
 import { View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getTabBarHeight, getTabBarBottomPadding } from '../../utils/systemUI';
 import { HomeScreen, ProvideFavorScreen, ProfileScreen, SettingsScreen, FilterScreen, AskFavorScreen, EditFavorScreen, FavorDetailsScreen, UserProfileScreen, ProvideFavorDetailsScreen } from '../../screens';
 import { NotificationsScreen } from '../../screens/notificationsScreen/NotificationsScreen';
 import { CreateFavorScreen } from '../../screens/createFavorScreen/CreateFavorScreen';
@@ -41,10 +43,6 @@ function HomeStack() {
         name="HomeMain" 
         component={HomeScreen}
       />
-      <Stack.Screen 
-        name="FilterScreen" 
-        component={FilterScreen}
-      />
     </Stack.Navigator>
   );
 }
@@ -56,10 +54,6 @@ function ProvideFavorStack() {
       <Stack.Screen 
         name="ProvideFavorMain" 
         component={ProvideFavorScreen}
-      />
-      <Stack.Screen 
-        name="FilterScreen" 
-        component={FilterScreen}
       />
       <Stack.Screen 
         name="AskFavorScreen" 
@@ -170,6 +164,12 @@ function SettingsStack() {
 }
 
 function TabNavigator() {
+  const insets = useSafeAreaInsets();
+  
+  // Use utility functions for proper system UI handling
+  const tabBarHeight = getTabBarHeight(insets.bottom);
+  const paddingBottom = getTabBarBottomPadding(insets.bottom);
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -177,8 +177,8 @@ function TabNavigator() {
         tabBarStyle: {
           backgroundColor: '#1C2013', // Dark background matching the image
           borderTopWidth: 0,
-          height: 90,
-          paddingBottom: 25,
+          height: tabBarHeight,
+          paddingBottom: paddingBottom,
           paddingTop: 15,
           borderTopLeftRadius: 20,
           borderTopRightRadius: 20,
@@ -277,6 +277,17 @@ export function MainTabs() {
       <RootStack.Screen 
         name="PaymentMethodScreen" 
         component={PaymentMethodScreen}
+      />
+      <RootStack.Screen 
+        name="FilterScreen" 
+        component={FilterScreen}
+        options={{
+          presentation: 'modal',
+          headerShown: false,
+          gestureEnabled: true,
+          gestureDirection: 'vertical',
+          animationTypeForReplace: 'push',
+        }}
       />
     </RootStack.Navigator>
   );

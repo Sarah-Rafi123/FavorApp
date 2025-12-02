@@ -658,7 +658,7 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
       <ScrollView 
         className="flex-1"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 120 }}
+        contentContainerStyle={{ paddingBottom: 160 }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

@@ -266,7 +266,7 @@ export function NotificationsScreen() {
           onEndReachedThreshold={0.5}
           ListFooterComponent={renderFooter}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 100 }}
+          contentContainerStyle={{ paddingBottom: 160 }}
           ItemSeparatorComponent={() => (
             <View className="mx-6 h-px bg-gray-100" />
           )}

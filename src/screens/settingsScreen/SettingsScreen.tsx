@@ -200,7 +200,7 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
       <ScrollView 
         className="flex-1" 
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={{ paddingBottom: 160 }}
       >
         <View className="">
           

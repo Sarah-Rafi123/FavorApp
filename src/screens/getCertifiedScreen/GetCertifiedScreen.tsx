@@ -287,7 +287,7 @@ export function GetCertifiedScreen({ navigation }: GetCertifiedScreenProps) {
       <ScrollView 
         className="flex-1"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 120 }}
+        contentContainerStyle={{ paddingBottom: 160 }}
       >
         <View className="items-center px-6 pt-8">
           
