@@ -15,7 +15,9 @@ export interface ListFavorSubjectsResponse {
   success: boolean;
   data: {
     favor_subjects: FavorSubject[];
+    total_count: number;
   };
+  message: string;
 }
 
 export interface GetFavorSubjectResponse {
@@ -48,87 +50,52 @@ export const FavorSubjectMockService = {
     const mockSubjects: FavorSubject[] = [
       {
         id: 1,
-        name: 'Moving Help',
+        name: 'Lifting',
         is_active: true,
-        description: 'Help with moving furniture, boxes, and household items',
-        icon: '📦',
+        description: 'Help with lifting heavy items',
+        icon: '💪',
       },
       {
         id: 2,
-        name: 'Yard Work',
+        name: 'Gardening',
         is_active: true,
-        description: 'Garden cleanup, lawn mowing, leaf removal',
+        description: 'Garden work and landscaping assistance',
         icon: '🌱',
       },
       {
         id: 3,
-        name: 'Plumbing',
+        name: 'Technical',
         is_active: true,
-        description: 'Plumbing repairs and installations',
-        icon: '🔧',
-      },
-      {
-        id: 4,
-        name: 'Electrical',
-        is_active: true,
-        description: 'Electrical repairs and installations',
+        description: 'Technical support and repairs',
         icon: '⚡',
       },
       {
-        id: 5,
-        name: 'Cleaning',
+        id: 4,
+        name: 'Moving',
         is_active: true,
-        description: 'House cleaning, deep cleaning, organization',
-        icon: '🧹',
-      },
-      {
-        id: 6,
-        name: 'Painting',
-        is_active: true,
-        description: 'Interior and exterior painting services',
-        icon: '🎨',
-      },
-      {
-        id: 7,
-        name: 'Pet Care',
-        is_active: true,
-        description: 'Pet sitting, dog walking, pet grooming',
-        icon: '🐕',
-      },
-      {
-        id: 8,
-        name: 'Handyman',
-        is_active: true,
-        description: 'General handyman services and repairs',
-        icon: '🔨',
-      },
-      {
-        id: 9,
-        name: 'Delivery',
-        is_active: true,
-        description: 'Package delivery, grocery pickup, errands',
+        description: 'Moving assistance and transportation',
         icon: '📦',
       },
       {
-        id: 10,
-        name: 'Tech Support',
+        id: 5,
+        name: 'Assisting',
         is_active: true,
-        description: 'Computer setup, tech troubleshooting',
-        icon: '💻',
+        description: 'General assistance and helping hands',
+        icon: '🤝',
       },
       {
-        id: 11,
-        name: 'Tutoring',
+        id: 6,
+        name: 'Opening',
         is_active: true,
-        description: 'Academic tutoring and teaching',
-        icon: '📚',
+        description: 'Opening services and access help',
+        icon: '🔑',
       },
       {
-        id: 12,
-        name: 'Event Help',
+        id: 7,
+        name: 'Maintenance',
         is_active: true,
-        description: 'Event setup, party assistance, catering help',
-        icon: '🎉',
+        description: 'Maintenance and repair services',
+        icon: '🔨',
       },
     ];
 
@@ -136,7 +103,9 @@ export const FavorSubjectMockService = {
       success: true,
       data: {
         favor_subjects: mockSubjects,
+        total_count: mockSubjects.length,
       },
+      message: "Favor subjects retrieved successfully",
     };
   },
 

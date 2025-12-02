@@ -542,10 +542,6 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
       {Platform.OS === 'android' && !mapReady && !mapLoadingTimeout && (
         <View className="absolute inset-0 z-20 bg-gray-100 items-center justify-center">
           <ActivityIndicator size="large" color="#44A27B" />
-          <Text className="text-gray-600 mt-4 text-lg">Loading Map...</Text>
-          <Text className="text-gray-500 mt-2 text-sm px-6 text-center">
-            This may take a few moments on Android
-          </Text>
         </View>
       )}
 

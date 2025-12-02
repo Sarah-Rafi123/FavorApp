@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,7 @@ import { getCertificationStatus } from '../../services/apis/CertificationApis';
 import { ImagePickerUtils } from '../../utils/ImagePickerUtils';
 import BackSvg from '../../assets/icons/Back';
 import useAuthStore from '../../store/useAuthStore';
+import { useFavorSubjects } from '../../services/queries/FavorSubjectQueries';
 
 interface AskFavorScreenProps {
   navigation?: any;
@@ -67,19 +68,12 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
     description: ''
   });
 
-  // Hardcoded favor subjects with their IDs
-  const favorSubjects = [
-    { id: 1, name: 'Dump Run/Removal' },
-    { id: 2, name: 'Lawn Care' },
-    { id: 3, name: 'Home Repairs' },
-    { id: 4, name: 'Furniture Assembly' },
-    { id: 5, name: 'Installation' },
-    { id: 6, name: 'Moving' },
-    { id: 7, name: 'Dog Poop Removal' },
-    { id: 8, name: 'Manual Labor' },
-    { id: 9, name: 'Assistance' },
-    { id: 10, name: 'Snow Removal' }
-  ];
+  // Fetch favor subjects from API
+  const { data: favorSubjectsResponse, isLoading: favorSubjectsLoading, error: favorSubjectsError } = useFavorSubjects();
+  const favorSubjects = favorSubjectsResponse?.data?.favor_subjects || [];
+  
+  // Special ID for "Other" option that doesn't conflict with API data
+  const OTHER_SUBJECT_ID = -1;
 
   // Create favor mutations
   const createFavorMutation = useCreateFavor();
@@ -142,7 +136,7 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
         break;
         
       case 'otherSubjectName':
-        if (formData.favorSubjectId === 11 && (!value || !value.trim())) {
+        if (formData.favorSubjectId === OTHER_SUBJECT_ID && (!value || !value.trim())) {
           newErrors.otherSubjectName = 'Please provide a custom subject name.';
         } else {
           newErrors.otherSubjectName = '';
@@ -389,7 +383,7 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
       hasErrors = true;
     }
     
-    if (formData.favorSubjectId === 11 && !formData.otherSubjectName.trim()) {
+    if (formData.favorSubjectId === OTHER_SUBJECT_ID && !formData.otherSubjectName.trim()) {
       newErrors.otherSubjectName = 'Please provide a custom subject name.';
       hasErrors = true;
     }
@@ -439,13 +433,13 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
           state: formData.state.trim(),
         },
         priority: formData.priority,
-        favor_subject_id: formData.favorSubjectId === 11 ? 'other' : formData.favorSubjectId!,
+        favor_subject_id: formData.favorSubjectId === OTHER_SUBJECT_ID ? 'other' : formData.favorSubjectId!,
         favor_pay: formData.favorPrice === 'Paid' ? '0' : '1', // 0 = paid, 1 = free
         time_to_complete: formData.timeToComplete,
         tip: formData.favorPrice === 'Paid' ? formData.tip : 0,
         additional_tip: formData.favorPrice === 'Paid' && formData.additionalTip > 0 ? formData.additionalTip : undefined,
         lat_lng: formData.latLng || undefined,
-        other_subject_name: formData.favorSubjectId === 11 ? formData.otherSubjectName.trim() : undefined,
+        other_subject_name: formData.favorSubjectId === OTHER_SUBJECT_ID ? formData.otherSubjectName.trim() : undefined,
       };
 
       // Debug logging to verify request format
@@ -540,8 +534,19 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
           {/* Subject Section */}
           <View className="mb-8">
             <Text className="text-xl font-bold text-black mb-6">Subject</Text>
-            <View className="flex-row flex-wrap">
-              {favorSubjects.map((subject) => (
+            
+            {favorSubjectsLoading ? (
+              <View className="flex-row justify-center items-center py-4">
+                <ActivityIndicator size="small" color="#44A27B" />
+                <Text className="ml-2 text-gray-600">Loading subjects...</Text>
+              </View>
+            ) : favorSubjectsError ? (
+              <View className="bg-red-50 p-4 rounded-xl">
+                <Text className="text-red-600 text-center">Failed to load subjects. Please try again.</Text>
+              </View>
+            ) : (
+              <View className="flex-row flex-wrap">
+                {favorSubjects.map((subject) => (
                 <View key={subject.id} className="w-1/3 mb-4">
                   <TouchableOpacity 
                     className="flex-row items-center"
@@ -557,29 +562,31 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
                     <Text className="text-black text-base flex-1">{subject.name}</Text>
                   </TouchableOpacity>
                 </View>
-              ))}
-              <View className="w-1/3 mb-4">
-                <TouchableOpacity 
-                  className="flex-row items-center"
-                  onPress={() => updateFormData('favorSubjectId', 11)}
-                >
-                  <View className={`w-6 h-6 rounded-full border-2 mr-3 items-center justify-center ${
-                    formData.favorSubjectId === 11 ? 'border-[#44A27B]' : 'border-gray-400'
-                  }`}>
-                    {formData.favorSubjectId === 11 && (
-                      <View className="w-3 h-3 rounded-full bg-[#44A27B]" />
-                    )}
-                  </View>
-                  <Text className="text-black text-base flex-1">Other</Text>
-                </TouchableOpacity>
+                ))}
+                
+                <View className="w-1/3 mb-4">
+                  <TouchableOpacity 
+                    className="flex-row items-center"
+                    onPress={() => updateFormData('favorSubjectId', OTHER_SUBJECT_ID)}
+                  >
+                    <View className={`w-6 h-6 rounded-full border-2 mr-3 items-center justify-center ${
+                      formData.favorSubjectId === OTHER_SUBJECT_ID ? 'border-[#44A27B]' : 'border-gray-400'
+                    }`}>
+                      {formData.favorSubjectId === OTHER_SUBJECT_ID && (
+                        <View className="w-3 h-3 rounded-full bg-[#44A27B]" />
+                      )}
+                    </View>
+                    <Text className="text-black text-base flex-1">Other</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
+            )}
             {errors.favorSubjectId ? (
               <Text className="text-red-500 text-sm mt-1">{errors.favorSubjectId}</Text>
             ) : null}
             
             {/* Custom Subject Name Input - Only show when Other is selected */}
-            {formData.favorSubjectId === 11 && (
+            {formData.favorSubjectId === OTHER_SUBJECT_ID && (
               <View className="mt-4">
                 <Text className="text-lg font-semibold text-black mb-3">Please specify:</Text>
                 <View className={`bg-white border-2 rounded-2xl px-4 py-4 ${

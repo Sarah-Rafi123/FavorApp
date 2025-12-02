@@ -7,10 +7,13 @@ import {
   ScrollView,
   ImageBackground,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CarouselButton } from '../../components/buttons';
 import Svg, { Path } from 'react-native-svg';
 import FIconSmallSvg from '../../assets/icons/FIconSmall';
+import BackSvg from '../../assets/icons/Back';
 import useFilterStore from '../../store/useFilterStore';
+import { useFavorSubjects } from '../../services/queries/FavorSubjectQueries';
 
 interface FilterScreenProps {
   onBack?: () => void;
@@ -34,6 +37,12 @@ const CheckIcon = () => (
 
 export function FilterScreen({ onBack, onApply, navigation }: FilterScreenProps) {
   const { filters, updateFilter, clearFilters } = useFilterStore();
+  const insets = useSafeAreaInsets();
+  
+  // Fetch favor subjects from API
+  const { data: favorSubjectsResponse, isLoading: favorSubjectsLoading, error: favorSubjectsError } = useFavorSubjects();
+  const favorSubjects = favorSubjectsResponse?.data?.favor_subjects || [];
+  const categoryOptions = favorSubjects.map(subject => subject.name);
   
   // Convert store filters to UI format for display
   const uiFilters = {
@@ -134,38 +143,38 @@ export function FilterScreen({ onBack, onApply, navigation }: FilterScreenProps)
   );
 
   return (
-    <View className="flex-1 bg-black bg-opacity-50">
-      <View className="flex-1 mt-16">
-        <ImageBackground
-          source={require('../../assets/images/Wallpaper.png')}
-          className="flex-1 rounded-t-3xl overflow-hidden"
-          resizeMode="cover"
-        >
-          <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+    <View className="flex-1 bg-transparent">
+      <ImageBackground
+        source={require('../../assets/images/Wallpaper.png')}
+        className="flex-1 rounded-t-3xl overflow-hidden pt-16"
+        resizeMode="cover"
+      >
+          <StatusBar className='bg-transparent'  />
+          
           
           {/* Modal Drag Indicator */}
           <View className="pt-4 pb-2 items-center">
-            <View className="w-12 h-1 bg-gray-400 rounded-full" />
+            <View className="w-12 h-1.5 bg-gray-400 rounded-full opacity-60" />
           </View>
       
-      {/* Header */}
-      <View className="pt-8 pb-4 px-6">
-        <View className="flex-row items-center justify-between">
-          <Text className="text-2xl font-bold text-black">Filters</Text>
-          <TouchableOpacity 
-            className="w-8 h-8 bg-gray-200 rounded-full items-center justify-center"
-            onPress={onBack || (() => {
-              if (navigation?.canGoBack()) {
-                navigation.goBack();
-              } else {
-                navigation?.navigate('Home');
-              }
-            })}
-          >
-            <Text className="text-gray-600 text-lg font-bold">×</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+          {/* Header */}
+          <View className="pt-2 pb-4 px-6">
+            <View className="flex-row items-center">
+              <TouchableOpacity 
+                className="mr-4"
+                onPress={onBack || (() => {
+                  if (navigation?.canGoBack()) {
+                    navigation.goBack();
+                  } else {
+                    navigation?.navigate('Home');
+                  }
+                })}
+              >
+                <BackSvg />
+              </TouchableOpacity>
+              <Text className="text-2xl font-bold text-black">Filters</Text>
+            </View>
+          </View>
 
       <ScrollView 
         className="flex-1"
@@ -194,37 +203,42 @@ export function FilterScreen({ onBack, onApply, navigation }: FilterScreenProps)
 
         <FilterSection
           title="Category"
-          options={['Lifting', 'Moving', 'Maintenance', 'Gardening', 'Assisting', 'Technical', 'Opening']}
+          options={favorSubjectsLoading ? ['Loading...'] : favorSubjectsError ? ['Error loading categories'] : categoryOptions}
           section="category"
         />
       </ScrollView>
 
-      {/* Bottom Buttons */}
-      <View className="absolute bottom-32 left-0 right-0 px-6 bg-transparent">
-        <View className="mb-4">
-          <CarouselButton
-            title="Apply Filters"
-            onPress={() => {
-              const applyAction = onApply || (() => {
-                console.log('Applied filters:', filters);
-                if (navigation?.canGoBack()) {
-                  navigation.goBack();
-                } else {
-                  navigation?.navigate('Home');
-                }
-              });
-              applyAction();
-            }}
-          />
-        </View>
-        <TouchableOpacity onPress={clearAll}>
-          <Text className="text-gray-700 text-center text-lg font-medium">
-            Clear All
-          </Text>
-        </TouchableOpacity>
-      </View>
+          {/* Bottom Buttons */}
+          <View className="absolute bottom-0 left-0 right-0">
+            {/* Background with gradient effect */}
+            <View 
+              className="bg-[#FBFFF0] px-6 mt-36 shadow-lg"
+              style={{ paddingTop: 32, paddingBottom: Math.max(16, insets.bottom + 8) }}
+            >
+              <View className="mb-4">
+                <CarouselButton
+                  title="Apply Filters"
+                  onPress={() => {
+                    const applyAction = onApply || (() => {
+                      console.log('Applied filters:', filters);
+                      if (navigation?.canGoBack()) {
+                        navigation.goBack();
+                      } else {
+                        navigation?.navigate('Home');
+                      }
+                    });
+                    applyAction();
+                  }}
+                />
+              </View>
+              <TouchableOpacity onPress={clearAll}>
+                <Text className="text-gray-600 text-center text-lg font-medium">
+                  Clear All
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </ImageBackground>
-      </View>
     </View>
   );
 }

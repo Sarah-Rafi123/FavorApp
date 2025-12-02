@@ -74,6 +74,7 @@ export const useActiveFavorSubjects = (
         ...response,
         data: {
           favor_subjects: activeSubjects,
+          total_count: activeSubjects.length,
         },
       };
     },
