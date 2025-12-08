@@ -134,15 +134,10 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications, navigatio
   const error = useFilteredData ? browseFavorsError : favorsError;
   const refetch = useFilteredData ? refetchBrowseFavors : refetchFavors;
 
-  // Check verification status and show encouragement if needed
+  // Check verification status and show encouragement on every login
   const checkVerificationAndShowEncouragement = async () => {
     try {
-      // Check if we've already shown the encouragement modal in this session
-      const hasShownToday = await AsyncStorage.getItem(`encouragement_shown_${user?.id}_${new Date().toDateString()}`);
-      if (hasShownToday) {
-        setVerificationStatus(prev => ({ ...prev, hasShownEncouragement: true }));
-        return;
-      }
+      console.log('Checking verification status for encouragement modal on login');
 
       // Check KYC certification status
       const certificationResponse = await getCertificationStatus();
@@ -159,8 +154,9 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications, navigatio
         hasShownEncouragement: false
       });
       
-      // Show encouragement if user is not fully verified/subscribed
+      // Show encouragement on every login if user is not fully verified/subscribed
       if (!isKYCVerified || !isSubscribed) {
+        console.log('Showing encouragement modal for incomplete verification/subscription');
         setShowEncouragementModal(true);
       }
     } catch (error) {
@@ -170,12 +166,11 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications, navigatio
 
   const handleSkipEncouragement = async () => {
     try {
-      // Store that we've shown the encouragement today
-      await AsyncStorage.setItem(`encouragement_shown_${user?.id}_${new Date().toDateString()}`, 'true');
+      // Simply close the modal without storing any skip status (will show on every login)
       setShowEncouragementModal(false);
       setVerificationStatus(prev => ({ ...prev, hasShownEncouragement: true }));
     } catch (error) {
-      console.error('Error storing encouragement skip status:', error);
+      console.error('Error handling encouragement skip:', error);
       setShowEncouragementModal(false);
     }
   };
@@ -714,7 +709,7 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications, navigatio
                   <View className="w-5 h-5 rounded-full mr-3 bg-green-500">
                     <Text className="text-white text-xs text-center leading-5">✓</Text>
                   </View>
-                  <Text className="text-gray-700 flex-1">Verified status and security</Text>
+                  <Text className="text-gray-700 flex-1">Verified Community</Text>
                 </View>
               )}
               
@@ -745,6 +740,13 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications, navigatio
                 </View>
                 <Text className="text-gray-700 flex-1">Ask or Do Paid Favors</Text>
               </View>
+              
+              <View className="flex-row items-center mb-3">
+                <View className="w-5 h-5 rounded-full mr-3 bg-green-600">
+                  <Text className="text-white text-xs text-center leading-5">💲</Text>
+                </View>
+                <Text className="text-gray-700 flex-1">Just $4.99/month • Cancel anytime</Text>
+              </View>
             </View>
             
             <View className="space-y-3">
@@ -770,7 +772,7 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications, navigatio
                     navigation?.navigate('GetCertifiedScreen');
                   }}
                 >
-                  <Text className="text-white text-center font-semibold">Complete Verification</Text>
+                  <Text className="text-white text-center font-semibold">Upgrade Now</Text>
                 </TouchableOpacity>
               )}
               

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, Image, TouchableOpacity, StatusBar, ImageBackground, ActivityIndicator, Alert, Platform, Modal } from 'react-native';
+import { View, Text, ScrollView, Image, TouchableOpacity, StatusBar, ImageBackground, ActivityIndicator, Alert, Platform, Modal, RefreshControl } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { CarouselButton } from '../../components/buttons';
 import { UpdateProfileModal } from '../../components/overlays/UpdateProfileModal';
@@ -42,6 +42,7 @@ export function ProfileScreen() {
   const [showPDFViewer, setShowPDFViewer] = useState(false);
   const [pdfUri, setPdfUri] = useState('');
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+  const [refreshing, setRefreshing] = useState(false);
   
   // Profile query that depends on auth state
   const { data: profileResponse, isLoading, error, refetch: refetchProfile } = useProfileQuery();
@@ -57,6 +58,21 @@ export function ProfileScreen() {
     },
     { enabled: !!profileResponse?.data?.profile?.id && !!user && !!accessToken }
   );
+
+  // Pull-to-refresh handler
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        refetchProfile(),
+        refetchBalance(),
+      ]);
+    } catch (error) {
+      console.error('Error refreshing profile data:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
   
   // Clear fallback profile data - use only API data
   const [profileData, setProfileData] = useState<ProfileData>({
@@ -509,6 +525,16 @@ export function ProfileScreen() {
         className="flex-1"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 160 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={['#44A27B']}
+            tintColor="#44A27B"
+            title="Pull to refresh"
+            titleColor="#44A27B"
+          />
+        }
       >
         {/* Main Profile Card */}
         <View className="mx-6 mb-6 bg-[#FBFFF0] rounded-3xl p-6 border-4 border-[#71DFB1]">

@@ -8,6 +8,8 @@ import {
   TextInput,
   Alert,
   ImageBackground,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import BackSvg from '../../assets/icons/Back';
@@ -116,24 +118,31 @@ export function DeleteAccountScreen({ navigation }: DeleteAccountScreenProps) {
     >
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       
-      {/* Header */}
-      <View className="pt-16 pb-6 px-6">
-        <View className="flex-row items-center">
-          <TouchableOpacity 
-            className="mr-4"
-            onPress={() => navigation?.goBack()}
-          >
-            <BackSvg />
-          </TouchableOpacity>
-          <Text className="text-2xl font-bold text-black">Delete Account</Text>
-        </View>
-      </View>
-
-      <ScrollView 
+      <KeyboardAvoidingView 
         className="flex-1"
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 120 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
+        {/* Header */}
+        <View className="pt-16 pb-6 px-6">
+          <View className="flex-row items-center">
+            <TouchableOpacity 
+              className="mr-4"
+              onPress={() => navigation?.goBack()}
+            >
+              <BackSvg />
+            </TouchableOpacity>
+            <Text className="text-2xl font-bold text-black">Delete Account</Text>
+          </View>
+        </View>
+
+        <ScrollView 
+          className="flex-1"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 120 }}
+          keyboardShouldPersistTaps="handled"
+          enableOnAndroid={true}
+        >
         <View className="px-6 pt-6">
           
           {/* Question */}
@@ -223,7 +232,8 @@ export function DeleteAccountScreen({ navigation }: DeleteAccountScreenProps) {
             </TouchableOpacity>
           </View>
         </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </ImageBackground>
   );
 }

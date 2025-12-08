@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -9,11 +10,13 @@ import {
   Alert,
   Platform,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import Purchases, { CustomerInfo, PurchasesOffering } from 'react-native-purchases';
 import RevenueCatUI from 'react-native-purchases-ui';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { getCertificationStatus, CertificationStatusData } from '../../services/apis/CertificationApis';
+import { useLifetimeSlots } from '../../services/queries/LifetimeSlotsQueries';
 // Using main app logo for consistency
 import BackSvg from '../../assets/icons/Back';
 import FIcon from '../../assets/icons/FIcon';
@@ -47,7 +50,31 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
   const [backendSubscriptionData, setBackendSubscriptionData] = useState<CertificationStatusData | null>(null);
   const [offerings, setOfferings] = useState<PurchasesOffering | null>(null);
   const [isUpgrading, setIsUpgrading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const { user } = useAuthStore();
+  
+  // Fetch lifetime slots availability
+  const { 
+    data: lifetimeSlots, 
+    isLoading: lifetimeSlotsLoading, 
+    error: lifetimeSlotsError,
+    refetch: refetchLifetimeSlots 
+  } = useLifetimeSlots();
+
+  // Pull-to-refresh handler
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        initializeRevenueCat(),
+        refetchLifetimeSlots()
+      ]);
+    } catch (error) {
+      console.error('Error refreshing subscription data:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const features = [
     "No Admin or Extra Fees",
@@ -58,6 +85,17 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
   useEffect(() => {
     initializeRevenueCat();
   }, [user]);
+
+  // Refetch subscription status every time screen is focused
+  useFocusEffect(
+    React.useCallback(() => {
+      if (user?.id && isInitialized) {
+        console.log('🔄 Screen focused - refreshing subscription data...');
+        initializeRevenueCat();
+        refetchLifetimeSlots();
+      }
+    }, [user?.id, isInitialized, refetchLifetimeSlots])
+  );
 
   const initializeRevenueCat = async () => {
     if (!user?.id) {
@@ -97,14 +135,25 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
       const customerInfo = await Purchases.logIn(user.id);
       
       const activeEntitlements = Object.keys(customerInfo.customerInfo.entitlements.active);
-      const hasRevenueCatSubscription = activeEntitlements.length > 0;
+      
+      // Check for cancelled subscription - if premium entitlement exists but won't renew, it's cancelled
+      const allEntitlements = customerInfo.customerInfo.entitlements.all;
+      const premiumEntitlement = customerInfo.customerInfo.entitlements.active['premium'] || allEntitlements['premium'];
+      
+      // More accurate RevenueCat subscription check
+      const hasRevenueCatSubscription = activeEntitlements.length > 0 && 
+        (!premiumEntitlement || (premiumEntitlement.willRenew && !premiumEntitlement.billingIssueDetectedAt && !premiumEntitlement.unsubscribeDetectedAt));
       
       console.log('✅ RevenueCat login successful:', {
         originalAppUserId: customerInfo.customerInfo.originalAppUserId,
         isAnonymous: customerInfo.customerInfo.originalAppUserId.startsWith('$RCAnonymousID'),
         activeEntitlements: activeEntitlements,
         hasActiveSubscriptions: hasRevenueCatSubscription,
-        customerInfoCreated: customerInfo.created
+        customerInfoCreated: customerInfo.created,
+        premiumWillRenew: premiumEntitlement?.willRenew,
+        premiumBillingIssue: !!premiumEntitlement?.billingIssueDetectedAt,
+        premiumUnsubscribed: !!premiumEntitlement?.unsubscribeDetectedAt,
+        premiumExpirationDate: premiumEntitlement?.expirationDate
       });
 
       // If RevenueCat has subscription but backend doesn't, prioritize backend
@@ -125,9 +174,29 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
       }
 
       // Load offerings for potential upgrades
+      console.log('🛒 Loading RevenueCat offerings...');
       const offerings = await Purchases.getOfferings();
+      
+      console.log('📦 Offerings loaded:', {
+        hasCurrentOffering: !!offerings.current,
+        offeringsCount: Object.keys(offerings.all).length,
+        currentOfferingId: offerings.current?.identifier,
+        packagesCount: offerings.current?.availablePackages?.length || 0
+      });
+      
       if (offerings.current) {
         setOfferings(offerings.current);
+        console.log('✅ Offerings set successfully:', {
+          identifier: offerings.current.identifier,
+          packages: offerings.current.availablePackages.map(pkg => ({
+            identifier: pkg.product.identifier,
+            packageType: pkg.packageType,
+            price: pkg.product.priceString
+          }))
+        });
+      } else {
+        console.log('⚠️ No current offering found');
+        setOfferings(null);
       }
 
       // Log webhook-related info
@@ -152,6 +221,26 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
     const activeSubscriptions = customerInfo.activeSubscriptions;
     const entitlements = customerInfo.entitlements.active;
     
+    // Check if subscription is actually cancelled (will renew = false)
+    const allEntitlements = customerInfo.entitlements.all;
+    const premiumEntitlement = entitlements['premium'] || allEntitlements['premium'];
+    
+    console.log('🔍 Detailed subscription check:', {
+      activeSubscriptions: activeSubscriptions.length,
+      activeEntitlements: Object.keys(entitlements).length,
+      willRenew: premiumEntitlement?.willRenew,
+      isActive: premiumEntitlement?.isActive,
+      expirationDate: premiumEntitlement?.expirationDate,
+      billingIssueDetectedAt: premiumEntitlement?.billingIssueDetectedAt,
+      unsubscribeDetectedAt: premiumEntitlement?.unsubscribeDetectedAt
+    });
+    
+    // If subscription is cancelled (willRenew = false) or has billing issues, don't count as active
+    if (premiumEntitlement && (!premiumEntitlement.willRenew || premiumEntitlement.billingIssueDetectedAt || premiumEntitlement.unsubscribeDetectedAt)) {
+      console.log('⚠️ Subscription cancelled or has billing issues - treating as inactive');
+      return { type: null, expirationDate: null, productId: null };
+    }
+    
     // Get the first active subscription
     const firstActiveSubscription = activeSubscriptions[0];
     if (!firstActiveSubscription) {
@@ -167,13 +256,13 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
     }
 
     // Get expiration date from entitlements
-    const premiumEntitlement = entitlements['premium'];
     const expirationDate = premiumEntitlement?.expirationDate || customerInfo.latestExpirationDate;
 
     console.log('📊 Subscription details:', {
       productId: firstActiveSubscription,
       type: subscriptionType,
-      expirationDate: expirationDate
+      expirationDate: expirationDate,
+      willRenew: premiumEntitlement?.willRenew
     });
 
     return {
@@ -299,11 +388,21 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
   const openSubscriptionModal = async () => {
     try {
       console.log('🛒 Opening RevenueCat Subscription Modal...');
+      
+      // Check lifetime slots before opening modal
+      if (lifetimeSlots && lifetimeSlots.slots_remaining > 0) {
+        console.log(`🎫 ${lifetimeSlots.slots_remaining} lifetime slots remaining`);
+      }
+      
       await RevenueCatUI.presentPaywall();
-      // Refresh subscription status after modal closes - check both backend and RevenueCat
+      
+      // Refresh subscription status and lifetime slots after modal closes
       setTimeout(() => {
-        console.log('🔄 Refreshing subscription data after modal close...');
-        initializeRevenueCat();
+        console.log('🔄 Refreshing subscription data and lifetime slots after modal close...');
+        Promise.all([
+          initializeRevenueCat(),
+          refetchLifetimeSlots()
+        ]);
       }, 1000);
     } catch (error: any) {
       console.error('❌ Error opening subscription modal:', error);
@@ -315,6 +414,20 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
     try {
       console.log('🛠️ Opening RevenueCat Customer Center Modal...');
       await RevenueCatUI.presentCustomerCenter();
+      
+      // Check if subscription was cancelled and show plans
+      setTimeout(async () => {
+        console.log('🔄 Checking subscription status after Customer Center...');
+        await initializeRevenueCat();
+        
+        // If user cancelled subscription, show them the subscription plans again
+        if (!hasActiveSubscription) {
+          console.log('📱 Subscription cancelled, showing plans...');
+          setTimeout(() => {
+            openSubscriptionModal();
+          }, 1000);
+        }
+      }, 1000);
     } catch (error: any) {
       console.error('❌ Error opening Customer Center:', error);
       Alert.alert(
@@ -382,6 +495,13 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
     const subscriptionPlatform = getSubscriptionPlatform();
     const currentPlatform = Platform.OS;
     
+    console.log('🔍 Platform upgrade check:', {
+      subscriptionPlatform,
+      currentPlatform,
+      backendSource: backendSubscriptionData?.subscription_source,
+      productId: subscriptionDetails.productId
+    });
+    
     // If subscription is from web (Stripe), they can't upgrade on mobile
     if (subscriptionPlatform === 'web') {
       return false;
@@ -399,6 +519,11 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
     // If subscription is from RevenueCat mobile, allow upgrade on mobile platforms
     if (subscriptionPlatform === 'mobile') {
       return currentPlatform === 'android' || currentPlatform === 'ios';
+    }
+    
+    // If platform is unknown or same platform, allow upgrade
+    if (subscriptionPlatform === 'unknown' || subscriptionPlatform === currentPlatform) {
+      return true;
     }
     
     return true;
@@ -424,7 +549,19 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
   };
 
   const upgradeToAnnual = async () => {
+    console.log('🚀 Upgrade to annual plan initiated');
+    console.log('📊 Current state:', {
+      hasActiveSubscription,
+      subscriptionType: subscriptionDetails.type,
+      currentPlatform: Platform.OS,
+      subscriptionPlatform: getSubscriptionPlatform(),
+      canUpgrade: canUpgradeOnCurrentPlatform(),
+      offeringsAvailable: !!offerings,
+      availablePackagesCount: offerings?.availablePackages?.length || 0
+    });
+
     if (!canUpgradeOnCurrentPlatform()) {
+      console.log('❌ Platform restriction blocking upgrade');
       Alert.alert(
         'Platform Restriction',
         getUpgradeRestrictionMessage(),
@@ -434,6 +571,7 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
     }
 
     if (!offerings || !user?.id) {
+      console.log('❌ Missing offerings or user ID:', { offerings: !!offerings, userId: !!user?.id });
       Alert.alert('Error', 'Unable to load upgrade options. Please try again.');
       return;
     }
@@ -441,19 +579,49 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
     try {
       setIsUpgrading(true);
       
-      // Find the annual package
-      const annualPackage = offerings.availablePackages.find(
-        pkg => pkg.packageType === 'ANNUAL' || pkg.product.identifier.includes('annual') || pkg.product.identifier.includes('year')
+      // Debug available packages
+      console.log('📦 Available packages:', offerings.availablePackages.map(pkg => ({
+        identifier: pkg.product.identifier,
+        packageType: pkg.packageType,
+        title: pkg.product.title,
+        description: pkg.product.description,
+        price: pkg.product.priceString
+      })));
+      
+      // Find the annual package with more comprehensive search
+      let annualPackage = offerings.availablePackages.find(
+        pkg => pkg.packageType === 'ANNUAL'
       );
 
       if (!annualPackage) {
-        Alert.alert('Error', 'Annual subscription option not available.');
+        annualPackage = offerings.availablePackages.find(
+          pkg => pkg.product.identifier.toLowerCase().includes('annual') || 
+                 pkg.product.identifier.toLowerCase().includes('year') ||
+                 pkg.product.title.toLowerCase().includes('annual') ||
+                 pkg.product.title.toLowerCase().includes('year')
+        );
+      }
+
+      if (!annualPackage) {
+        console.log('❌ No annual package found');
+        Alert.alert(
+          'Annual Plan Not Available', 
+          'The annual subscription option is not currently available. Please try refreshing or contact support.',
+          [
+            { text: 'Refresh', onPress: () => initializeRevenueCat() },
+            { text: 'OK' }
+          ]
+        );
         return;
       }
 
       console.log('🔄 Starting upgrade to annual subscription:', {
         fromProduct: subscriptionDetails.productId,
-        toProduct: annualPackage.product.identifier,
+        toPackage: {
+          identifier: annualPackage.product.identifier,
+          packageType: annualPackage.packageType,
+          price: annualPackage.product.priceString
+        },
         userId: user.id,
         subscriptionPlatform: getSubscriptionPlatform(),
         currentPlatform: Platform.OS
@@ -485,9 +653,40 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
 
     } catch (error: any) {
       console.error('❌ Upgrade failed:', error);
+      console.error('❌ Upgrade error details:', {
+        message: error.message,
+        code: error.code,
+        domain: error.domain,
+        userInfo: error.userInfo
+      });
       handleRevenueCatError(error);
     } finally {
       setIsUpgrading(false);
+    }
+  };
+
+  const openAndroidUpgradeModal = async () => {
+    try {
+      console.log('🤖 Opening Android upgrade options...');
+      
+      // Check lifetime slots availability for Android users
+      if (lifetimeSlots && lifetimeSlots.slots_remaining > 0) {
+        console.log(`🎫 ${lifetimeSlots.slots_remaining} lifetime slots available for Android users`);
+      }
+      
+      await RevenueCatUI.presentPaywall();
+      
+      // Refresh subscription status and lifetime slots after modal closes
+      setTimeout(() => {
+        console.log('🔄 Refreshing data after Android upgrade modal close...');
+        Promise.all([
+          initializeRevenueCat(),
+          refetchLifetimeSlots()
+        ]);
+      }, 1000);
+    } catch (error: any) {
+      console.error('❌ Error opening Android upgrade modal:', error);
+      handleRevenueCatError(error);
     }
   };
 
@@ -537,6 +736,16 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
         className="flex-1"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 160 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={['#44A27B']}
+            tintColor="#44A27B"
+            title="Pull to refresh"
+            titleColor="#44A27B"
+          />
+        }
       >
         <View className="items-center px-6 pt-8">
           
@@ -560,18 +769,44 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
           </View>
 
           {/* Features List */}
-          <View className="w-full mb-8">
-            {features.map((feature, index) => (
-              <View key={index} className="flex-row items-start mb-4">
-                <View className="mr-3 mt-1">
-                  <CheckIcon />
+          <View className="w-full mb-8 items-center px-6">
+            <View className="w-full max-w-xs">
+              {features.map((feature, index) => (
+                <View key={index} className="flex-row items-center mb-4">
+                  <View className="w-6 mr-3 items-center">
+                    <CheckIcon />
+                  </View>
+                  <Text className="text-gray-700 text-base leading-6 flex-1">
+                    {feature}
+                  </Text>
                 </View>
-                <Text className="flex-1 text-gray-700 text-base leading-6">
-                  {feature}
-                </Text>
-              </View>
-            ))}
+              ))}
+            </View>
           </View>
+
+          {/* Lifetime Slots Scarcity Alert */}
+          {!hasActiveSubscription && !lifetimeSlotsLoading && lifetimeSlots && lifetimeSlots.slots_remaining <= 20 && lifetimeSlots.slots_remaining > 0 && (
+            <View className="w-full mb-4 bg-orange-50 border border-orange-200 rounded-2xl p-4">
+              <Text className="text-orange-800 text-center font-semibold text-base mb-1">
+                🎫 Limited Time Offer!
+              </Text>
+              <Text className="text-orange-700 text-center text-sm">
+                Only {lifetimeSlots.slots_remaining} of {lifetimeSlots.total_slots} Lifetime Plan slots remaining
+              </Text>
+            </View>
+          )}
+          
+          {/* Lifetime Slots Sold Out Alert */}
+          {!hasActiveSubscription && !lifetimeSlotsLoading && lifetimeSlots && lifetimeSlots.slots_remaining === 0 && (
+            <View className="w-full mb-4 bg-red-50 border border-red-200 rounded-2xl p-4">
+              <Text className="text-red-800 text-center font-semibold text-base mb-1">
+                🚫 Lifetime Plan Sold Out
+              </Text>
+              <Text className="text-red-700 text-center text-sm">
+                All {lifetimeSlots.total_slots} Lifetime Plan slots have been taken. Monthly and annual plans are still available.
+              </Text>
+            </View>
+          )}
 
           {/* Action Buttons */}
           {!hasActiveSubscription ? (
@@ -584,6 +819,18 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
                   View Subscription Plans
                 </Text>
               </TouchableOpacity>
+              
+              {/* Android-specific Upgrade Plan Button */}
+              {/* {Platform.OS === 'android' && (
+                <TouchableOpacity 
+                  className="w-full bg-blue-600 rounded-3xl py-4 mb-4 shadow-sm"
+                  onPress={openAndroidUpgradeModal}
+                >
+                  <Text className="text-white text-center font-bold text-lg">
+                    🤖 Upgrade Plan (Android)
+                  </Text>
+                </TouchableOpacity>
+              )} */}
               
               {/* Restore Purchases Button */}
               <TouchableOpacity 
@@ -732,6 +979,23 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
               )}
             </View>
           )}
+
+          {/* Android-specific Upgrade Button for existing subscribers */}
+          {/* {hasActiveSubscription && Platform.OS === 'android' && (
+            <View className="w-full mb-6">
+              <TouchableOpacity 
+                className="w-full bg-blue-600 rounded-3xl py-4 shadow-sm"
+                onPress={openAndroidUpgradeModal}
+              >
+                <Text className="text-white text-center font-bold text-lg">
+                  🤖 Explore Upgrade Options (Android)
+                </Text>
+              </TouchableOpacity>
+              <Text className="text-gray-500 text-center text-sm mt-2">
+                View available plan upgrades and lifetime options
+              </Text>
+            </View>
+          )} */}
 
           {/* Customer Support Section */}
           <View className="w-full mt-6">

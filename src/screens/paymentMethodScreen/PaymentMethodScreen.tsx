@@ -383,7 +383,7 @@ export function PaymentMethodScreen({ navigation }: PaymentMethodScreenProps) {
               }}
             >
               <Text className="text-white text-center text-lg font-semibold">
-                + Add New Card
+                + Update Card
               </Text>
             </TouchableOpacity>
           </View>

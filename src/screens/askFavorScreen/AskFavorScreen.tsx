@@ -335,36 +335,38 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
       paymentMethodsCount: paymentMethodsData?.data?.payment_methods?.length || 0
     });
 
-    // Check subscription and KYC verification status first
-    const verification = await checkVerificationStatus();
-    
-    if (!verification.isSubscribed || !verification.isKYCVerified) {
-      setShowVerificationModal(true);
-      return;
-    }
+    // Check subscription and KYC verification status only for paid favors
+    if (formData.favorPrice === 'Paid') {
+      const verification = await checkVerificationStatus();
+      
+      if (!verification.isSubscribed || !verification.isKYCVerified) {
+        setShowVerificationModal(true);
+        return;
+      }
 
-    // Additional check for paid favors requiring payment methods
-    if (formData.favorPrice === 'Paid' && !hasPaymentMethods) {
-      Alert.alert(
-        'Payment Method Required',
-        'You need to add a payment method before creating paid favors. Please add a payment method first.',
-        [
-          {
-            text: 'Cancel',
-            style: 'cancel',
-          },
-          {
-            text: 'Add Payment Method',
-            onPress: () => {
-              // Navigate to Settings tab, then to PaymentMethodScreen
-              navigation?.navigate('Settings', {
-                screen: 'PaymentMethodScreen'
-              });
+      // Additional check for paid favors requiring payment methods
+      if (!hasPaymentMethods) {
+        Alert.alert(
+          'Payment Method Required',
+          'You need to add a payment method before creating paid favors. Please add a payment method first.',
+          [
+            {
+              text: 'Cancel',
+              style: 'cancel',
             },
-          },
-        ]
-      );
-      return;
+            {
+              text: 'Add Payment Method',
+              onPress: () => {
+                // Navigate to Settings tab, then to PaymentMethodScreen
+                navigation?.navigate('Settings', {
+                  screen: 'PaymentMethodScreen'
+                });
+              },
+            },
+          ]
+        );
+        return;
+      }
     }
 
     // Validate all fields
@@ -545,40 +547,53 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
                 <Text className="text-red-600 text-center">Failed to load subjects. Please try again.</Text>
               </View>
             ) : (
-              <View className="flex-row flex-wrap">
+              <View className="space-y-3">
                 {favorSubjects.map((subject) => (
-                <View key={subject.id} className="w-1/3 mb-4">
                   <TouchableOpacity 
-                    className="flex-row items-center"
+                    key={subject.id}
+                    className={`w-full p-4 rounded-xl flex-row items-center ${
+                      formData.favorSubjectId === subject.id 
+                        ? 'bg-[#44A27B]/10' 
+                        : 'bg-transparent'
+                    }`}
                     onPress={() => updateFormData('favorSubjectId', subject.id)}
                   >
-                    <View className={`w-6 h-6 rounded-full border-2 mr-3 items-center justify-center ${
-                      formData.favorSubjectId === subject.id ? 'border-[#44A27B]' : 'border-gray-400'
+                    <View className={`w-6 h-6 rounded-full border-2 mr-4 items-center justify-center ${
+                      formData.favorSubjectId === subject.id ? 'border-[#44A27B] bg-[#44A27B]' : 'border-gray-400'
                     }`}>
                       {formData.favorSubjectId === subject.id && (
-                        <View className="w-3 h-3 rounded-full bg-[#44A27B]" />
+                        <View className="w-3 h-3 rounded-full bg-white" />
                       )}
                     </View>
-                    <Text className="text-black text-base flex-1">{subject.name}</Text>
+                    <Text className={`text-base font-medium flex-1 ${
+                      formData.favorSubjectId === subject.id ? 'text-[#44A27B]' : 'text-black'
+                    }`}>
+                      {subject.name}
+                    </Text>
                   </TouchableOpacity>
-                </View>
                 ))}
                 
-                <View className="w-1/3 mb-4">
-                  <TouchableOpacity 
-                    className="flex-row items-center"
-                    onPress={() => updateFormData('favorSubjectId', OTHER_SUBJECT_ID)}
-                  >
-                    <View className={`w-6 h-6 rounded-full border-2 mr-3 items-center justify-center ${
-                      formData.favorSubjectId === OTHER_SUBJECT_ID ? 'border-[#44A27B]' : 'border-gray-400'
-                    }`}>
-                      {formData.favorSubjectId === OTHER_SUBJECT_ID && (
-                        <View className="w-3 h-3 rounded-full bg-[#44A27B]" />
-                      )}
-                    </View>
-                    <Text className="text-black text-base flex-1">Other</Text>
-                  </TouchableOpacity>
-                </View>
+                <TouchableOpacity 
+                  className={`w-full p-4 rounded-xl flex-row items-center ${
+                    formData.favorSubjectId === OTHER_SUBJECT_ID 
+                      ? 'bg-[#44A27B]/10' 
+                      : 'bg-transparent'
+                  }`}
+                  onPress={() => updateFormData('favorSubjectId', OTHER_SUBJECT_ID)}
+                >
+                  <View className={`w-6 h-6 rounded-full border-2 mr-4 items-center justify-center ${
+                    formData.favorSubjectId === OTHER_SUBJECT_ID ? 'border-[#44A27B] bg-[#44A27B]' : 'border-gray-400'
+                  }`}>
+                    {formData.favorSubjectId === OTHER_SUBJECT_ID && (
+                      <View className="w-3 h-3 rounded-full bg-white" />
+                    )}
+                  </View>
+                  <Text className={`text-base font-medium flex-1 ${
+                    formData.favorSubjectId === OTHER_SUBJECT_ID ? 'text-[#44A27B]' : 'text-black'
+                  }`}>
+                    Other
+                  </Text>
+                </TouchableOpacity>
               </View>
             )}
             {errors.favorSubjectId ? (

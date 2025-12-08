@@ -62,6 +62,16 @@ export const getTabBarHeight = (insetBottom: number): number => {
     return baseHeight + 20;
   }
   
+  // iOS handling
+  if (Platform.OS === 'ios') {
+    // For devices with home indicator, add height for safe area
+    if (insetBottom > 0) {
+      return baseHeight + Math.min(insetBottom, 34); // Cap at 34px (standard home indicator)
+    }
+    // For older devices
+    return baseHeight;
+  }
+  
   return baseHeight;
 };
 
@@ -78,6 +88,16 @@ export const getTabBarBottomPadding = (insetBottom: number): number => {
     }
     // For button navigation, add minimal extra padding
     return basePadding + 15; // Reduced from getBottomSafeAreaAdjustment
+  }
+  
+  // iOS handling - ensure proper safe area respect
+  if (Platform.OS === 'ios') {
+    // For devices with home indicator (insetBottom > 0)
+    if (insetBottom > 0) {
+      return Math.max(basePadding, insetBottom + 5);
+    }
+    // For older devices without home indicator
+    return basePadding;
   }
   
   return Math.max(basePadding, insetBottom + 10);
