@@ -1600,7 +1600,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
                     });
                   }}
                 >
-                  <Text className="text-white text-center font-semibold">Get Premium Subscription</Text>
+                  <Text className="text-white text-center font-semibold">Get FavorApp Pro Subscription</Text>
                 </TouchableOpacity>
               )}
               

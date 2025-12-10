@@ -2,7 +2,7 @@
   "expo": {
     "name": "FavorApp",
     "slug": "favorapp",
-    "version": "1.0.30",
+    "version": "1.0.31",
     "orientation": "portrait",
     "icon": "./assets/AppLogo.png",
     "userInterfaceStyle": "light",
@@ -24,9 +24,9 @@
     "android": {
       "icon": "./assets/AppLogo.png",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/AppLogo.png",
+        "foregroundImage": "./assets/AppLogo_adaptive.png",
         "backgroundColor": "#FFFFFF",
-        "monochromeImage": "./assets/AppLogo.png"
+        "monochromeImage": "./assets/AppLogo_adaptive.png"
       },
       "package": "com.favorappllc.mobile",
       "compileSdkVersion": 35,

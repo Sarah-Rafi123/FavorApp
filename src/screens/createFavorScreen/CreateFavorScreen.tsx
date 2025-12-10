@@ -28,6 +28,7 @@ import { LocationSmallSvg } from '../../assets/icons/LocationSmall';
 import { ClockSmallSvg } from '../../assets/icons/ClockSmall';
 import { useMyFavors, useFavorApplicants } from '../../services/queries/FavorQueries';
 import { useDeleteFavor, useAcceptApplicant } from '../../services/mutations/FavorMutations';
+import { getCertificationStatus } from '../../services/apis/CertificationApis';
 import { Favor, FavorApplicant } from '../../services/apis/FavorApis';
 import { useUserReviewsQuery } from '../../services/queries/ProfileQueries';
 import useAuthStore from '../../store/useAuthStore';
@@ -54,6 +55,12 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
   const [loadingApplicants, setLoadingApplicants] = useState<Set<string>>(new Set());
   const [showReassignModal, setShowReassignModal] = useState(false);
   const [reassignData, setReassignData] = useState<{ favor: Favor; applicant: FavorApplicant } | null>(null);
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [verificationStatus, setVerificationStatus] = useState<{
+    isSubscribed: boolean;
+    isKYCVerified: boolean;
+    isLoading: boolean;
+  }>({ isSubscribed: false, isKYCVerified: false, isLoading: false });
 
   // Get auth store state
   const { user, accessToken } = useAuthStore();
@@ -82,6 +89,41 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
       });
     }
   });
+
+  // Check verification status before accepting applicants
+  const checkVerificationStatus = async () => {
+    try {
+      setVerificationStatus(prev => ({ ...prev, isLoading: true }));
+      
+      // Check KYC certification status and subscription status
+      const certificationResponse = await getCertificationStatus();
+      const isKYCVerified = certificationResponse.data.is_kyc_verified === 'verified';
+      
+      // Check subscription status from the API response
+      const isSubscribed = !!(certificationResponse.data.active_subscription?.active);
+      
+      console.log('🔍 Verification Status Check:', {
+        isKYCVerified,
+        isSubscribed,
+        kycStatus: certificationResponse.data.is_kyc_verified,
+        hasActiveSubscription: !!certificationResponse.data.active_subscription,
+        subscriptionActive: certificationResponse.data.active_subscription?.active,
+        subscriptionStatus: certificationResponse.data.active_subscription?.status
+      });
+      
+      setVerificationStatus({
+        isKYCVerified,
+        isSubscribed,
+        isLoading: false
+      });
+      
+      return { isKYCVerified, isSubscribed };
+    } catch (error) {
+      console.error('Error checking verification status:', error);
+      setVerificationStatus(prev => ({ ...prev, isLoading: false }));
+      return { isKYCVerified: false, isSubscribed: false };
+    }
+  };
 
   // API calls for different tabs
   // All tab: active favors (shows requests) - using currentPage for infinite scroll
@@ -367,15 +409,18 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
     setFavorToCancel(null);
   };
 
-  const handleReassignModalClose = () => {
-    setShowReassignModal(false);
-    setReassignData(null);
-  };
-
   const handleConfirmReassign = async () => {
     if (!reassignData) return;
 
     try {
+      // Check subscription status first (mandatory), KYC is optional
+      const verification = await checkVerificationStatus();
+      
+      if (!verification.isSubscribed) {
+        setShowVerificationModal(true);
+        return;
+      }
+
       const key = `${reassignData.favor.id}-${reassignData.applicant.user.id}`;
       setLoadingApplicants(prev => new Set(prev).add(key));
       
@@ -408,7 +453,67 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
     }
   };
 
+  // Handle accepting an applicant with verification check
+  const handleAcceptApplicant = async (favor: Favor, applicant: FavorApplicant) => {
+    console.log('🚀 handleAcceptApplicant called - START');
+    
+    try {
+      console.log('🎯 Accept button clicked for:', {
+        favorId: favor.id,
+        applicantName: applicant.user.full_name,
+        applicantId: applicant.user.id
+      });
 
+      console.log('🔍 About to call checkVerificationStatus...');
+      
+      // Check subscription and KYC verification status first
+      const verification = await checkVerificationStatus();
+      
+      console.log('🔍 checkVerificationStatus completed. Result:', verification);
+      
+      // Check only subscription (mandatory), KYC is optional
+      if (!verification.isSubscribed) {
+        console.log('❌ Subscription validation failed, showing modal:', {
+          isSubscribed: verification.isSubscribed,
+          isKYCVerified: verification.isKYCVerified,
+          message: 'Subscription is required, KYC is optional'
+        });
+        
+        console.log('🚨 SHOWING VERIFICATION MODAL - SUBSCRIPTION REQUIRED...');
+        setShowVerificationModal(true);
+        console.log('🚨 setShowVerificationModal(true) called');
+        return;
+      }
+
+      console.log('✅ Verification passed, proceeding with accept...');
+
+      if (favor.accepted_response && favor.status === 'in-progress') {
+        // Favor already has accepted provider, show confirmation modal for reassign
+        setReassignData({ favor, applicant });
+        setShowReassignModal(true);
+      } else {
+        // No accepted provider yet, call accept API directly
+        const key = `${favor.id}-${applicant.user.id}`;
+        setLoadingApplicants(prev => new Set(prev).add(key));
+        
+        acceptApplicantMutation.mutate({
+          favorId: favor.id,
+          applicantId: applicant.user.id
+        });
+      }
+    } catch (error) {
+      console.error('❌ Error in handleAcceptApplicant:', error);
+      console.error('❌ Error stack:', (error as Error)?.stack);
+      // Show verification modal on error to be safe
+      console.log('🚨 Error occurred, showing verification modal as safety measure');
+      setShowVerificationModal(true);
+    }
+  };
+
+  const handleReassignModalClose = () => {
+    setShowReassignModal(false);
+    setReassignData(null);
+  };
 
   // Component for individual request cards showing applicant details
   const ApplicantReviewInfo = ({ applicant }: { applicant: FavorApplicant }) => {
@@ -648,22 +753,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
                 {/* Accept/Reassign button */}
                 <TouchableOpacity 
                   className="bg-[#44A27B] rounded-full py-4 mt-4"
-                  onPress={() => {
-                    if (favor.accepted_response && favor.status === 'in-progress') {
-                      // Favor already has accepted provider, show confirmation modal for reassign
-                      setReassignData({ favor, applicant });
-                      setShowReassignModal(true);
-                    } else {
-                      // No accepted provider yet, call accept API directly
-                      const key = `${favor.id}-${applicant.user.id}`;
-                      setLoadingApplicants(prev => new Set(prev).add(key));
-                      
-                      acceptApplicantMutation.mutate({
-                        favorId: favor.id,
-                        applicantId: applicant.user.id
-                      });
-                    }
-                  }}
+                  onPress={() => handleAcceptApplicant(favor, applicant)}
                   disabled={loadingApplicants.has(`${favor.id}-${applicant.user.id}`)}
                 >
                   <Text className="text-white font-bold text-lg text-center">
@@ -792,22 +882,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
           {/* Accept/Reassign button with full width */}
           <TouchableOpacity 
             className="bg-[#44A27B] rounded-full py-4 mt-4"
-            onPress={() => {
-              if (favor.accepted_response && favor.status === 'in-progress') {
-                // Favor already has accepted provider, show confirmation modal for reassign
-                setReassignData({ favor, applicant });
-                setShowReassignModal(true);
-              } else {
-                // No accepted provider yet, call accept API directly
-                const key = `${favor.id}-${applicant.user.id}`;
-                setLoadingApplicants(prev => new Set(prev).add(key));
-                
-                acceptApplicantMutation.mutate({
-                  favorId: favor.id,
-                  applicantId: applicant.user.id
-                });
-              }
-            }}
+            onPress={() => handleAcceptApplicant(favor, applicant)}
             disabled={loadingApplicants.has(`${favor.id}-${applicant.user.id}`)}
           >
             <Text className="text-white font-bold text-lg text-center">
@@ -1369,6 +1444,91 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
         newProviderName={reassignData?.applicant?.user?.full_name}
       />
 
+      {/* Verification Status Modal */}
+      <Modal
+        visible={showVerificationModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowVerificationModal(false)}
+      >
+        <View className="flex-1 bg-black/50 justify-center items-center px-6">
+          <View className="bg-white rounded-2xl p-6 w-full max-w-md">
+            <Text className="text-xl font-bold text-gray-800 mb-4 text-center">
+              Verification Required
+            </Text>
+            
+            {verificationStatus.isLoading ? (
+              <View className="flex-row justify-center items-center py-8">
+                <ActivityIndicator size="large" color="#44A27B" />
+                <Text className="ml-3 text-gray-600">Checking verification status...</Text>
+              </View>
+            ) : (
+              <>
+                <Text className="text-gray-600 text-center mb-6 leading-6">
+                  To accept favor applicants, you need an active subscription. KYC verification is optional but recommended.
+                </Text>
+                
+                <View className="mb-6">
+                  <View className="flex-row items-center mb-3">
+                    <View className={`w-5 h-5 rounded-full mr-3 ${verificationStatus.isSubscribed ? 'bg-green-500' : 'bg-red-500'}`}>
+                      <Text className="text-white text-xs text-center leading-5">
+                        {verificationStatus.isSubscribed ? '✓' : '✗'}
+                      </Text>
+                    </View>
+                    <Text className="text-gray-700 flex-1">Have an active subscription (Required)</Text>
+                  </View>
+                  
+                  <View className="flex-row items-center mb-3">
+                    <View className={`w-5 h-5 rounded-full mr-3 ${verificationStatus.isKYCVerified ? 'bg-green-500' : 'bg-blue-500'}`}>
+                      <Text className="text-white text-xs text-center leading-5">
+                        {verificationStatus.isKYCVerified ? '✓' : 'i'}
+                      </Text>
+                    </View>
+                    <Text className="text-gray-700 flex-1">Complete KYC verification (Optional)</Text>
+                  </View>
+                </View>
+                
+                <View className="gap-y-3">
+                  {!verificationStatus.isSubscribed && (
+                    <TouchableOpacity
+                      className="w-full py-3 px-4 bg-blue-500 rounded-xl"
+                      onPress={() => {
+                        setShowVerificationModal(false);
+                        navigation?.navigate('Settings', {
+                          screen: 'SubscriptionsScreen'
+                        });
+                      }}
+                    >
+                      <Text className="text-white text-center font-semibold">Get FavorApp Pro Subscription</Text>
+                    </TouchableOpacity>
+                  )}
+                  
+                  {!verificationStatus.isKYCVerified && (
+                    <TouchableOpacity
+                      className="w-full py-3 px-4 bg-green-500 rounded-xl"
+                      onPress={() => {
+                        setShowVerificationModal(false);
+                        navigation?.navigate('Settings', {
+                          screen: 'GetCertifiedScreen'
+                        });
+                      }}
+                    >
+                      <Text className="text-white text-center font-semibold">Get Certified (Optional)</Text>
+                    </TouchableOpacity>
+                  )}
+                  
+                  <TouchableOpacity
+                    className="w-full py-3 px-4 border border-gray-300 rounded-xl"
+                    onPress={() => setShowVerificationModal(false)}
+                  >
+                    <Text className="text-gray-600 text-center font-semibold">Cancel</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
 
     </ImageBackground>
   );

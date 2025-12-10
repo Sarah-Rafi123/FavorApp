@@ -120,6 +120,7 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
     aboutMe: '',
     otherSkills: '',
     ageConsent: '',
+    profileImage: '',
   });
 
   // Phone number formatting functions
@@ -356,6 +357,8 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
       const result = await ImagePickerUtils.openCamera();
       if (result) {
         setFormData(prev => ({ ...prev, profileImage: result }));
+        // Clear profile image error when image is selected
+        setErrors(prev => ({ ...prev, profileImage: '' }));
       }
     } catch (error: any) {
       console.error('Camera launch error:', error);
@@ -369,6 +372,8 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
       const result = await ImagePickerUtils.openImageLibrary();
       if (result) {
         setFormData(prev => ({ ...prev, profileImage: result }));
+        // Clear profile image error when image is selected
+        setErrors(prev => ({ ...prev, profileImage: '' }));
       }
     } catch (error: any) {
       console.error('Image library launch error:', error);
@@ -385,7 +390,11 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
         { 
           text: 'Remove', 
           style: 'destructive',
-          onPress: () => setFormData(prev => ({ ...prev, profileImage: null }))
+          onPress: () => {
+            setFormData(prev => ({ ...prev, profileImage: null }));
+            // Set profile image error when image is removed since it's required
+            setErrors(prev => ({ ...prev, profileImage: 'Profile picture is required' }));
+          }
         }
       ]
     );
@@ -404,6 +413,7 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
       aboutMe: '',
       otherSkills: '',
       ageConsent: '',
+      profileImage: '',
     };
     let isValid = true;
 
@@ -491,6 +501,12 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
       isValid = false;
     }
 
+    // Profile image validation
+    if (!formData.profileImage) {
+      newErrors.profileImage = 'Profile picture is required';
+      isValid = false;
+    }
+
     setErrors(newErrors);
     
     // Show popup with validation errors if there are any
@@ -516,6 +532,7 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
           aboutMe: 'About Me',
           otherSkills: 'Other Skills',
           ageConsent: 'Age Consent',
+          profileImage: 'Profile Picture',
         };
         return `• ${fieldLabels[field] || field}: ${error}`;
       });
@@ -535,10 +552,6 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
       // Validation popup is already shown by validateForm()
       return;
     }
-
-    const formatDate = (date: Date): string => {
-      return date.toISOString().split('T')[0]; // YYYY-MM-DD format
-    };
 
     // Create FormData for multipart upload
     const formDataPayload = new FormData();
@@ -633,7 +646,8 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
            validatePhone(formData.phoneText) === '' && 
            formData.yearsOfExperience.trim() &&
            formData.aboutMe.trim().length >= 20 &&
-           formData.ageConsent;
+           formData.ageConsent &&
+           formData.profileImage !== null;
     
     // Check age validation
     const today = new Date();
@@ -688,6 +702,7 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
       aboutMe: '',
       otherSkills: '',
       ageConsent: '',
+      profileImage: '',
     });
     
     // Clear address modal state
@@ -1043,7 +1058,7 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
               {/* Profile Image Upload */}
               <View className="mb-6">
                 <Text className="text-sm font-medium text-gray-700 mb-4">
-                  Profile Photo
+                  Profile Photo *
                 </Text>
                 <View className="items-center">
                   <View className="relative mb-4">
@@ -1068,6 +1083,9 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
                     </Text>
                   </TouchableOpacity>
                 </View>
+                {errors.profileImage ? (
+                  <Text className="text-red-500 text-sm mt-2 text-center">{errors.profileImage}</Text>
+                ) : null}
               </View>
 
               {/* Age Consent Checkbox */}

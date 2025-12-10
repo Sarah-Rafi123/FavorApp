@@ -11,6 +11,8 @@ import {
   Platform,
   Dimensions,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getTabBarHeight } from '../../utils/systemUI';
 import { WebView } from 'react-native-webview';
 import * as Location from 'expo-location';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
@@ -54,6 +56,8 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
   const webViewRef = useRef<WebView>(null);
   const mapReadyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = getTabBarHeight(insets.bottom);
 
   // Use browseFavors when filters are active, useFavors when not
   const useFilteredData = hasActiveFilters();
@@ -203,6 +207,9 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
                     streetViewControl: false,
                     fullscreenControl: false,
                     zoomControl: true,
+                    zoomControlOptions: {
+                        position: google.maps.ControlPosition.RIGHT_CENTER
+                    },
                     gestureHandling: 'greedy',
                     styles: [
                         {
@@ -658,7 +665,7 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
       </View>
 
       {/* GPS Location Button */}
-      <View className="absolute bottom-48 left-6 z-10">
+      <View className="absolute left-6 z-10" style={{ bottom: tabBarHeight + 20 }}>
         <TouchableOpacity
           onPress={async () => {
             // Return to live GPS location
@@ -710,7 +717,7 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
 
       {/* Favor Counter */}
       {!isLoading && allFavors.length > 0 && (
-        <View className="absolute bottom-36 left-6 z-10 bg-green-500 rounded-full px-3 py-2 shadow-lg">
+        <View className="absolute left-6 z-10 bg-green-500 rounded-full px-3 py-2 shadow-lg" style={{ bottom: tabBarHeight + 70 }}>
           <Text className="text-white text-sm font-semibold">
             {allFavors.filter(favor => parseLatLng(favor.lat_lng)).length} favors on map
           </Text>

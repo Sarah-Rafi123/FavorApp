@@ -760,7 +760,7 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications, navigatio
                     });
                   }}
                 >
-                  <Text className="text-white text-center font-semibold">Get Premium Subscription</Text>
+                  <Text className="text-white text-center font-semibold">Get FavorApp Pro Subscription</Text>
                 </TouchableOpacity>
               )}
               

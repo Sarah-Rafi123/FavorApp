@@ -756,7 +756,7 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
 
           {/* Title */}
           <Text className="text-3xl font-bold text-gray-800 mb-2 text-center">
-            {hasActiveSubscription ? 'Premium Member' : 'Get Premium Access'}
+            {hasActiveSubscription ? 'FavorApp Pro' : 'Get FavorApp Pro'}
           </Text>
           
           {/* Subtitle with lines */}
@@ -864,7 +864,7 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
                       <View className="flex-row justify-between items-center mb-2">
                         <Text className="text-gray-700 font-medium">Price:</Text>
                         <Text className="text-gray-600 text-sm">
-                          ₹{(backendSubscriptionData.active_subscription.plan.price_cents / 100).toFixed(2)}/{backendSubscriptionData.active_subscription.plan.interval}
+                          ${(backendSubscriptionData.active_subscription.plan.price_cents / 100).toFixed(2)}/{backendSubscriptionData.active_subscription.plan.interval}
                         </Text>
                       </View>
                     )}
@@ -889,7 +889,7 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
                       <View className="flex-row justify-between items-center mb-2">
                         <Text className="text-gray-700 font-medium">Status:</Text>
                         <Text className={`text-sm font-medium ${
-                          backendSubscriptionData.active_subscription.status === 'paid' ? 'text-green-600' : 'text-red-600'
+                          backendSubscriptionData.active_subscription.status === 'paid' ? 'text-green-600' : 'text-green-600'
                         }`}>
                           {backendSubscriptionData.active_subscription.status.charAt(0).toUpperCase() + 
                            backendSubscriptionData.active_subscription.status.slice(1)}
