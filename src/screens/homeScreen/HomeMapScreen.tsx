@@ -256,8 +256,8 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
                             map: map,
                             title: favor.title,
                             icon: {
-                                path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
-                                scale: 6,
+                                path: google.maps.SymbolPath.CIRCLE,
+                                scale: 8,
                                 fillColor: '#EF4444',
                                 fillOpacity: 0.9,
                                 strokeWeight: 2,
