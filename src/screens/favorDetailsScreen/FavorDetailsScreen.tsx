@@ -1312,7 +1312,7 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
 
             {/* Modal Text */}
             <Text className="text-gray-700 text-lg text-center mb-8 leading-6">
-              Are you sure you want to cancel this Favor request to help {favor.user.full_name}?
+              Are you sure you want to cancel this Favor request to get help from  {favor.user.full_name}?
             </Text>
 
             {/* Buttons */}
