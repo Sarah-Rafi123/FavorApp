@@ -828,21 +828,14 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications, navigatio
                         {verificationStatus.isKYCVerified ? '✓' : '✗'}
                       </Text>
                     </View>
-                    <Text className="text-gray-700 flex-1">Complete KYC verification through Shufti Pro</Text>
+                    <Text className="text-gray-700 flex-1">Complete Identity Verification through Shufti Pro</Text>
                   </View>
                 </View>
                 
-                <View className="flex-row gap-x-3">
-                  <TouchableOpacity
-                    className="flex-1 py-3 px-4 border border-gray-300 rounded-xl"
-                    onPress={() => setShowVerificationModal(false)}
-                  >
-                    <Text className="text-gray-600 text-center font-semibold">Cancel</Text>
-                  </TouchableOpacity>
-                  
+                <View className="gap-y-3">
                   {!verificationStatus.isSubscribed && (
                     <TouchableOpacity
-                      className="flex-1 py-3 px-4 bg-blue-500 rounded-xl"
+                      className="w-full py-3 px-4 bg-blue-500 rounded-xl"
                       onPress={() => {
                         setShowVerificationModal(false);
                         navigation?.navigate('Settings', {
@@ -856,7 +849,7 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications, navigatio
                   
                   {!verificationStatus.isKYCVerified && (
                     <TouchableOpacity
-                      className="flex-1 py-3 px-4 bg-green-500 rounded-xl"
+                      className="w-full py-3 px-4 bg-green-500 rounded-xl"
                       onPress={() => {
                         setShowVerificationModal(false);
                         navigation?.navigate('Settings', {
@@ -864,9 +857,16 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications, navigatio
                         });
                       }}
                     >
-                      <Text className="text-white text-center font-semibold">Get Certified</Text>
+                      <Text className="text-white text-center font-semibold">Get Verified</Text>
                     </TouchableOpacity>
                   )}
+
+                  <TouchableOpacity
+                    className="w-full py-3 px-4 border border-gray-300 rounded-xl"
+                    onPress={() => setShowVerificationModal(false)}
+                  >
+                    <Text className="text-gray-600 text-center font-semibold">Cancel</Text>
+                  </TouchableOpacity>
                 </View>
               </>
             )}

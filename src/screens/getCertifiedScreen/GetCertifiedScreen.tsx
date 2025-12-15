@@ -73,7 +73,7 @@ export function GetCertifiedScreen({ navigation }: GetCertifiedScreenProps) {
     "Complete identity verification process",
     "Upload valid government-issued ID (passport, driver's license, etc.)",
     "Take a live selfie for identity confirmation",
-    "Get certified status upon successful verification"
+    "Get verified status upon successful verification"
   ];
 
   useEffect(() => {
@@ -176,7 +176,7 @@ export function GetCertifiedScreen({ navigation }: GetCertifiedScreenProps) {
         if (status === 'verified') {
           Alert.alert(
             'Verification Complete!',
-            'Your identity has been successfully verified. You are now certified!',
+            'Your identity has been successfully verified. You are now verified!',
             [{ text: 'OK' }]
           );
         } else if (status === 'failed') {
@@ -205,7 +205,7 @@ export function GetCertifiedScreen({ navigation }: GetCertifiedScreenProps) {
     setKycStatus('verified');
     Alert.alert(
       'Verification Complete!',
-      'Your identity has been successfully verified. You are now certified!',
+      'Your identity has been successfully verified. You are now verified!',
       [{ text: 'OK', onPress: () => navigation?.navigate('SettingsMain') }]
     );
   };
@@ -233,7 +233,7 @@ export function GetCertifiedScreen({ navigation }: GetCertifiedScreenProps) {
         return {
           icon: <CheckIcon />,
           title: 'Verification Complete',
-          subtitle: 'You are now certified!',
+          subtitle: 'You are now verified!',
           color: 'text-green-600',
           bgColor: 'bg-[#DCFBCC]',
           borderColor: 'border-green-600'
@@ -305,7 +305,7 @@ export function GetCertifiedScreen({ navigation }: GetCertifiedScreenProps) {
           <View className="flex-row items-center mb-8 w-full px-4">
             <View className="flex-1 h-px bg-gray-300" />
             <Text className="text-lg text-gray-600 px-4">
-              Get Certified
+              Get Verified
             </Text>
             <View className="flex-1 h-px bg-gray-300" />
           </View>
@@ -396,9 +396,14 @@ export function GetCertifiedScreen({ navigation }: GetCertifiedScreenProps) {
                        <Text className="text-xs text-gray-600">×</Text>
                      </View>
                     }
-                    <Text className={`ml-2 font-medium ${activeSubscription ? 'text-green-600' : 'text-gray-500'}`}>
-                      {activeSubscription ? activeSubscription.plan.name : 'None'}
-                    </Text>
+                    <View className="ml-2">
+                      <Text className={`font-medium ${activeSubscription ? 'text-green-600' : 'text-gray-500'}`}>
+                        {activeSubscription ? activeSubscription.plan.name : 'None'}
+                      </Text>
+                      {activeSubscription && (
+                        <View className="h-0.5 bg-green-600 mt-1 rounded-full" />
+                      )}
+                    </View>
                   </View>
                 </View>
                 {activeSubscription && (
@@ -542,7 +547,7 @@ export function GetCertifiedScreen({ navigation }: GetCertifiedScreenProps) {
                     className="rounded-3xl py-4 border-2 border-[#44A27B] bg-transparent"
                     onPress={() => {
                       Alert.alert(
-                        'Restart KYC Verification',
+                        'Restart Identity Verification',
                         'Your current verification is still being processed. Starting a new verification will cancel the current one. Do you want to proceed?',
                         [
                           {
@@ -580,7 +585,7 @@ export function GetCertifiedScreen({ navigation }: GetCertifiedScreenProps) {
                   disabled={true}
                 >
                   <Text className="text-white text-center font-semibold text-lg">
-                    ✓ Verified & Certified
+                    ✓ Verified 
                   </Text>
                 </TouchableOpacity>
               )}

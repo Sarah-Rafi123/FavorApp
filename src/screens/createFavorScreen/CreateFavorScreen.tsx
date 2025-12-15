@@ -1358,9 +1358,11 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
         <View className="flex-1 items-center justify-center px-6">
           <View className="items-center mb-4">
             {activeTab === 'All' && 
-            <View className="w-64 h-64 justify-center items-center"
+            <View className="justify-center items-center"
             >
-                <CreateFavorSvg focused={true} />
+                <View style={{ transform: [{ scale: 3.5 }] }}>
+                  <CreateFavorSvg focused={true} />
+                </View>
                 </View>
              }
             {activeTab === 'Active' && <PersonwithHeartSvg />}
@@ -1468,7 +1470,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
             ) : (
               <>
                 <Text className="text-gray-600 text-center mb-6 leading-6">
-                  To accept favor applicants, you need an active subscription. KYC verification is optional but recommended.
+                  To accept favor applicants, you need an active subscription. Identity Verification is optional but recommended.
                 </Text>
                 
                 <View className="mb-6">
@@ -1487,7 +1489,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
                         {verificationStatus.isKYCVerified ? '✓' : 'i'}
                       </Text>
                     </View>
-                    <Text className="text-gray-700 flex-1">Complete KYC verification (Optional)</Text>
+                    <Text className="text-gray-700 flex-1">Complete Identity Verification (Optional)</Text>
                   </View>
                 </View>
                 
@@ -1516,7 +1518,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
                         });
                       }}
                     >
-                      <Text className="text-white text-center font-semibold">Get Certified (Optional)</Text>
+                      <Text className="text-white text-center font-semibold">Get Verified (Optional)</Text>
                     </TouchableOpacity>
                   )}
                   

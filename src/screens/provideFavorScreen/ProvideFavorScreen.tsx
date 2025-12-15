@@ -1667,7 +1667,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
                         {verificationStatus.isKYCVerified ? '✓' : '✗'}
                       </Text>
                     </View>
-                    <Text className="text-gray-700 flex-1">Complete KYC verification through Shufti Pro</Text>
+                    <Text className="text-gray-700 flex-1">Complete Identity Verification through Shufti Pro</Text>
                   </View>
                 </View>
                 
@@ -1696,7 +1696,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
                         });
                       }}
                     >
-                      <Text className="text-white text-center font-semibold">Get Certified</Text>
+                      <Text className="text-white text-center font-semibold">Get Verified</Text>
                     </TouchableOpacity>
                   )}
 

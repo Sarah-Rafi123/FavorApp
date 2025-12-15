@@ -579,7 +579,7 @@ export function ProfileScreen() {
                 <Text className="text-black font-bold text-lg">Location: <Text className="text-black font-normal text-lg">{profile.address.city}, {profile.address.state}</Text></Text>
               )}
               {profile?.is_certified !== null && (
-                <Text className="text-black font-bold text-lg">Certified: <Text className={`font-normal text-lg ${profile?.is_certified ? 'text-green-600' : 'text-gray-500'}`}>{profile?.is_certified ? 'Yes' : 'No'}</Text></Text>
+                <Text className="text-black font-bold text-lg">Verified: <Text className={`font-normal text-lg ${profile?.is_certified ? 'text-green-600' : 'text-gray-500'}`}>{profile?.is_certified ? 'Yes' : 'No'}</Text></Text>
               )}
             </View>
           </View>
@@ -814,7 +814,7 @@ export function ProfileScreen() {
                           <Text className="font-semibold text-black">{review.given_by.full_name}</Text>
                           {review.given_by.is_certified && (
                             <View className="bg-green-100 px-2 py-0.5 rounded-full">
-                              <Text className="text-green-600 text-xs font-medium">Certified</Text>
+                              <Text className="text-green-600 text-xs font-medium">Vertified</Text>
                             </View>
                           )}
                         </View>

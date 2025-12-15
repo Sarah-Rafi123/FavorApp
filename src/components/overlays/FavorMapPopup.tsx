@@ -412,7 +412,7 @@ export function FavorMapPopup({ visible, onClose, favor, navigation }: FavorMapP
                         });
                       }}
                     >
-                      <Text className="text-white text-center font-semibold">Get Certified</Text>
+                      <Text className="text-white text-center font-semibold">Get Verified</Text>
                     </TouchableOpacity>
                   )}
                 </View>
