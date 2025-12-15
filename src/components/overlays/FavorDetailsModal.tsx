@@ -4,6 +4,7 @@ import {
   Text,
   Modal,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   Image,
   ActivityIndicator,
   ScrollView,
@@ -259,8 +260,13 @@ export function FavorDetailsModal({ visible, onClose, favorId }: FavorDetailsMod
       animationType="fade"
       onRequestClose={onClose}
     >
-      <View className="flex-1 bg-black/50 justify-center items-center px-4">
-        <View className="bg-[#FBFFF0] rounded-2xl w-full max-w-sm mx-4 shadow-lg border-2 border-[#44A27B] max-h-[90vh] flex" style={{ height: '90%' }}>
+      <TouchableWithoutFeedback onPress={onClose}>
+        <View className="flex-1 bg-black/50 justify-center items-center px-4">
+          <TouchableWithoutFeedback onPress={() => {}}>
+            <View 
+              className="bg-[#FBFFF0] rounded-2xl w-full max-w-sm mx-4 shadow-lg border-2 border-[#44A27B] max-h-[90vh] flex" 
+              style={{ height: '90%' }}
+            >
           {/* Close Button */}
           <TouchableOpacity 
             onPress={onClose}
@@ -471,8 +477,10 @@ export function FavorDetailsModal({ visible, onClose, favorId }: FavorDetailsMod
               </TouchableOpacity>
             </View>
           )}
+            </View>
+          </TouchableWithoutFeedback>
         </View>
-      </View>
+      </TouchableWithoutFeedback>
 
       {/* Stripe Connect WebView */}
       <StripeConnectWebView

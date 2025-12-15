@@ -1553,12 +1553,12 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
                 </View>
               )}
               
-              <View className="flex-row items-center mb-3">
+              {/* <View className="flex-row items-center mb-3">
                 <View className="w-5 h-5 rounded-full mr-3 bg-yellow-500">
                   <Text className="text-white text-xs text-center leading-5">⭐</Text>
                 </View>
                 <Text className="text-gray-700 flex-1">Access to premium features</Text>
-              </View>
+              </View> */}
               
               <View className="flex-row items-center mb-3">
                 <View className="w-5 h-5 rounded-full mr-3 bg-purple-500">
@@ -1671,17 +1671,10 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
                   </View>
                 </View>
                 
-                <View className="flex-row gap-x-3">
-                  <TouchableOpacity
-                    className="flex-1 py-3 px-4 border border-gray-300 rounded-xl"
-                    onPress={() => setShowVerificationModal(false)}
-                  >
-                    <Text className="text-gray-600 text-center font-semibold">Cancel</Text>
-                  </TouchableOpacity>
-                  
+                <View className="gap-y-3">
                   {!verificationStatus.isSubscribed && (
                     <TouchableOpacity
-                      className="flex-1 py-3 px-4 bg-blue-500 rounded-xl"
+                      className="w-full py-3 px-4 bg-blue-500 rounded-xl"
                       onPress={() => {
                         setShowVerificationModal(false);
                         navigation?.navigate('Settings', {
@@ -1695,7 +1688,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
                   
                   {!verificationStatus.isKYCVerified && (
                     <TouchableOpacity
-                      className="flex-1 py-3 px-4 bg-green-500 rounded-xl"
+                      className="w-full py-3 px-4 bg-green-500 rounded-xl"
                       onPress={() => {
                         setShowVerificationModal(false);
                         navigation?.navigate('Settings', {
@@ -1706,6 +1699,13 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
                       <Text className="text-white text-center font-semibold">Get Certified</Text>
                     </TouchableOpacity>
                   )}
+
+                  <TouchableOpacity
+                    className="w-full py-3 px-4 border border-gray-300 rounded-xl"
+                    onPress={() => setShowVerificationModal(false)}
+                  >
+                    <Text className="text-gray-600 text-center font-semibold">Cancel</Text>
+                  </TouchableOpacity>
                 </View>
               </>
             )}

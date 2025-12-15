@@ -1358,7 +1358,10 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
         <View className="flex-1 items-center justify-center px-6">
           <View className="items-center mb-4">
             {activeTab === 'All' && 
+            <View className="w-64 h-64 justify-center items-center"
+            >
                 <CreateFavorSvg focused={true} />
+                </View>
              }
             {activeTab === 'Active' && <PersonwithHeartSvg />}
             {activeTab === 'History' && <TimerSvg />}

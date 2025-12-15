@@ -242,7 +242,7 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
                             scale: 8,
                             fillColor: '${selectedLocation ? '#3B82F6' : '#44A27B'}',
                             fillOpacity: 1,
-                            strokeWeight: 2,
+                            strokeWeight: 1,
                             strokeColor: '${selectedLocation ? '#1E40AF' : '#059669'}'
                         }
                     });
@@ -258,10 +258,10 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
                             icon: {
                                 path: google.maps.SymbolPath.CIRCLE,
                                 scale: 8,
-                                fillColor: '#EF4444',
+                                fillColor: '#F8BBD0',
                                 fillOpacity: 0.9,
-                                strokeWeight: 2,
-                                strokeColor: '#DC2626'
+                                strokeWeight: 1,
+                                strokeColor: '#e65351'
                             }
                         });
 

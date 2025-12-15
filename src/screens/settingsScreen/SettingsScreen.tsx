@@ -212,7 +212,7 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
 
           <SettingItem
             icon={<GetCertifiedSvg />}
-            title="Get Certified"
+            title="Get Verified"
             onPress={() => navigation?.navigate('GetCertifiedScreen')}
           />
 

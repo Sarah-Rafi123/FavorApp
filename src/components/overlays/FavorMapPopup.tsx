@@ -374,7 +374,7 @@ export function FavorMapPopup({ visible, onClose, favor, navigation }: FavorMapP
                         {verificationStatus.isKYCVerified ? '✓' : '✗'}
                       </Text>
                     </View>
-                    <Text className="text-gray-700 flex-1">Complete KYC verification through Shufti Pro</Text>
+                    <Text className="text-gray-700 flex-1">Complete Identity verification through Shufti Pro</Text>
                   </View>
                 </View>
                 

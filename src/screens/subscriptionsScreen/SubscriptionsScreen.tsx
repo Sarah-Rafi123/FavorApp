@@ -726,7 +726,7 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
           >
             <BackSvg />
           </TouchableOpacity>
-          <Text className="text-2xl font-bold text-black">
+          <Text className="text-3xl font-bold text-black">
             {hasActiveSubscription ? 'Manage Subscription' : 'Get Subscribed'}
           </Text>
         </View>
@@ -755,14 +755,14 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
           </View>
 
           {/* Title */}
-          <Text className="text-3xl font-bold text-gray-800 mb-2 text-center">
+          <Text className="text-4xl font-bold text-gray-800 mb-2 text-center">
             {hasActiveSubscription ? 'FavorApp Pro' : 'Get FavorApp Pro'}
           </Text>
           
           {/* Subtitle with lines */}
           <View className="flex-row items-center mb-8 w-full px-4">
             <View className="flex-1 h-px bg-gray-300" />
-            <Text className="text-lg text-gray-600 px-4">
+            <Text className="text-xl text-gray-600 px-4">
               {hasActiveSubscription ? 'Your Benefits' : 'Premium Features'}
             </Text>
             <View className="flex-1 h-px bg-gray-300" />
@@ -776,7 +776,7 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
                   <View className="w-6 mr-3 items-center">
                     <CheckIcon />
                   </View>
-                  <Text className="text-gray-700 text-base leading-6 flex-1">
+                  <Text className="text-gray-700 text-lg leading-6 flex-1">
                     {feature}
                   </Text>
                 </View>
@@ -787,10 +787,10 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
           {/* Lifetime Slots Scarcity Alert */}
           {!hasActiveSubscription && !lifetimeSlotsLoading && lifetimeSlots && lifetimeSlots.slots_remaining <= 20 && lifetimeSlots.slots_remaining > 0 && (
             <View className="w-full mb-4 bg-orange-50 border border-orange-200 rounded-2xl p-4">
-              <Text className="text-orange-800 text-center font-semibold text-base mb-1">
+              <Text className="text-orange-800 text-center font-semibold text-lg mb-1">
                 🎫 Limited Time Offer!
               </Text>
-              <Text className="text-orange-700 text-center text-sm">
+              <Text className="text-orange-700 text-center text-base">
                 Only {lifetimeSlots.slots_remaining} of {lifetimeSlots.total_slots} Lifetime Plan slots remaining
               </Text>
             </View>
@@ -799,10 +799,10 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
           {/* Lifetime Slots Sold Out Alert */}
           {!hasActiveSubscription && !lifetimeSlotsLoading && lifetimeSlots && lifetimeSlots.slots_remaining === 0 && (
             <View className="w-full mb-4 bg-red-50 border border-red-200 rounded-2xl p-4">
-              <Text className="text-red-800 text-center font-semibold text-base mb-1">
+              <Text className="text-red-800 text-center font-semibold text-lg mb-1">
                 🚫 Lifetime Plan Sold Out
               </Text>
-              <Text className="text-red-700 text-center text-sm">
+              <Text className="text-red-700 text-center text-base">
                 All {lifetimeSlots.total_slots} Lifetime Plan slots have been taken. Monthly and annual plans are still available.
               </Text>
             </View>
@@ -815,7 +815,7 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
                 className="w-full bg-[#44A27B] rounded-3xl py-4 mb-4 shadow-sm"
                 onPress={openSubscriptionModal}
               >
-                <Text className="text-white text-center font-bold text-lg">
+                <Text className="text-white text-center font-bold text-xl">
                   View Subscription Plans
                 </Text>
               </TouchableOpacity>
@@ -837,7 +837,7 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
                 className="w-full bg-gray-100 border border-gray-300 rounded-3xl py-3 shadow-sm"
                 onPress={handleRestorePurchases}
               >
-                <Text className="text-gray-700 text-center font-medium">
+                <Text className="text-gray-700 text-center font-medium text-lg">
                   Restore Purchases
                 </Text>
               </TouchableOpacity>
@@ -846,15 +846,15 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
             <View className="w-full mb-8">
               {/* Subscription Details Card */}
               <View className="w-full bg-[#DCFBCC] rounded-2xl p-6 mb-4 border border-green-600">
-                <Text className="text-center text-green-600 font-semibold mb-3">
+                <Text className="text-center text-green-600 font-semibold mb-3 text-lg">
                   ✅ Premium Member
                 </Text>
                 
                 {(subscriptionDetails.type || backendSubscriptionData?.active_subscription) && (
                   <View className=" rounded-lg p-4 mb-3">
                     <View className="flex-row justify-between items-center mb-2">
-                      <Text className="text-gray-700 font-medium">Plan:</Text>
-                      <Text className="text-green-800 font-semibold capitalize">
+                      <Text className="text-gray-700 font-medium text-lg">Plan:</Text>
+                      <Text className="text-green-800 font-semibold capitalize text-lg">
                         {backendSubscriptionData?.active_subscription?.plan.name || 
                          (subscriptionDetails.type === 'monthly' ? 'Monthly' : 'Annual') + ' Subscription'}
                       </Text>
@@ -862,8 +862,8 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
                     
                     {backendSubscriptionData?.active_subscription && (
                       <View className="flex-row justify-between items-center mb-2">
-                        <Text className="text-gray-700 font-medium">Price:</Text>
-                        <Text className="text-gray-600 text-sm">
+                        <Text className="text-gray-700 font-medium text-lg">Price:</Text>
+                        <Text className="text-gray-600 text-base">
                           ${(backendSubscriptionData.active_subscription.plan.price_cents / 100).toFixed(2)}/{backendSubscriptionData.active_subscription.plan.interval}
                         </Text>
                       </View>
@@ -871,24 +871,24 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
 
                     {backendSubscriptionData?.subscription_source && (
                       <View className="flex-row justify-between items-center mb-2">
-                        <Text className="text-gray-700 font-medium">Source:</Text>
-                        <Text className="text-gray-600 text-sm capitalize">
+                        <Text className="text-gray-700 font-medium text-lg">Source:</Text>
+                        <Text className="text-gray-600 text-base capitalize">
                           {backendSubscriptionData.subscription_source === 'revenue_cat' ? 'RevenueCat' : 'Stripe'}
                         </Text>
                       </View>
                     )}
 
                     <View className="flex-row justify-between items-center mb-2">
-                      <Text className="text-gray-700 font-medium">Store:</Text>
-                      <Text className="text-gray-600 text-sm">
+                      <Text className="text-gray-700 font-medium text-lg">Store:</Text>
+                      <Text className="text-gray-600 text-base">
                         {getStoreIcon()} {getStoreName()}
                       </Text>
                     </View>
 
                     {backendSubscriptionData?.active_subscription?.status && (
                       <View className="flex-row justify-between items-center mb-2">
-                        <Text className="text-gray-700 font-medium">Status:</Text>
-                        <Text className={`text-sm font-medium ${
+                        <Text className="text-gray-700 font-medium text-lg">Status:</Text>
+                        <Text className={`text-base font-medium ${
                           backendSubscriptionData.active_subscription.status === 'paid' ? 'text-green-600' : 'text-green-600'
                         }`}>
                           {backendSubscriptionData.active_subscription.status.charAt(0).toUpperCase() + 
@@ -899,8 +899,8 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
                     
                     {subscriptionDetails.expirationDate && (
                       <View className="flex-row justify-between items-center">
-                        <Text className="text-gray-700 font-medium">Renews:</Text>
-                        <Text className="text-gray-600 text-sm">
+                        <Text className="text-gray-700 font-medium text-lg">Renews:</Text>
+                        <Text className="text-gray-600 text-base">
                           {formatExpirationDate(subscriptionDetails.expirationDate)}
                         </Text>
                       </View>
@@ -908,7 +908,7 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
                   </View>
                 )}
 
-                <Text className="text-center text-green-700 text-sm">
+                <Text className="text-center text-green-700 text-base">
                   Enjoy all premium features and benefits
                 </Text>
               </View>
@@ -925,13 +925,13 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
                     ? 'bg-[#DCFBCC] border-green-600' 
                     : 'bg-orange-50 border-orange-300'
                 }`}>
-                  <Text className={`text-center font-semibold mb-2 ${
+                  <Text className={`text-center font-semibold mb-2 text-lg ${
                     canUpgradeOnCurrentPlatform() ? 'text-green-600' : 'text-orange-600'
                   }`}>
                     {canUpgradeOnCurrentPlatform() ? '💰 Save with Annual Plan' : '⚠️ Platform Restriction'}
                   </Text>
                   
-                  <Text className={`text-center text-sm mb-4 ${
+                  <Text className={`text-center text-base mb-4 ${
                     canUpgradeOnCurrentPlatform() ? 'text-green-600' : 'text-orange-600'
                   }`}>
                     {canUpgradeOnCurrentPlatform() 
@@ -949,12 +949,12 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
                       {isUpgrading ? (
                         <View className="flex-row justify-center items-center">
                           <ActivityIndicator size="small" color="white" />
-                          <Text className="text-white text-center font-semibold ml-2">
+                          <Text className="text-white text-center font-semibold ml-2 text-lg">
                             Upgrading...
                           </Text>
                         </View>
                       ) : (
-                        <Text className="text-white text-center font-semibold">
+                        <Text className="text-white text-center font-semibold text-lg">
                           Upgrade to Annual Plan
                         </Text>
                       )}
@@ -970,7 +970,7 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
                         );
                       }}
                     >
-                      <Text className="text-gray-600 text-center font-semibold">
+                      <Text className="text-gray-600 text-center font-semibold text-lg">
                         Cannot Upgrade Here
                       </Text>
                     </TouchableOpacity>
@@ -1001,7 +1001,7 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
           <View className="w-full mt-6">
             <View className="flex-row items-center mb-4 w-full px-4">
               <View className="flex-1 h-px bg-gray-300" />
-              <Text className="text-sm text-gray-500 px-4">
+              <Text className="text-base text-gray-500 px-4">
                 {hasActiveSubscription ? 'Manage' : 'Need Help?'}
               </Text>
               <View className="flex-1 h-px bg-gray-300" />
@@ -1011,10 +1011,10 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
               className="w-full bg-white border border-gray-300 rounded-2xl p-4 shadow-sm"
               onPress={openCustomerCenterModal}
             >
-              <Text className="text-center text-gray-700 font-medium">
+              <Text className="text-center text-gray-700 font-medium text-lg">
                 🛠️ Customer Center
               </Text>
-              <Text className="text-center text-gray-500 text-sm mt-1">
+              <Text className="text-center text-gray-500 text-base mt-1">
                 {hasActiveSubscription ? 'Manage subscription and billing' : 'Get support and manage subscription'}
               </Text>
             </TouchableOpacity>

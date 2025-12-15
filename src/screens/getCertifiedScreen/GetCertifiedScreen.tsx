@@ -280,7 +280,7 @@ export function GetCertifiedScreen({ navigation }: GetCertifiedScreenProps) {
           >
             <BackSvg />
           </TouchableOpacity>
-          <Text className="text-2xl font-bold text-black">Get Certified</Text>
+          <Text className="text-2xl font-bold text-black">Get Verified</Text>
         </View>
       </View>
 
@@ -336,18 +336,23 @@ export function GetCertifiedScreen({ navigation }: GetCertifiedScreenProps) {
 
           {/* Certification Status Card */}
           <View className="w-full bg-white rounded-2xl p-6 mb-6 border border-gray-200 shadow-sm">
-            <Text className="text-lg font-semibold text-gray-800 mb-4">
-              Certification Status
+            <Text className="text-lg font-semibold text-gray-800 mb-6 text-center">
+              Verification Status
             </Text>
             
-            <View className="space-y-3">
-              {/* KYC Status */}
-              <View className="flex-row justify-between items-center">
-                <Text className="text-gray-600">Identity Verification:</Text>
+            <View className="space-y-4">
+              {/* Identity Verification */}
+              <View className="flex-row justify-between items-center py-2">
+                <Text className="text-gray-700 font-medium">Identity Verification</Text>
                 <View className="flex-row items-center">
                   {kycStatus === 'verified' && <CheckIcon />}
                   {kycStatus === 'pending' && <PendingIcon />}
                   {kycStatus === 'failed' && <ErrorIcon />}
+                  {kycStatus === 'not-verified' && (
+                    <View className="w-6 h-6 rounded-full bg-gray-200 items-center justify-center">
+                      <Text className="text-xs text-gray-600">×</Text>
+                    </View>
+                  )}
                   <Text className={`ml-2 font-medium ${
                     kycStatus === 'verified' ? 'text-green-600' :
                     kycStatus === 'pending' ? 'text-yellow-600' :
@@ -360,9 +365,12 @@ export function GetCertifiedScreen({ navigation }: GetCertifiedScreenProps) {
                 </View>
               </View>
 
+              {/* Divider */}
+              <View className="h-px bg-gray-200" />
+
               {/* Certification Status */}
-              <View className="flex-row justify-between items-center">
-                <Text className="text-gray-600">Certification:</Text>
+              <View className="flex-row justify-between items-center py-2">
+                <Text className="text-gray-700 font-medium">Certification Status</Text>
                 <View className="flex-row items-center">
                   {isCertified ? <CheckIcon /> : 
                    <View className="w-6 h-6 rounded-full bg-gray-200 items-center justify-center">
@@ -375,43 +383,41 @@ export function GetCertifiedScreen({ navigation }: GetCertifiedScreenProps) {
                 </View>
               </View>
 
+              {/* Divider */}
+              <View className="h-px bg-gray-200" />
+
               {/* Subscription Status */}
-              {activeSubscription ? (
-                <>
-                  <View className="flex-row justify-between items-center">
-                    <Text className="text-gray-600">Subscription:</Text>
-                    <View className="flex-row items-center">
-                      <CheckIcon />
-                      <Text className="ml-2 font-medium text-green-600">
-                        {activeSubscription.plan.name}
-                      </Text>
-                    </View>
+              <View className="py-2">
+                <View className="flex-row justify-between items-center">
+                  <Text className="text-gray-700 font-medium">Subscription Status</Text>
+                  <View className="flex-row items-center">
+                    {activeSubscription ? <CheckIcon /> : 
+                     <View className="w-6 h-6 rounded-full bg-gray-200 items-center justify-center">
+                       <Text className="text-xs text-gray-600">×</Text>
+                     </View>
+                    }
+                    <Text className={`ml-2 font-medium ${activeSubscription ? 'text-green-600' : 'text-gray-500'}`}>
+                      {activeSubscription ? activeSubscription.plan.name : 'None'}
+                    </Text>
                   </View>
-                  <View className="flex-row justify-between items-center">
-                    <Text className="text-gray-600">Status:</Text>
-                    <Text className={`font-medium ${
+                </View>
+                {activeSubscription && (
+                  <View className="mt-2 ml-8">
+                    <Text className={`text-sm ${
                       activeSubscription.status === 'paid' ? 'text-green-600' : 'text-yellow-600'
                     }`}>
-                      {activeSubscription.status === 'paid' ? 'Active' : activeSubscription.status}
+                      {activeSubscription.status === 'paid' ? 'Active' : activeSubscription.status} • ${(activeSubscription.plan.price_cents / 100).toFixed(2)}/{activeSubscription.plan.interval}
                     </Text>
                   </View>
-                  <View className="flex-row justify-between items-center">
-                    <Text className="text-gray-600">Plan:</Text>
-                    <Text className="font-medium text-gray-800">
-                      ${(activeSubscription.plan.price_cents / 100).toFixed(2)}/{activeSubscription.plan.interval}
-                    </Text>
-                  </View>
-                </>
-              ) : (
-                <View className="flex-row justify-between items-center">
-                  <Text className="text-gray-600">Subscription:</Text>
-                  <Text className="font-medium text-gray-500">None</Text>
-                </View>
-              )}
+                )}
+              </View>
 
-              {/* Payment Method Status */}
-              <View className="flex-row justify-between items-center">
-                <Text className="text-gray-600">Payment Method:</Text>
+              {/* Divider */}
+              <View className="h-px bg-gray-200" />
+
+              {/* Payment Method */}
+              <View className="flex-row justify-between items-center py-2">
+                <Text className="text-gray-700 font-medium">Payment Method</Text>
                 <View className="flex-row items-center">
                   {hasPaymentMethod ? <CheckIcon /> : 
                    <View className="w-6 h-6 rounded-full bg-gray-200 items-center justify-center">
@@ -440,7 +446,7 @@ export function GetCertifiedScreen({ navigation }: GetCertifiedScreenProps) {
 
           {/* Features List */}
           <View className="w-full mb-8">
-            <Text className="text-lg font-semibold text-gray-800 mb-4">
+            <Text className="text-lg font-semibold text-gray-800 mb-4 text-center">
               Verification Process:
             </Text>
             {features.map((feature, index) => (
@@ -459,8 +465,8 @@ export function GetCertifiedScreen({ navigation }: GetCertifiedScreenProps) {
             {/* Additional info for pending verifications */}
             {kycStatus === 'pending' && (
               <View className="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-200">
-                <Text className="text-blue-800 font-medium mb-2">💡 Need to restart verification?</Text>
-                <Text className="text-blue-700 text-sm leading-5">
+                <Text className="text-blue-800 font-medium mb-2 text-center">💡 Need to restart verification?</Text>
+                <Text className="text-blue-700 text-sm leading-5 text-center">
                   If your verification is taking too long or you encountered technical issues, you can start a new verification process. This will cancel your current pending verification.
                 </Text>
               </View>

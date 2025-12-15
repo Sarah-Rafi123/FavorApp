@@ -33,9 +33,19 @@ export function FavorMapPreviewModal({ visible, onClose, favor }: FavorMapPrevie
       transparent
       animationType="fade"
       statusBarTranslucent
+      onRequestClose={onClose}
     >
-      <View className="flex-1 bg-black/50 items-center justify-center px-6">
-        <View className="bg-white rounded-3xl p-6 w-full max-w-sm relative border-4" style={{borderColor: '#71DFB1'}}>
+      <TouchableOpacity 
+        className="flex-1 bg-black/50 items-center justify-center px-6"
+        activeOpacity={1}
+        onPress={onClose}
+      >
+        <TouchableOpacity 
+          className="bg-white rounded-3xl p-6 w-full max-w-sm relative border-4" 
+          style={{borderColor: '#71DFB1'}}
+          activeOpacity={1}
+          onPress={(e) => e.stopPropagation()}
+        >
           
           {/* Close Button */}
           <TouchableOpacity 
@@ -113,8 +123,8 @@ export function FavorMapPreviewModal({ visible, onClose, favor }: FavorMapPrevie
             )}
           </View>
 
-        </View>
-      </View>
+        </TouchableOpacity>
+      </TouchableOpacity>
     </Modal>
   );
 }

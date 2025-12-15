@@ -261,6 +261,7 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications, navigatio
     setShowFavorDetailsModal(true);
   };
 
+
   const handleStripeSetupRequired = async (onSetupComplete: () => void) => {
     try {
       console.log('🚀 Starting Stripe Connect WebView setup...');
@@ -713,12 +714,12 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications, navigatio
                 </View>
               )}
               
-              <View className="flex-row items-center mb-3">
+              {/* <View className="flex-row items-center mb-3">
                 <View className="w-5 h-5 rounded-full mr-3 bg-yellow-500">
                   <Text className="text-white text-xs text-center leading-5">⭐</Text>
                 </View>
                 <Text className="text-gray-700 flex-1">Access to premium features</Text>
-              </View>
+              </View> */}
               
               <View className="flex-row items-center mb-3">
                 <View className="w-5 h-5 rounded-full mr-3 bg-purple-500">

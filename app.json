@@ -7,7 +7,7 @@
     "icon": "./assets/AppLogo.png",
     "userInterfaceStyle": "light",
     "scheme": "favorapp",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
       "icon": "./assets/AppLogo.png",
       "supportsTablet": true,

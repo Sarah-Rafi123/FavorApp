@@ -33,7 +33,6 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
     timeToComplete: '20 minutes',
     favorPrice: 'Free',
     tip: 0,
-    additionalTip: 0,
     address: '',
     description: '',
     city: '',
@@ -395,7 +394,6 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
         favor_pay: formData.favorPrice === 'Paid' ? '0' : '1', // 0 = paid, 1 = free
         time_to_complete: formData.timeToComplete,
         tip: formData.favorPrice === 'Paid' ? formData.tip : 0,
-        additional_tip: formData.favorPrice === 'Paid' && formData.additionalTip > 0 ? formData.additionalTip : undefined,
         lat_lng: formData.latLng || undefined,
         other_subject_name: formData.favorSubjectId === OTHER_SUBJECT_ID ? formData.otherSubjectName.trim() : undefined,
       };
@@ -620,6 +618,9 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
                   <Text className="text-sm font-medium text-gray-700 mb-2">
                     Favor Amount ($) *
                   </Text>
+                  <Text className="text-xs text-gray-500 mb-3">
+                    Favor charges 3% + $0.30 per transaction to keep the app running.
+                  </Text>
                   <TextInput
                     className={`px-4 py-3 rounded-xl border text-base bg-transparent ${
                       errors.tip ? 'border-red-500' : 'border-gray-300'
@@ -642,29 +643,6 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
                   {errors.tip ? (
                     <Text className="text-red-500 text-sm mt-1">{errors.tip}</Text>
                   ) : null}
-                </View>
-                
-                <View>
-                  <Text className="text-sm font-medium text-gray-700 mb-2">
-                    Additional Tip ($) - Optional
-                  </Text>
-                  <TextInput
-                    className="px-4 py-3 rounded-xl border border-gray-300 text-base bg-transparent"
-                    style={{
-                      backgroundColor: 'transparent',
-                      fontSize: 16,
-                      lineHeight: 22,
-                      height: 56
-                    }}
-                    placeholder="Enter additional tip (optional)"
-                    placeholderTextColor="#9CA3AF"
-                    value={formData.additionalTip.toString()}
-                    onChangeText={(text) => {
-                      const numValue = parseFloat(text) || 0;
-                      updateFormData('additionalTip', numValue);
-                    }}
-                    keyboardType="numeric"
-                  />
                 </View>
               </View>
             )}

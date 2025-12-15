@@ -28,7 +28,6 @@ export interface Favor {
   description: string;
   address: string;
   tip: string | number;
-  additional_tip?: string | number;
   favor_pay: boolean;
   priority: 'immediate' | 'delayed' | 'no_rush';
   status: 'pending' | 'in-progress' | 'completed' | 'cancelled';
@@ -208,7 +207,6 @@ export interface CreateFavorRequest {
   favor_pay: '0' | '1'; // 0 = paid, 1 = free
   time_to_complete?: string;
   tip?: number;
-  additional_tip?: number;
   lat_lng?: string;
   other_subject_name?: string;
 }
@@ -232,7 +230,6 @@ export interface UpdateFavorRequest {
   favor_pay?: '0' | '1';
   time_to_complete?: string;
   tip?: number;
-  additional_tip?: number;
   lat_lng?: string;
   other_subject_name?: string;
   remove_image?: '1';

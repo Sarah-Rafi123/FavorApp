@@ -730,24 +730,11 @@ export function FavorDetailsScreen({ navigation, route }: FavorDetailsScreenProp
                   </Text>
                 </View>
 
-                {favor.additional_tip && parseFloat((favor.additional_tip || 0).toString()) > 0 && (
-                  <View className="flex-row">
-                    <Text className="text-gray-700 text-base w-20">Tip</Text>
-                    <Text className="text-gray-700 text-base mr-2">:</Text>
-                    <Text className="text-gray-700 text-base flex-1">
-                      +${parseFloat((favor.additional_tip || 0).toString()).toFixed(2)}
-                    </Text>
-                  </View>
-                )}
-
                 <View className="flex-row">
                   <Text className="text-gray-700 text-base w-20">Total</Text>
                   <Text className="text-gray-700 text-base mr-2">:</Text>
                   <Text className="text-gray-700 text-base flex-1">
-                    ${(
-                      parseFloat((favor.tip || 0).toString()) + 
-                      parseFloat((favor.additional_tip || 0).toString())
-                    ).toFixed(2)}
+                    ${parseFloat((favor.tip || 0).toString()).toFixed(2)}
                   </Text>
                 </View>
               </>
