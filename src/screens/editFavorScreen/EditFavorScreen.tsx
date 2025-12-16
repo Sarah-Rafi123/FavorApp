@@ -575,6 +575,9 @@ export function EditFavorScreen({ navigation, route }: EditFavorScreenProps) {
                   <Text className="text-sm font-medium text-gray-700 mb-2">
                     Favor Amount ($) *
                   </Text>
+                  <Text className="text-xs text-gray-500 mb-3">
+                    Favor charges 3% + $0.30 per transaction to keep the app running.
+                  </Text>
                   <TextInput
                     className={`px-4 py-3 rounded-xl border text-base bg-white ${
                       errors.tip ? 'border-red-500' : 'border-gray-300'
@@ -593,6 +596,11 @@ export function EditFavorScreen({ navigation, route }: EditFavorScreenProps) {
                     }}
                     keyboardType="numeric"
                   />
+                  {formData.tip > 0 && (
+                    <Text className="text-sm font-medium text-black mt-3">
+                      Final amount would be ${(formData.tip + (formData.tip * 0.03) + 0.30).toFixed(2)}
+                    </Text>
+                  )}
                   {errors.tip ? (
                     <Text className="text-red-500 text-sm mt-1">{errors.tip}</Text>
                   ) : null}

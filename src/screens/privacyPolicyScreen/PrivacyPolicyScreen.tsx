@@ -59,8 +59,9 @@ export function PrivacyPolicyScreen({ navigation }: PrivacyPolicyScreenProps) {
           <Text className="text-sm text-gray-700 leading-6 mb-4">
             • Account information: Name, email address, phone number, password{'\n'}
             • Profile information: Photos, bio, preferences{'\n'}
-            • Identity verification: Government-issued ID for KYC compliance{'\n'}
-            • Payment information: Processed securely through Stripe{'\n'}
+            • Identity verification: Government-issued ID, facial recognition data via Shufti Pro{'\n'}
+            • Payment information: Credit/debit cards, bank accounts processed through Stripe{'\n'}
+            • Subscription information: Plan details, billing history, payment preferences{'\n'}
             • Communications: Messages between users, support inquiries
           </Text>
 
@@ -76,20 +77,23 @@ export function PrivacyPolicyScreen({ navigation }: PrivacyPolicyScreenProps) {
           <Text className="text-base font-semibold text-gray-800 mb-2">Third-Party Information:</Text>
           <Text className="text-sm text-gray-700 leading-6 mb-6">
             • Social media profile information if you choose to link accounts{'\n'}
-            • Information from identity verification providers{'\n'}
-            • Payment processing data from Stripe and app stores
+            • Identity verification data from Shufti Pro (KYC/AML compliance){'\n'}
+            • Payment processing data from Stripe and app stores{'\n'}
+            • Subscription management data from RevenueCat{'\n'}
+            • Background check information (when applicable)
           </Text>
 
           <Text className="text-lg font-bold text-gray-800 mb-3">2. How We Use Your Information</Text>
           <Text className="text-sm text-gray-700 leading-6 mb-6">
             • Provide and maintain our Service{'\n'}
-            • Process payments and transactions{'\n'}
-            • Verify user identity and prevent fraud{'\n'}
-            • Send notifications about app activity and updates{'\n'}
+            • Process payments, subscriptions, and transactions{'\n'}
+            • Verify user identity through Shufti Pro and prevent fraud{'\n'}
+            • Manage subscription billing and renewals{'\n'}
+            • Send notifications about app activity, billing, and updates{'\n'}
             • Improve our Service through analytics{'\n'}
-            • Comply with legal obligations{'\n'}
+            • Comply with legal obligations and KYC/AML requirements{'\n'}
             • Protect user safety and security{'\n'}
-            • Provide customer support
+            • Provide customer support and subscription management
           </Text>
 
           <Text className="text-lg font-bold text-gray-800 mb-3">3. Information Sharing and Disclosure</Text>
@@ -98,11 +102,12 @@ export function PrivacyPolicyScreen({ navigation }: PrivacyPolicyScreenProps) {
           </Text>
           <Text className="text-sm text-gray-700 leading-6 mb-6">
             • With other users when you post public content{'\n'}
-            • With service providers (Stripe, RevenueCat, push notification services){'\n'}
+            • With service providers (Stripe, RevenueCat, Shufti Pro, push notification services){'\n'}
             • When required by law or to protect rights and safety{'\n'}
             • In connection with business transfers{'\n'}
             • With your consent for specific purposes{'\n'}
-            • For fraud prevention and identity verification
+            • For fraud prevention, identity verification, and KYC/AML compliance{'\n'}
+            • With subscription and billing partners for payment processing
           </Text>
 
           <Text className="text-lg font-bold text-gray-800 mb-3">4. Data Retention</Text>
@@ -129,27 +134,55 @@ export function PrivacyPolicyScreen({ navigation }: PrivacyPolicyScreenProps) {
             • Non-discrimination for exercising rights
           </Text>
 
-          <Text className="text-lg font-bold text-gray-800 mb-3">7. Location Services</Text>
+          <Text className="text-lg font-bold text-gray-800 mb-3">7. Subscription Services and Billing</Text>
+          <Text className="text-base text-gray-700 leading-6 mb-4">
+            For subscription services, we collect and process:
+          </Text>
+          <Text className="text-sm text-gray-700 leading-6 mb-6">
+            • Subscription plan preferences and history{'\n'}
+            • Payment method information (processed by Stripe){'\n'}
+            • Billing addresses and transaction records{'\n'}
+            • Auto-renewal settings and cancellation requests{'\n'}
+            • App store purchase receipts (Apple App Store, Google Play){'\n'}
+            • RevenueCat subscriber data for cross-platform management{'\n'}
+            • Promotional code usage and subscription modifications
+          </Text>
+
+          <Text className="text-lg font-bold text-gray-800 mb-3">8. Identity Verification through Shufti Pro</Text>
+          <Text className="text-base text-gray-700 leading-6 mb-4">
+            To ensure platform safety and comply with regulations, we use Shufti Pro for identity verification:
+          </Text>
+          <Text className="text-sm text-gray-700 leading-6 mb-6">
+            • Government-issued ID documents (driver's license, passport, national ID){'\n'}
+            • Facial recognition and biometric data for identity confirmation{'\n'}
+            • Address verification documents when required{'\n'}
+            • Real-time verification status and fraud prevention scores{'\n'}
+            • KYC (Know Your Customer) and AML (Anti-Money Laundering) compliance data{'\n'}
+            • Verification attempts, results, and timestamps{'\n'}
+            • Document authenticity checks and risk assessment results
+          </Text>
+
+          <Text className="text-lg font-bold text-gray-800 mb-3">9. Location Services</Text>
           <Text className="text-base text-gray-700 leading-6 mb-6">
             We use location data to show nearby favors and relevant content. You can disable location services in your device settings, but some features may not work properly. We do not share your precise location with other users.
           </Text>
 
-          <Text className="text-lg font-bold text-gray-800 mb-3">8. International Data Transfers</Text>
+          <Text className="text-lg font-bold text-gray-800 mb-3">10. International Data Transfers</Text>
           <Text className="text-base text-gray-700 leading-6 mb-6">
-            Our servers are located in the United States. If you access our Service from outside the US, your information may be transferred to, stored, and processed in the US where data protection laws may differ from your jurisdiction.
+            Our servers are located in the United States. If you access our Service from outside the US, your information may be transferred to, stored, and processed in the US where data protection laws may differ from your jurisdiction. Shufti Pro may process verification data in multiple jurisdictions for compliance purposes.
           </Text>
 
-          <Text className="text-lg font-bold text-gray-800 mb-3">9. Children's Privacy</Text>
+          <Text className="text-lg font-bold text-gray-800 mb-3">11. Children's Privacy</Text>
           <Text className="text-base text-gray-700 leading-6 mb-6">
             Our Service is not intended for children under 18. We do not knowingly collect personal information from children under 18. If we learn we have collected such information, we will delete it immediately.
           </Text>
 
-          <Text className="text-lg font-bold text-gray-800 mb-3">10. Changes to This Policy</Text>
+          <Text className="text-lg font-bold text-gray-800 mb-3">12. Changes to This Policy</Text>
           <Text className="text-base text-gray-700 leading-6 mb-6">
             We may update this Privacy Policy periodically. Material changes will be notified through the app or email. Continued use after changes constitutes acceptance of the updated policy.
           </Text>
 
-          <Text className="text-lg font-bold text-gray-800 mb-3">11. Contact Us</Text>
+          <Text className="text-lg font-bold text-gray-800 mb-3">13. Contact Us</Text>
           <Text className="text-base text-gray-700 leading-6 mb-6">
             For privacy-related questions or to exercise your rights, contact us at:{'\n'}{'\n'}
             Email: privacy@favorapp.net{'\n'}
