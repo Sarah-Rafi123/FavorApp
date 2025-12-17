@@ -15,6 +15,7 @@ import {
   Dimensions,
   Modal,
 } from 'react-native';
+import { navigateToGetCertifiedWithSubscriptionCheck } from '../../utils/subscriptionUtils';
 import { CarouselButton } from '../../components/buttons';
 import CreateFavorSvg from '../../assets/icons/ProvideFavor';
 import PersonwithHeartSvg from '../../assets/icons/PersonwithHeart';
@@ -1513,9 +1514,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
                       className="w-full py-3 px-4 bg-green-500 rounded-xl"
                       onPress={() => {
                         setShowVerificationModal(false);
-                        navigation?.navigate('Settings', {
-                          screen: 'GetCertifiedScreen'
-                        });
+                        navigateToGetCertifiedWithSubscriptionCheck(navigation);
                       }}
                     >
                       <Text className="text-white text-center font-semibold">Get Verified (Optional)</Text>

@@ -1,8 +1,8 @@
 import React from 'react';
-import { View } from 'react-native';
+import { View, Platform } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 import { getTabBarHeight, getTabBarBottomPadding } from '../../utils/systemUI';
 import { HomeScreen, ProvideFavorScreen, ProfileScreen, SettingsScreen, FilterScreen, AskFavorScreen, EditFavorScreen, FavorDetailsScreen, UserProfileScreen, ProvideFavorDetailsScreen } from '../../screens';
 import { NotificationsScreen } from '../../screens/notificationsScreen/NotificationsScreen';
@@ -171,35 +171,36 @@ function TabNavigator() {
   const paddingBottom = getTabBarBottomPadding(insets.bottom);
 
   return (
-    <Tab.Navigator
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: {
-          backgroundColor: '#1C2013', // Dark background matching the image
-          borderTopWidth: 0,
-          height: tabBarHeight,
-          paddingBottom: paddingBottom,
-          paddingTop: 15,
-          borderTopLeftRadius: 20,
-          borderTopRightRadius: 20,
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          elevation: 0,
-        },
-        tabBarActiveTintColor: '#44A27B',
-        tabBarInactiveTintColor: '#9CA3AF',
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '400',
-          marginTop: 5,
-        },
-        tabBarItemStyle: {
-          paddingVertical: 5,
-        },
-      }}
-    >
+    <View style={{ flex: 1 }}>
+      <Tab.Navigator
+        screenOptions={{
+          headerShown: false,
+          tabBarStyle: {
+            backgroundColor: '#1C2013', // Dark background matching the image
+            borderTopWidth: 0,
+            height: tabBarHeight + (insets.bottom || 0),
+            paddingBottom: paddingBottom + (insets.bottom || 0),
+            paddingTop: 15,
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            elevation: 0,
+          },
+          tabBarActiveTintColor: '#44A27B',
+          tabBarInactiveTintColor: '#9CA3AF',
+          tabBarLabelStyle: {
+            fontSize: 11,
+            fontWeight: '400',
+            marginTop: 5,
+          },
+          tabBarItemStyle: {
+            paddingVertical: 5,
+          },
+        }}
+      >
       <Tab.Screen
         name="Home"
         component={HomeStack}
@@ -263,35 +264,46 @@ function TabNavigator() {
         }}
       />
     </Tab.Navigator>
+    </View>
   );
 }
 
 export function MainTabs() {
   return (
-    <RootStack.Navigator screenOptions={{ headerShown: false }}>
-      <RootStack.Screen 
-        name="MainTabs" 
-        component={TabNavigator}
-      />
-      <RootStack.Screen 
-        name="NotificationsScreen" 
-        component={NotificationsScreen}
-      />
-      <RootStack.Screen 
-        name="PaymentMethodScreen" 
-        component={PaymentMethodScreen}
-      />
-      <RootStack.Screen 
-        name="FilterScreen" 
-        component={FilterScreen}
-        options={{
-          presentation: 'modal',
-          headerShown: false,
-          gestureEnabled: true,
-          gestureDirection: 'vertical',
-          animationTypeForReplace: 'push',
-        }}
-      />
-    </RootStack.Navigator>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#1C2013' }} edges={[]}>
+      <RootStack.Navigator screenOptions={{ headerShown: false }}>
+        <RootStack.Screen 
+          name="MainTabs" 
+          component={TabNavigator}
+        />
+        <RootStack.Screen 
+          name="NotificationsScreen" 
+          component={NotificationsScreen}
+        />
+        <RootStack.Screen 
+          name="PaymentMethodScreen" 
+          component={PaymentMethodScreen}
+        />
+        <RootStack.Screen 
+          name="GetCertifiedScreen" 
+          component={GetCertifiedScreen}
+        />
+        <RootStack.Screen 
+          name="SubscriptionsScreen" 
+          component={SubscriptionsScreen}
+        />
+        <RootStack.Screen 
+          name="FilterScreen" 
+          component={FilterScreen}
+          options={{
+            presentation: 'modal',
+            headerShown: false,
+            gestureEnabled: true,
+            gestureDirection: 'vertical',
+            animationTypeForReplace: 'push',
+          }}
+        />
+      </RootStack.Navigator>
+    </SafeAreaView>
   );
 }

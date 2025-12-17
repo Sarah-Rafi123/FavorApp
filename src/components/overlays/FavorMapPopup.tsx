@@ -7,6 +7,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { navigateToGetCertifiedWithSubscriptionCheck } from '../../utils/subscriptionUtils';
 import { Favor } from '../../services/apis/FavorApis';
 import { useApplyToFavor } from '../../services/mutations/FavorMutations';
 import { getCertificationStatus } from '../../services/apis/CertificationApis';
@@ -407,9 +408,7 @@ export function FavorMapPopup({ visible, onClose, favor, navigation }: FavorMapP
                       onPress={() => {
                         setShowVerificationModal(false);
                         onClose();
-                        navigation?.navigate('Settings', {
-                          screen: 'GetCertifiedScreen'
-                        });
+                        navigateToGetCertifiedWithSubscriptionCheck(navigation);
                       }}
                     >
                       <Text className="text-white text-center font-semibold">Get Verified</Text>

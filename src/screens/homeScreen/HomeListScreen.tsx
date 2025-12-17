@@ -12,6 +12,7 @@ import {
   Alert,
   Modal,
 } from 'react-native';
+import { navigateToGetCertifiedWithSubscriptionCheck } from '../../utils/subscriptionUtils';
 import { FavorDetailsModal, StripeConnectWebView } from '../../components/overlays';
 import { useFavors, useBrowseFavors } from '../../services/queries/FavorQueries';
 import { Favor } from '../../services/apis/FavorApis';
@@ -770,7 +771,7 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications, navigatio
                   className="py-3 px-4 bg-green-500 rounded-xl mb-3"
                   onPress={() => {
                     setShowEncouragementModal(false);
-                    navigation?.navigate('GetCertifiedScreen');
+                    navigateToGetCertifiedWithSubscriptionCheck(navigation);
                   }}
                 >
                   <Text className="text-white text-center font-semibold">Upgrade Now</Text>
@@ -852,9 +853,7 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications, navigatio
                       className="w-full py-3 px-4 bg-green-500 rounded-xl"
                       onPress={() => {
                         setShowVerificationModal(false);
-                        navigation?.navigate('Settings', {
-                          screen: 'GetCertifiedScreen'
-                        });
+                        navigateToGetCertifiedWithSubscriptionCheck(navigation);
                       }}
                     >
                       <Text className="text-white text-center font-semibold">Get Verified</Text>

@@ -54,12 +54,8 @@ export const getTabBarHeight = (insetBottom: number): number => {
   const baseHeight = 90;
   
   if (Platform.OS === 'android') {
-    // For gesture navigation, keep base height, insets handle spacing
-    if (insetBottom > 0) {
-      return baseHeight;
-    }
-    // For button navigation, add minimal height to avoid overlap
-    return baseHeight + 20;
+    // Always use base height since SafeAreaView now handles the bottom inset
+    return baseHeight;
   }
   
   // iOS handling
@@ -82,12 +78,8 @@ export const getTabBarBottomPadding = (insetBottom: number): number => {
   const basePadding = 25;
   
   if (Platform.OS === 'android') {
-    // For gesture navigation, use the inset value directly with base padding
-    if (insetBottom > 0) {
-      return Math.max(basePadding, insetBottom + 5);
-    }
-    // For button navigation, add minimal extra padding
-    return basePadding + 15; // Reduced from getBottomSafeAreaAdjustment
+    // Use only base padding since SafeAreaView handles the bottom inset
+    return basePadding;
   }
   
   // iOS handling - ensure proper safe area respect

@@ -107,6 +107,11 @@ export function PaymentMethodScreen({ navigation }: PaymentMethodScreenProps) {
                 topOffset: 60,
               });
               
+              // Navigate back to settings after successful deletion
+              setTimeout(() => {
+                navigation?.goBack();
+              }, 2000);
+              
             } catch (error: any) {
               console.error('❌ Failed to delete payment method:', error);
               Alert.alert(
@@ -243,6 +248,11 @@ export function PaymentMethodScreen({ navigation }: PaymentMethodScreenProps) {
 
       setIsProcessing(false);
       setReady(false); // Reset for next time
+      
+      // Navigate back to settings after successful payment method addition
+      setTimeout(() => {
+        navigation?.goBack();
+      }, 2000); // Wait 2 seconds to let user see the success message
 
     } catch (error: any) {
       setIsProcessing(false);

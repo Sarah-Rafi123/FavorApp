@@ -14,6 +14,7 @@ import {
   Modal,
   Linking,
 } from 'react-native';
+import { navigateToGetCertifiedWithSubscriptionCheck } from '../../utils/subscriptionUtils';
 import { CarouselButton } from '../../components/buttons';
 import ProvideFavorSvg from '../../assets/icons/ProvideFavor';
 import PersonwithHeartSvg from '../../assets/icons/PersonwithHeart';
@@ -1609,7 +1610,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
                   className="py-3 px-4 bg-green-500 rounded-xl mb-3"
                   onPress={() => {
                     setShowEncouragementModal(false);
-                    navigation?.navigate('GetCertifiedScreen');
+                    navigateToGetCertifiedWithSubscriptionCheck(navigation);
                   }}
                 >
                   <Text className="text-white text-center font-semibold">Upgrade Now</Text>
@@ -1691,9 +1692,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
                       className="w-full py-3 px-4 bg-green-500 rounded-xl"
                       onPress={() => {
                         setShowVerificationModal(false);
-                        navigation?.navigate('Settings', {
-                          screen: 'GetCertifiedScreen'
-                        });
+                        navigateToGetCertifiedWithSubscriptionCheck(navigation);
                       }}
                     >
                       <Text className="text-white text-center font-semibold">Get Verified</Text>

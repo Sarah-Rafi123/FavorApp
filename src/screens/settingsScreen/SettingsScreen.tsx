@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import useAuthStore from '../../store/useAuthStore';
+import { navigateToGetCertifiedWithSubscriptionCheck } from '../../utils/subscriptionUtils';
 import { LogoutModal } from '../../components/overlays';
 import FilterSvg from '../../assets/icons/Filter';
 import { NotificationBell } from '../../components/notifications/NotificationBell';
@@ -213,7 +214,7 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
           <SettingItem
             icon={<GetCertifiedSvg />}
             title="Get Verified"
-            onPress={() => navigation?.navigate('GetCertifiedScreen')}
+            onPress={() => navigateToGetCertifiedWithSubscriptionCheck(navigation)}
           />
 
           <SettingItem
