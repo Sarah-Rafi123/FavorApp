@@ -41,7 +41,7 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
   const [showFavorModal, setShowFavorModal] = useState(false);
   const [showLocationPermissionModal, setShowLocationPermissionModal] = useState(false);
   const [showAddressModal, setShowAddressModal] = useState(false);
-  const [currentAddress, setCurrentAddress] = useState('Getting location...');
+  const [currentAddress, setCurrentAddress] = useState('Your Location');
   const [tempLocation, setTempLocation] = useState('');
   const [liveLocation, setLiveLocation] = useState<any>(null); // User's actual GPS location
   const [selectedLocation, setSelectedLocation] = useState<{latitude: number, longitude: number} | null>(null); // Currently viewed location
@@ -53,6 +53,7 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
   });
   const [mapReady, setMapReady] = useState(false);
   const [mapLoadingTimeout, setMapLoadingTimeout] = useState(false);
+  const [isGettingLocation, setIsGettingLocation] = useState(true);
   const webViewRef = useRef<WebView>(null);
   const mapReadyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -85,8 +86,11 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
 
   // Use the appropriate data source
   const currentData = useFilteredData ? browseFavorsData : favorsData;
-  const isLoading = useFilteredData ? browseFavorsLoading : favorsLoading;
+  const isFavorsLoading = useFilteredData ? browseFavorsLoading : favorsLoading;
   const error = useFilteredData ? browseFavorsError : favorsError;
+
+  // Calculate overall loading state - show loader when any major component is loading
+  const isMainLoading = !mapReady || isGettingLocation || (isFavorsLoading && !currentData);
 
   useEffect(() => {
     checkLocationPermission();
@@ -146,12 +150,39 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
     const favorMarkerPoints = allFavors.map(favor => {
       const coords = parseLatLng(favor.lat_lng);
       if (!coords) return null;
+
+      // Determine if favor is paid
+      const isPaid = favor.favor_price === 'paid' || (favor.tip && parseFloat(favor.tip.toString()) > 0);
+      
+      // Get priority-based colors
+      let fillColor, strokeColor;
+      switch (favor.priority) {
+        case 'immediate':
+          fillColor = '#FFEBEE'; // Light red
+          strokeColor = '#DC2626'; // Red
+          break;
+        case 'delayed':
+          fillColor = '#FFFEE4'; // Light mustard
+          strokeColor = '#EFD351'; // Mustard
+          break;
+        case 'no_rush':
+          fillColor = '#DCFFD9'; // Light green
+          strokeColor = '#44D436'; // Green
+          break;
+        default:
+          fillColor = '#F3F4F6'; // Light gray
+          strokeColor = '#6B7280'; // Gray
+      }
+
       return {
         lat: coords.latitude,
         lng: coords.longitude,
         title: favor.title || favor.favor_subject.name,
         description: `$${parseFloat((favor.tip || 0).toString()).toFixed(2)}`,
-        id: favor.id
+        id: favor.id,
+        fillColor,
+        strokeColor,
+        isPaid
       };
     }).filter(Boolean);
 
@@ -251,18 +282,37 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
                 // Add favor markers
                 ${JSON.stringify(favorMarkerPoints)}.forEach(function(favor) {
                     if (favor) {
+                        // Create custom marker with dollar sign for paid favors
+                        let markerIcon;
+                        if (favor.isPaid) {
+                            // Create custom dollar sign marker
+                            markerIcon = {
+                                url: 'data:image/svg+xml;base64,' + btoa(\`
+                                    <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <circle cx="12" cy="12" r="10" fill="\${favor.fillColor}" stroke="\${favor.strokeColor}" stroke-width="2"/>
+                                        <text x="12" y="17" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="\${favor.strokeColor}">$</text>
+                                    </svg>
+                                \`),
+                                scaledSize: new google.maps.Size(24, 24),
+                                anchor: new google.maps.Point(12, 12)
+                            };
+                        } else {
+                            // Use regular circle marker for free favors
+                            markerIcon = {
+                                path: google.maps.SymbolPath.CIRCLE,
+                                scale: 10,
+                                fillColor: favor.fillColor,
+                                fillOpacity: 0.9,
+                                strokeWeight: 2,
+                                strokeColor: favor.strokeColor
+                            };
+                        }
+
                         const marker = new google.maps.Marker({
                             position: { lat: favor.lat, lng: favor.lng },
                             map: map,
                             title: favor.title,
-                            icon: {
-                                path: google.maps.SymbolPath.CIRCLE,
-                                scale: 8,
-                                fillColor: '#F8BBD0',
-                                fillOpacity: 0.9,
-                                strokeWeight: 1,
-                                strokeColor: '#e65351'
-                            }
+                            icon: markerIcon
                         });
 
                         const infoWindow = new google.maps.InfoWindow({
@@ -335,6 +385,7 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
       const { status } = await Location.getForegroundPermissionsAsync();
       
       if (status !== 'granted') {
+        setIsGettingLocation(false);
         setShowLocationPermissionModal(true);
         return;
       }
@@ -363,6 +414,7 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
   };
 
   const getCurrentLocation = async () => {
+    setIsGettingLocation(true);
     try {
       // Different accuracy settings for Android vs iOS
       const locationOptions = Platform.OS === 'android' 
@@ -427,6 +479,8 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
       // Set fallback to Wyoming
       setCurrentAddress('Wyoming, USA');
       setTempLocation('Wyoming, USA');
+    } finally {
+      setIsGettingLocation(false);
     }
   };
 
@@ -498,57 +552,47 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
     <View className="flex-1">
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       
-      {/* Header */}
-      <View className="absolute top-16 left-6 right-6 z-10 flex-row justify-between items-center">
-        <Text className="text-2xl font-bold text-gray-800">Home</Text>
-        <View className="flex-row gap-x-2">
-          <TouchableOpacity
-            className="items-center justify-center relative w-10 h-10 rounded-full"
-            onPress={onFilter}
-          >
-            <FilterSvg />
-            {getFilterCount() > 0 && (
-              <View className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full items-center justify-center">
-                <Text className="text-white text-xs font-bold">{getFilterCount()}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-          <NotificationBell onPress={onNotifications} />
-        </View>
-      </View>
-
-      {/* Map View / List View Toggle */}
-      <View className="absolute top-28 left-6 p-2 right-6 z-10 flex-row bg-white rounded-full shadow-lg">
-        <TouchableOpacity className="flex-1 py-2.5 bg-green-500 rounded-full items-center">
-          <Text className="text-white font-semibold text-sm">Map View</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          className="flex-1 py-2.5 items-center"
-          onPress={onListView}
-        >
-          <Text className="text-gray-600 font-semibold text-sm">List View</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Loading indicator for favors */}
-      {isLoading && (
-        <View className="absolute top-40 left-6 right-6 z-10 bg-white rounded-lg p-3 shadow-lg flex-row items-center">
-          <ActivityIndicator size="small" color="#44A27B" />
-          <Text className="ml-3 text-gray-600">Loading favors...</Text>
+      {/* Header - Hidden during main loading */}
+      {!isMainLoading && (
+        <View className="absolute top-16 left-6 right-6 z-10 flex-row justify-between items-center">
+          <Text className="text-2xl font-bold text-gray-800">Home</Text>
+          <View className="flex-row gap-x-2">
+            <TouchableOpacity
+              className="items-center justify-center relative w-10 h-10 rounded-full"
+              onPress={onFilter}
+            >
+              <FilterSvg />
+              {getFilterCount() > 0 && (
+                <View className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full items-center justify-center">
+                  <Text className="text-white text-xs font-bold">{getFilterCount()}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            <NotificationBell onPress={onNotifications} />
+          </View>
         </View>
       )}
+
+      {/* Map View / List View Toggle - Hidden during main loading */}
+      {!isMainLoading && (
+        <View className="absolute top-28 left-6 p-2 right-6 z-10 flex-row bg-white rounded-full shadow-lg">
+          <TouchableOpacity className="flex-1 py-2.5 bg-green-500 rounded-full items-center">
+            <Text className="text-white font-semibold text-sm">Map View</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            className="flex-1 py-2.5 items-center"
+            onPress={onListView}
+          >
+            <Text className="text-gray-600 font-semibold text-sm">List View</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
 
       {/* Error indicator for favors */}
-      {error && (
+      {error && !isMainLoading && (
         <View className="absolute top-40 left-6 right-6 z-10 bg-red-50 border border-red-200 rounded-lg p-3 shadow-lg">
           <Text className="text-red-600 text-sm">Failed to load favors</Text>
-        </View>
-      )}
-
-      {/* Android Map Loading Indicator */}
-      {Platform.OS === 'android' && !mapReady && !mapLoadingTimeout && (
-        <View className="absolute inset-0 z-20 bg-gray-100 items-center justify-center">
-          <ActivityIndicator size="large" color="#44A27B" />
         </View>
       )}
 
@@ -574,16 +618,7 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
           onMessage={handleWebViewMessage}
           javaScriptEnabled={true}
           domStorageEnabled={true}
-          startInLoadingState={true}
-          renderLoading={() => (
-            <View className="absolute inset-0 bg-gray-100 items-center justify-center">
-              <ActivityIndicator size="large" color="#44A27B" />
-              <Text className="text-gray-600 mt-4 text-lg">Loading Map...</Text>
-              <Text className="text-gray-500 mt-2 text-sm px-6 text-center">
-                {Platform.OS === 'android' ? 'Using WebView for better Android compatibility' : 'Loading Google Maps'}
-              </Text>
-            </View>
-          )}
+          startInLoadingState={false}
           onLoadEnd={() => {
             console.log(`WebView Map loaded on ${Platform.OS}`);
           }}
@@ -603,8 +638,9 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
         />
       </View>
 
-      {/* Location Display Field */}
-      <View className="absolute top-52 left-6 right-6 z-50">
+      {/* Location Display Field - Hidden during main loading */}
+      {!isMainLoading && (
+        <View className="absolute top-52 left-6 right-6 z-50">
         <TouchableOpacity 
           onPress={() => setShowAddressModal(true)}
           className="bg-white rounded-full shadow-lg"
@@ -662,7 +698,8 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
-      </View>
+        </View>
+      )}
 
       {/* GPS Location Button */}
       <View className="absolute left-6 z-10" style={{ bottom: tabBarHeight + 20 }}>
@@ -716,7 +753,7 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
       </View>
 
       {/* Favor Counter */}
-      {!isLoading && allFavors.length > 0 && (
+      {!isMainLoading && allFavors.length > 0 && (
         <View className="absolute left-6 z-10 bg-green-500 rounded-full px-3 py-2 shadow-lg" style={{ bottom: tabBarHeight + 70 }}>
           <Text className="text-white text-sm font-semibold">
             {allFavors.filter(favor => parseLatLng(favor.lat_lng)).length} favors on map
@@ -757,6 +794,7 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
                 onPress={() => {
                   setShowLocationPermissionModal(false);
                   setCurrentAddress('Location access denied');
+                  setIsGettingLocation(false);
                 }}
               >
                 <Text className="text-gray-600 text-center font-semibold">Not Now</Text>

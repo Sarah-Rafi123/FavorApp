@@ -16,6 +16,7 @@ import {
   Modal,
 } from 'react-native';
 import { navigateToGetCertifiedWithSubscriptionCheck } from '../../utils/subscriptionUtils';
+import { getPriorityColor, formatPriority } from '../../utils/priorityUtils';
 import { CarouselButton } from '../../components/buttons';
 import CreateFavorSvg from '../../assets/icons/ProvideFavor';
 import PersonwithHeartSvg from '../../assets/icons/PersonwithHeart';
@@ -674,7 +675,12 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
             
             {/* Favor details on the right */}
             <View className="flex-1">
-              <Text className="text-[#D12E34] text-sm font-medium mb-1 capitalize">{favor.priority}</Text>
+              <Text 
+                className="text-sm font-medium mb-1"
+                style={{ color: getPriorityColor(favor.priority) }}
+              >
+                {formatPriority(favor.priority)}
+              </Text>
               
               {/* Category and Time row */}
               <View className="flex-row items-center mb-1">
@@ -813,7 +819,12 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
             
             {/* Favor details on the right */}
             <View className="flex-1">
-              <Text className="text-[#D12E34] text-sm font-medium mb-1 capitalize">{favor.priority}</Text>
+              <Text 
+                className="text-sm font-medium mb-1"
+                style={{ color: getPriorityColor(favor.priority) }}
+              >
+                {formatPriority(favor.priority)}
+              </Text>
               
               {/* Category and Time row */}
               <View className="flex-row items-center mb-1">
@@ -920,7 +931,12 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
               </View>
             )}
             <View className="flex-1">
-              <Text className="text-[#D12E34] text-sm font-medium mb-1 capitalize">{favor.priority}</Text>
+              <Text 
+                className="text-sm font-medium mb-1"
+                style={{ color: getPriorityColor(favor.priority) }}
+              >
+                {formatPriority(favor.priority)}
+              </Text>
               
               {/* Category and Time row */}
               <View className="flex-row items-center mb-1">
@@ -1064,7 +1080,12 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
               </View>
             )}
             <View className="flex-1">
-              <Text className="text-[#D12E34] text-sm font-medium mb-1 capitalize">{favor.priority}</Text>
+              <Text 
+                className="text-sm font-medium mb-1"
+                style={{ color: getPriorityColor(favor.priority) }}
+              >
+                {formatPriority(favor.priority)}
+              </Text>
               
               {/* Category and Time row */}
               <View className="flex-row items-center mb-1">
@@ -1495,7 +1516,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
                 </View>
                 
                 <View className="gap-y-3">
-                  {!verificationStatus.isSubscribed && (
+                  {/* {!verificationStatus.isSubscribed && (
                     <TouchableOpacity
                       className="w-full py-3 px-4 bg-blue-500 rounded-xl"
                       onPress={() => {
@@ -1507,7 +1528,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
                     >
                       <Text className="text-white text-center font-semibold">Get FavorApp Pro Subscription</Text>
                     </TouchableOpacity>
-                  )}
+                  )} */}
                   
                   {!verificationStatus.isKYCVerified && (
                     <TouchableOpacity

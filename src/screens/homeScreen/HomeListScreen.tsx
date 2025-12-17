@@ -13,6 +13,7 @@ import {
   Modal,
 } from 'react-native';
 import { navigateToGetCertifiedWithSubscriptionCheck } from '../../utils/subscriptionUtils';
+import { getPriorityColor, formatPriority } from '../../utils/priorityUtils';
 import { FavorDetailsModal, StripeConnectWebView } from '../../components/overlays';
 import { useFavors, useBrowseFavors } from '../../services/queries/FavorQueries';
 import { Favor } from '../../services/apis/FavorApis';
@@ -144,9 +145,8 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications, navigatio
       const certificationResponse = await getCertificationStatus();
       const isKYCVerified = certificationResponse.data.is_kyc_verified === 'verified';
       
-      // For now, we'll assume subscription status based on user data
-      // In a real app, you'd have a subscription status API call
-      const isSubscribed = user?.id ? true : false; // Placeholder logic
+      // Check subscription status from certification response
+      const isSubscribed = certificationResponse.data.is_certified && Boolean(certificationResponse.data.active_subscription?.active);
       
       setVerificationStatus({
         isKYCVerified,
@@ -156,9 +156,13 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications, navigatio
       });
       
       // Show encouragement on every login if user is not fully verified/subscribed
+      // Do NOT show if user is both subscribed AND KYC verified
       if (!isKYCVerified || !isSubscribed) {
         console.log('Showing encouragement modal for incomplete verification/subscription');
         setShowEncouragementModal(true);
+      } else {
+        console.log('User is both subscribed and KYC verified - hiding promotional pop-ups');
+        setShowEncouragementModal(false);
       }
     } catch (error) {
       console.error('Error checking verification status for encouragement:', error);
@@ -244,18 +248,6 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications, navigatio
   }, [refetch]);
 
   // Helper function to format priority text
-  const formatPriority = (priority: string) => {
-    switch (priority) {
-      case 'no_rush':
-        return 'No Rush';
-      case 'immediate':
-        return 'Immediate';
-      case 'delayed':
-        return 'Delayed';
-      default:
-        return priority.charAt(0).toUpperCase() + priority.slice(1);
-    }
-  };
 
   const handleFavorClick = (favor: Favor) => {
     setSelectedFavorId(favor.id);
@@ -494,7 +486,12 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications, navigatio
                   : favor.user.full_name}
               </Text>
               <View className="ml-2 px-2 py-1 rounded">
-                <Text className="text-[#D12E34] text-sm font-medium">{formatPriority(favor.priority)}</Text>
+                <Text 
+                  className="text-sm font-medium"
+                  style={{ color: getPriorityColor(favor.priority) }}
+                >
+                  {formatPriority(favor.priority)}
+                </Text>
               </View>
             </View>
             {/* Category and Time row */}
@@ -752,19 +749,6 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications, navigatio
             </View>
             
             <View className="space-y-3">
-              {!verificationStatus.isSubscribed && (
-                <TouchableOpacity
-                  className="py-3 px-4 bg-blue-500 rounded-xl mb-3"
-                  onPress={() => {
-                    setShowEncouragementModal(false);
-                    navigation?.navigate('Settings', {
-                      screen: 'SubscriptionsScreen'
-                    });
-                  }}
-                >
-                  <Text className="text-white text-center font-semibold">Get FavorApp Pro Subscription</Text>
-                </TouchableOpacity>
-              )}
               
               {!verificationStatus.isKYCVerified && (
                 <TouchableOpacity
@@ -834,19 +818,6 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications, navigatio
                 </View>
                 
                 <View className="gap-y-3">
-                  {!verificationStatus.isSubscribed && (
-                    <TouchableOpacity
-                      className="w-full py-3 px-4 bg-blue-500 rounded-xl"
-                      onPress={() => {
-                        setShowVerificationModal(false);
-                        navigation?.navigate('Settings', {
-                      screen: 'SubscriptionsScreen'
-                    });
-                      }}
-                    >
-                      <Text className="text-white text-center font-semibold">Get Subscribed</Text>
-                    </TouchableOpacity>
-                  )}
                   
                   {!verificationStatus.isKYCVerified && (
                     <TouchableOpacity

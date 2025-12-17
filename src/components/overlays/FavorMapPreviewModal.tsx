@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   Modal,
 } from 'react-native';
+import { getPriorityColor, formatPriority } from '../../utils/priorityUtils';
 import { Favor } from '../../services/apis/FavorApis';
 
 interface FavorMapPreviewModalProps {
@@ -14,18 +15,6 @@ interface FavorMapPreviewModalProps {
 }
 
 export function FavorMapPreviewModal({ visible, onClose, favor }: FavorMapPreviewModalProps) {
-  const formatPriority = (priority: string) => {
-    switch (priority) {
-      case 'no_rush':
-        return 'No Rush';
-      case 'immediate':
-        return 'Immediate';
-      case 'delayed':
-        return 'Delayed';
-      default:
-        return priority.charAt(0).toUpperCase() + priority.slice(1);
-    }
-  };
 
   return (
     <Modal
@@ -86,7 +75,10 @@ export function FavorMapPreviewModal({ visible, onClose, favor }: FavorMapPrevie
 
             <View className="mb-3">
               <Text className="text-gray-700 text-base">
-                <Text className="font-semibold">Priority:</Text> {formatPriority(favor.priority)}
+                <Text className="font-semibold">Priority:</Text> {' '}
+                <Text style={{ color: getPriorityColor(favor.priority), fontWeight: '600' }}>
+                  {formatPriority(favor.priority)}
+                </Text>
               </Text>
             </View>
 

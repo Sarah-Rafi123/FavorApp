@@ -10,6 +10,7 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
+import { getPriorityColor, formatPriority } from '../../utils/priorityUtils';
 import { useFavor } from '../../services/queries/FavorQueries';
 import { useApplyToFavor } from '../../services/mutations/FavorMutations';
 import { usePublicUserProfileQuery } from '../../services/queries/ProfileQueries';
@@ -82,19 +83,6 @@ export function FavorDetailsModal({ visible, onClose, favorId }: FavorDetailsMod
   });
   const stripeConnectManager = StripeConnectManager.getInstance();
 
-  // Helper function to format priority text
-  const formatPriority = (priority: string) => {
-    switch (priority) {
-      case 'no_rush':
-        return 'No Rush';
-      case 'immediate':
-        return 'Immediate';
-      case 'delayed':
-        return 'Delayed';
-      default:
-        return priority.charAt(0).toUpperCase() + priority.slice(1);
-    }
-  };
 
   // Helper function to format date
   const formatDate = (dateString: string) => {
@@ -314,7 +302,10 @@ export function FavorDetailsModal({ visible, onClose, favorId }: FavorDetailsMod
                     <View className="flex-row justify-between">
                       <View className="flex-1 mr-2">
                         <Text className="text-gray-600 font-bold text-sm mb-1">Priority</Text>
-                        <Text className="text-red-600 font-medium">
+                        <Text 
+                          className="font-medium"
+                          style={{ color: getPriorityColor(favor.priority) }}
+                        >
                           {formatPriority(favor.priority)}
                         </Text>
                       </View>

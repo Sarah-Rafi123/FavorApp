@@ -285,14 +285,6 @@ export function MainTabs() {
           component={PaymentMethodScreen}
         />
         <RootStack.Screen 
-          name="GetCertifiedScreen" 
-          component={GetCertifiedScreen}
-        />
-        <RootStack.Screen 
-          name="SubscriptionsScreen" 
-          component={SubscriptionsScreen}
-        />
-        <RootStack.Screen 
           name="FilterScreen" 
           component={FilterScreen}
           options={{

@@ -722,11 +722,14 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
         <View className="flex-row items-center">
           <TouchableOpacity 
             className="mr-4"
-            onPress={() => navigation?.goBack()}
+            onPress={() => {
+              // Navigate back to SettingsMain within the SettingsStack
+              navigation?.navigate('SettingsMain');
+            }}
           >
             <BackSvg />
           </TouchableOpacity>
-          <Text className="text-3xl font-bold text-black">
+          <Text className="text-2xl font-bold text-black">
             {hasActiveSubscription ? 'Manage Subscription' : 'Get Subscribed'}
           </Text>
         </View>

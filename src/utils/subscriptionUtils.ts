@@ -54,19 +54,30 @@ export const navigateToGetCertifiedWithSubscriptionCheck = async (
   onSubscriptionConfirmed?: () => void
 ) => {
   try {
+    // Check if navigation object exists
+    if (!navigation) {
+      console.error('❌ Navigation object is null or undefined');
+      return;
+    }
+
     const { hasActiveSubscription } = await checkSubscriptionStatus();
     
     if (hasActiveSubscription) {
       console.log('✅ User has active subscription - navigating to GetCertifiedScreen');
-      navigation?.navigate('GetCertifiedScreen');
+      navigation.navigate('Settings', { screen: 'GetCertifiedScreen' });
       onSubscriptionConfirmed?.();
     } else {
       console.log('⚠️ User has no active subscription - navigating to SubscriptionsScreen');
-      navigation?.navigate('SubscriptionsScreen');
+      navigation.navigate('Settings', { screen: 'SubscriptionsScreen' });
     }
   } catch (error) {
     console.error('❌ Error during subscription check navigation:', error);
-    // On error, still navigate to SubscriptionsScreen to be safe
-    navigation?.navigate('SubscriptionsScreen');
+    
+    // Check again if navigation exists before error fallback
+    if (navigation) {
+      navigation.navigate('Settings', { screen: 'SubscriptionsScreen' });
+    } else {
+      console.error('❌ Cannot navigate - navigation object is null');
+    }
   }
 };

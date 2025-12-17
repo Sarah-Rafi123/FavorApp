@@ -15,6 +15,7 @@ import {
   Platform,
   RefreshControl,
 } from 'react-native';
+import { getPriorityColor, formatPriority } from '../../utils/priorityUtils';
 import Svg, { Path } from 'react-native-svg';
 import BackSvg from '../../assets/icons/Back';
 import CancelSvg from '../../assets/icons/Cancel';
@@ -627,25 +628,30 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
           {/* Favor Details */}
           <View className="space-y-3 mb-6">
             <View className="flex-row">
-              <Text className="text-gray-700 text-base w-20">Priority</Text>
+              <Text className="text-gray-700 text-base w-20 font-bold">Priority</Text>
               <Text className="text-gray-700 text-base mr-2">:</Text>
-              <Text className="text-gray-800 text-base flex-1 capitalize">{favor.priority}</Text>
+              <Text 
+                className="text-base flex-1 font-medium"
+                style={{ color: getPriorityColor(favor.priority) }}
+              >
+                {formatPriority(favor.priority)}
+              </Text>
             </View>
 
             <View className="flex-row">
-              <Text className="text-gray-700 text-base w-20">Category</Text>
+              <Text className="text-gray-700 text-base w-20 font-bold">Category</Text>
               <Text className="text-gray-700 text-base mr-2">:</Text>
-              <Text className="text-gray-800 text-base flex-1">{favor.favor_subject.name}</Text>
+              <Text className="text-gray-800 text-base flex-1 font-bold">{favor.favor_subject.name}</Text>
             </View>
 
             <View className="flex-row">
-              <Text className="text-gray-700 text-base w-20">Duration</Text>
+              <Text className="text-gray-700 text-base w-20 font-bold">Duration</Text>
               <Text className="text-gray-700 text-base mr-2">:</Text>
               <Text className="text-gray-800 text-base flex-1">{favor.time_to_complete || '1 Hour'}</Text>
             </View>
 
             <View className="flex-row">
-              <Text className="text-gray-700 text-base w-20">Location</Text>
+              <Text className="text-gray-700 text-base w-20 font-bold">Location</Text>
               <Text className="text-gray-700 text-base mr-2">:</Text>
               <Text className="text-gray-800 text-base flex-1">{favor.city}, {favor.state}</Text>
             </View>
@@ -654,13 +660,13 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
             {!favor.favor_pay && (
               <>
                 <View className="flex-row">
-                  <Text className="text-gray-700 text-base w-20">Type</Text>
+                  <Text className="text-gray-700 text-base w-20 font-bold">Type</Text>
                   <Text className="text-gray-700 text-base mr-2">:</Text>
                   <Text className="text-gray-700 text-base flex-1">Paid Favor</Text>
                 </View>
 
                 <View className="flex-row">
-                  <Text className="text-gray-700 text-base w-20">Favor Amount</Text>
+                  <Text className="text-gray-700 text-base w-20 font-bold">Favor Amount</Text>
                   <Text className="text-gray-700 text-base mr-2">:</Text>
                   <Text className="text-gray-800 text-base flex-1">
                     ${parseFloat((favor.tip || 0).toString()).toFixed(2)}
@@ -668,7 +674,7 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
                 </View>
 
                 <View className="flex-row">
-                  <Text className="text-gray-700 text-base w-20">Total</Text>
+                  <Text className="text-gray-700 text-base w-20 font-bold">Total</Text>
                   <Text className="text-gray-700 text-base mr-2">:</Text>
                   <Text className="text-gray-700 text-base flex-1">
                     ${parseFloat((favor.tip || 0).toString()).toFixed(2)}
