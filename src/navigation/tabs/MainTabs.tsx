@@ -178,8 +178,8 @@ function TabNavigator() {
           tabBarStyle: {
             backgroundColor: '#1C2013', // Dark background matching the image
             borderTopWidth: 0,
-            height: tabBarHeight + (insets.bottom || 0),
-            paddingBottom: paddingBottom + (insets.bottom || 0),
+            height: Platform.OS === 'ios' ? tabBarHeight : tabBarHeight + (insets.bottom || 0),
+            paddingBottom: Platform.OS === 'ios' ? paddingBottom : paddingBottom + (insets.bottom || 0),
             paddingTop: 15,
             borderTopLeftRadius: 20,
             borderTopRightRadius: 20,

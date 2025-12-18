@@ -674,6 +674,7 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications, navigatio
           setSelectedFavorId(null);
         }}
         favorId={selectedFavorId}
+        navigation={navigation}
       />
 
       {/* Encouragement Modal */}
@@ -694,14 +695,14 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications, navigatio
             </Text>
             
             <View className="mb-6">
-              {!verificationStatus.isSubscribed && (
+              {/* {!verificationStatus.isSubscribed && (
                 <View className="flex-row items-center mb-3">
                   <View className="w-5 h-5 rounded-full mr-3 bg-blue-500">
                     <Text className="text-white text-xs text-center leading-5">💎</Text>
                   </View>
                   <Text className="text-gray-700 flex-1">Premium subscription benefits</Text>
                 </View>
-              )}
+              )} */}
               
               {!verificationStatus.isKYCVerified && (
                 <View className="flex-row items-center mb-3">

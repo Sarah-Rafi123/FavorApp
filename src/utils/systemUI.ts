@@ -84,12 +84,12 @@ export const getTabBarBottomPadding = (insetBottom: number): number => {
   
   // iOS handling - ensure proper safe area respect
   if (Platform.OS === 'ios') {
-    // For devices with home indicator (insetBottom > 0)
+    // For devices with home indicator (insetBottom > 0) - reduced padding for iOS only
     if (insetBottom > 0) {
-      return Math.max(basePadding, insetBottom + 5);
+      return Math.max(10, insetBottom - 5); // Reduced padding only for iOS
     }
-    // For older devices without home indicator
-    return basePadding;
+    // For older devices without home indicator - reduced for iOS only
+    return 10; // Reduced base padding for iOS only
   }
   
   return Math.max(basePadding, insetBottom + 10);

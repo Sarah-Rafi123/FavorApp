@@ -14,20 +14,30 @@ import { getPriorityColor, formatPriority } from '../../utils/priorityUtils';
 import { useFavor } from '../../services/queries/FavorQueries';
 import { useApplyToFavor } from '../../services/mutations/FavorMutations';
 import { usePublicUserProfileQuery } from '../../services/queries/ProfileQueries';
+import { getCertificationStatus } from '../../services/apis/CertificationApis';
 import { StripeConnectManager } from '../../services/StripeConnectManager';
 import { StripeConnectWebView } from './StripeConnectWebView';
 import { BlurredEmail, BlurredPhone } from '../common';
+import useAuthStore from '../../store/useAuthStore';
+import { navigateToGetCertifiedWithSubscriptionCheck } from '../../utils/subscriptionUtils';
 
 interface FavorDetailsModalProps {
   visible: boolean;
   onClose: () => void;
   favorId: number | null;
+  navigation?: any;
 }
 
-export function FavorDetailsModal({ visible, onClose, favorId }: FavorDetailsModalProps) {
+export function FavorDetailsModal({ visible, onClose, favorId, navigation }: FavorDetailsModalProps) {
   const [showStripeWebView, setShowStripeWebView] = useState(false);
   const [stripeOnboardingUrl, setStripeOnboardingUrl] = useState<string>('');
   const [pendingFavorAction, setPendingFavorAction] = useState<(() => void) | null>(null);
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [verificationStatus, setVerificationStatus] = useState<{
+    isSubscribed: boolean;
+    isKYCVerified: boolean;
+    isLoading: boolean;
+  }>({ isSubscribed: false, isKYCVerified: false, isLoading: false });
 
   const { data: favorData, isLoading, error } = useFavor(favorId || 0, {
     enabled: !!favorId && visible,
@@ -82,6 +92,32 @@ export function FavorDetailsModal({ visible, onClose, favorId }: FavorDetailsMod
     }
   });
   const stripeConnectManager = StripeConnectManager.getInstance();
+  const { user } = useAuthStore();
+
+  const checkVerificationStatus = async () => {
+    try {
+      setVerificationStatus(prev => ({ ...prev, isLoading: true }));
+      
+      // Check KYC certification status
+      const certificationResponse = await getCertificationStatus();
+      const isKYCVerified = certificationResponse.data.is_kyc_verified === 'verified';
+      
+      // Check subscription status from certification response
+      const isSubscribed = certificationResponse.data.is_certified && Boolean(certificationResponse.data.active_subscription?.active);
+      
+      setVerificationStatus({
+        isKYCVerified,
+        isSubscribed,
+        isLoading: false
+      });
+      
+      return { isKYCVerified, isSubscribed };
+    } catch (error) {
+      console.error('Error checking verification status:', error);
+      setVerificationStatus(prev => ({ ...prev, isLoading: false }));
+      return { isKYCVerified: false, isSubscribed: false };
+    }
+  };
 
 
   // Helper function to format date
@@ -169,6 +205,14 @@ export function FavorDetailsModal({ visible, onClose, favorId }: FavorDetailsMod
             }
           ]
         );
+        return;
+      }
+
+      // For paid favors, check subscription and KYC verification first
+      const verification = await checkVerificationStatus();
+      
+      if (!verification.isSubscribed || !verification.isKYCVerified) {
+        setShowVerificationModal(true);
         return;
       }
 
@@ -472,6 +516,76 @@ export function FavorDetailsModal({ visible, onClose, favorId }: FavorDetailsMod
           </TouchableWithoutFeedback>
         </View>
       </TouchableWithoutFeedback>
+
+      {/* Verification Status Modal */}
+      <Modal
+        visible={showVerificationModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowVerificationModal(false)}
+      >
+        <View className="flex-1 bg-black/50 justify-center items-center">
+          <View className="bg-white rounded-2xl p-6 mx-6 max-w-sm">
+            <Text className="text-xl font-bold text-gray-800 mb-4 text-center">
+              Verification Required
+            </Text>
+            
+            {verificationStatus.isLoading ? (
+              <View className="flex-row justify-center items-center py-8">
+                <ActivityIndicator size="large" color="#44A27B" />
+                <Text className="ml-3 text-gray-600">Checking verification status...</Text>
+              </View>
+            ) : (
+              <>
+                <Text className="text-gray-600 text-center mb-6 leading-6">
+                  To apply for paid favors, you need to:
+                </Text>
+                
+                <View className="mb-6">
+                  <View className="flex-row items-center mb-3">
+                    <View className={`w-5 h-5 rounded-full mr-3 ${verificationStatus.isSubscribed ? 'bg-green-500' : 'bg-red-500'}`}>
+                      <Text className="text-white text-xs text-center leading-5">
+                        {verificationStatus.isSubscribed ? '✓' : '✗'}
+                      </Text>
+                    </View>
+                    <Text className="text-gray-700 flex-1">Have an active subscription</Text>
+                  </View>
+                  
+                  <View className="flex-row items-center mb-3">
+                    <View className={`w-5 h-5 rounded-full mr-3 ${verificationStatus.isKYCVerified ? 'bg-green-500' : 'bg-red-500'}`}>
+                      <Text className="text-white text-xs text-center leading-5">
+                        {verificationStatus.isKYCVerified ? '✓' : '✗'}
+                      </Text>
+                    </View>
+                    <Text className="text-gray-700 flex-1">Complete Identity Verification through Shufti Pro</Text>
+                  </View>
+                </View>
+                
+                <View className="gap-y-3">
+                  {!verificationStatus.isKYCVerified && navigation && (
+                    <TouchableOpacity
+                      className="w-full py-3 px-4 bg-green-500 rounded-xl"
+                      onPress={() => {
+                        setShowVerificationModal(false);
+                        navigateToGetCertifiedWithSubscriptionCheck(navigation);
+                      }}
+                    >
+                      <Text className="text-white text-center font-semibold">Get Verified</Text>
+                    </TouchableOpacity>
+                  )}
+
+                  <TouchableOpacity
+                    className="w-full py-3 px-4 border border-gray-300 rounded-xl"
+                    onPress={() => setShowVerificationModal(false)}
+                  >
+                    <Text className="text-gray-600 text-center font-semibold">Cancel</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
 
       {/* Stripe Connect WebView */}
       <StripeConnectWebView

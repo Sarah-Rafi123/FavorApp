@@ -27,10 +27,11 @@ interface HomeMapScreenProps {
   onListView: () => void;
   onFilter: () => void;
   onNotifications: () => void;
+  navigation?: any;
 }
 
 
-export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMapScreenProps) {
+export function HomeMapScreen({ onListView, onFilter, onNotifications, navigation }: HomeMapScreenProps) {
   const [location, setLocation] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [allFavors, setAllFavors] = useState<Favor[]>([]);
@@ -771,6 +772,7 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications }: HomeMap
             setSelectedFavor(null);
           }}
           favor={selectedFavor}
+          navigation={navigation}
         />
       )}
 

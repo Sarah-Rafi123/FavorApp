@@ -641,7 +641,7 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
             <View className="flex-row">
               <Text className="text-gray-700 text-base w-20 font-bold">Category</Text>
               <Text className="text-gray-700 text-base mr-2">:</Text>
-              <Text className="text-gray-800 text-base flex-1 font-bold">{favor.favor_subject.name}</Text>
+              <Text className="text-gray-800 text-base flex-1">{favor.favor_subject.name}</Text>
             </View>
 
             <View className="flex-row">
@@ -662,7 +662,7 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
                 <View className="flex-row">
                   <Text className="text-gray-700 text-base w-20 font-bold">Type</Text>
                   <Text className="text-gray-700 text-base mr-2">:</Text>
-                  <Text className="text-gray-700 text-base flex-1">Paid Favor</Text>
+                  <Text className="text-gray-800 text-base flex-1">Paid Favor</Text>
                 </View>
 
                 <View className="flex-row">
@@ -686,14 +686,14 @@ export function ProvideFavorDetailsScreen({ navigation, route }: ProvideFavorDet
             {/* Free Favor Indicator */}
             {favor.favor_pay && (
               <View className="flex-row">
-                <Text className="text-gray-700 text-base w-20">Type</Text>
+                <Text className="text-gray-700 text-base w-20 font-bold">Type</Text>
                 <Text className="text-gray-700 text-base mr-2">:</Text>
-                <Text className="text-gray-700 text-base flex-1 font-semibold">Free Favor</Text>
+                <Text className="text-gray-800 text-base flex-1">Free Favor</Text>
               </View>
             )}
 
             <View className="flex-row items-start">
-              <Text className="text-gray-700 text-base w-24">Description</Text>
+              <Text className="text-gray-700 text-base w-24 font-bold">Description</Text>
               <Text className="text-gray-700 text-base mr-2">:</Text>
               <Text className="text-gray-800 text-base flex-1">{favor.description}</Text>
             </View>
