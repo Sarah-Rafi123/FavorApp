@@ -589,7 +589,7 @@ export function EditFavorScreen({ navigation, route }: EditFavorScreenProps) {
                     Favor Amount ($) *
                   </Text>
                   <Text className="text-xs text-gray-500 mb-3">
-                    Favor charges 3% + $0.30 per transaction to keep the app running.
+                    Favor charges 3% + $0.30 per transaction as Processing Fee. FavorApp does not make profit off of transactions
                   </Text>
                   <TextInput
                     className={`px-4 py-3 rounded-xl border text-base bg-white ${

@@ -63,8 +63,10 @@
     <string>Allow $(PRODUCT_NAME) to access your location</string>
     <key>NSMicrophoneUsageDescription</key>
     <string>Allow $(PRODUCT_NAME) to access your microphone</string>
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>Allow FavorApp to save PDF exports to your photo library.</string>
     <key>NSPhotoLibraryUsageDescription</key>
-    <string>This app needs access to photo library to select images for favor requests.</string>
+    <string>Allow FavorApp to access your photos to save PDF exports.</string>
     <key>UILaunchStoryboardName</key>
     <string>SplashScreen</string>
     <key>UIRequiredDeviceCapabilities</key>

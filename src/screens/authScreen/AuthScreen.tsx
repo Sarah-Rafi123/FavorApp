@@ -639,15 +639,18 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
             </View>
 
             {/* Tabs */}
-            <View className="flex-row mb-10 bg-gray-100 rounded-full p-1">
+            <View className="flex-row mb-10 bg-gray-100 rounded-full p-1" pointerEvents="box-none">
               <TouchableOpacity
                 className={`flex-1 py-3 rounded-full ${
                   activeTab === 'signin' ? 'bg-green-500' : ''
                 }`}
                 onPress={() => {
+                  console.log('🔄 Sign In tab pressed');
                   setActiveTab('signin');
                   clearFormData();
                 }}
+                activeOpacity={0.7}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
                 <Text className={`text-center font-semibold ${
                   activeTab === 'signin' ? 'text-white' : 'text-gray-600'
@@ -660,9 +663,12 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
                   activeTab === 'signup' ? 'bg-green-500' : ''
                 }`}
                 onPress={() => {
+                  console.log('🔄 Sign Up tab pressed');
                   setActiveTab('signup');
                   clearFormData();
                 }}
+                activeOpacity={0.7}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
                 <Text className={`text-center font-semibold ${
                   activeTab === 'signup' ? 'text-white' : 'text-gray-600'
@@ -905,17 +911,15 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
                     <Text className="text-gray-700 flex-1">
                       I have read and agree to the{' '}
                       <Text 
-                        className="underline text-black hover:text-green-500 transition-colors duration-200"
+                        className="underline text-black"
                         onPress={() => setShowTermsModal(true)}
-                        style={{ cursor: 'pointer' }}
                       >
                         Terms & Condition
                       </Text>
                       {' '}and the{' '}
                       <Text 
-                        className="underline text-black hover:text-green-500 transition-colors duration-200"
+                        className="underline text-black"
                         onPress={() => setShowPrivacyModal(true)}
-                        style={{ cursor: 'pointer' }}
                       >
                         Privacy Policy
                       </Text>
@@ -1057,6 +1061,7 @@ export function AuthScreen({ onLogin, onForgotPassword, onSignup, onCreateProfil
                 <Text className="text-base text-gray-700 leading-6 mb-6">
                   Your confidential personal information will NEVER be sold, shared, or given to any third party without your permission, and will NEVER be made publicly visible or available on the FavorApp website. We may share information with governmental agencies or other companies assisting us in fraud prevention or investigation.
                 </Text>
+                
 
                 <Text className="text-lg font-bold text-gray-800 mb-3">Commitment to Data Security</Text>
                 <Text className="text-base text-gray-700 leading-6 mb-6">

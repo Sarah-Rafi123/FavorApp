@@ -78,7 +78,7 @@ export function PDFViewerModal({ visible, onClose, pdfUri, fileName }: PDFViewer
               PDF Generated Successfully!
             </Text>
             <Text className="text-gray-600 text-center mb-6 leading-6">
-              Your profile PDF has been saved to your device. Tap "Share" to view it in your preferred PDF viewer app or share it with others.
+              Your profile PDF has been created and saved to your device. On Android, it's in your Downloads folder. On iOS, tap "Share" to save it to your Files app Downloads.
             </Text>
             <TouchableOpacity
               onPress={handleOpenExternal}

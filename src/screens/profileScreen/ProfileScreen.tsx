@@ -10,6 +10,8 @@ import Toast from 'react-native-toast-message';
 import * as FileSystem from 'expo-file-system';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import * as MediaLibrary from 'expo-media-library';
+import * as DocumentPicker from 'expo-document-picker';
 import { PDFViewerModal } from '../../components/overlays/PDFViewerModal';
 import EditSvg from '../../assets/icons/Edit';
 import FilterSvg from '../../assets/icons/Filter';
@@ -411,27 +413,111 @@ export function ProfileScreen() {
       });
       
       console.log('✅ PDF generated at:', uri);
-      setDownloadProgress('Preparing PDF viewer...');
+      setDownloadProgress('Downloading to device...');
       
-      // Move the PDF to a permanent location
-      const permanentUri = `${FileSystem.documentDirectory}${fileName}`;
-      await FileSystem.moveAsync({
-        from: uri,
-        to: permanentUri,
-      });
+      // Save to device Downloads folder with proper access
+      let finalUri = uri;
+      let downloadLocation = 'app storage';
       
-      console.log('✅ PDF saved to:', permanentUri);
+      try {
+        // First, save to a permanent location in app's document directory
+        const permanentUri = `${FileSystem.documentDirectory}${fileName}`;
+        await FileSystem.moveAsync({
+          from: uri,
+          to: permanentUri,
+        });
+        finalUri = permanentUri;
+        
+        if (Platform.OS === 'android') {
+          try {
+            setDownloadProgress('Saving to Downloads folder...');
+            
+            // Android: Use MediaLibrary to save to Downloads
+            const { status } = await MediaLibrary.requestPermissionsAsync();
+            
+            if (status === 'granted') {
+              console.log('📱 Saving PDF to Android Downloads...');
+              
+              // Create asset from the PDF file
+              const asset = await MediaLibrary.createAssetAsync(permanentUri);
+              
+              // Try to get or create Downloads album
+              let album = await MediaLibrary.getAlbumAsync('Download');
+              
+              if (album == null) {
+                console.log('📁 Creating Downloads album...');
+                album = await MediaLibrary.createAlbumAsync('Download', asset, false);
+              } else {
+                console.log('📁 Adding to existing Downloads album...');
+                await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+              }
+              
+              downloadLocation = 'Downloads folder';
+              console.log('✅ PDF successfully saved to Android Downloads');
+            } else {
+              console.warn('⚠️ Media library permission denied');
+              
+              // Try alternative approach using Sharing
+              await Sharing.shareAsync(permanentUri, {
+                mimeType: 'application/pdf',
+                dialogTitle: 'Save PDF to Downloads',
+                UTI: 'com.adobe.pdf',
+              });
+              
+              downloadLocation = 'shared to device';
+              console.log('✅ PDF shared via system dialog');
+            }
+          } catch (androidError) {
+            console.error('❌ Android download error:', androidError);
+            
+            // Final fallback - just share the file
+            await Sharing.shareAsync(permanentUri, {
+              mimeType: 'application/pdf',
+              dialogTitle: 'Save PDF',
+            });
+            
+            downloadLocation = 'shared to device';
+          }
+        } else if (Platform.OS === 'ios') {
+          try {
+            setDownloadProgress('Saving to Files app...');
+            
+            // iOS: Use Sharing to save to Files app (which includes Downloads)
+            console.log('📱 Opening iOS Files app for PDF save...');
+            
+            await Sharing.shareAsync(permanentUri, {
+              mimeType: 'application/pdf',
+              dialogTitle: 'Save to Files',
+              UTI: 'com.adobe.pdf',
+            });
+            
+            downloadLocation = 'Files app';
+            console.log('✅ PDF shared to iOS Files app');
+          } catch (iosError) {
+            console.error('❌ iOS sharing error:', iosError);
+            downloadLocation = 'Files app (fallback)';
+          }
+        }
+      } catch (saveError) {
+        console.error('❌ Failed to save PDF:', saveError);
+        throw new Error('Failed to save PDF file');
+      }
+      
       setDownloadProgress('Opening PDF viewer...');
       
       // Show the PDF in the viewer
-      setPdfUri(permanentUri);
+      setPdfUri(finalUri);
       setShowPDFViewer(true);
       
-      // Show success toast
+      // Show success toast with download info
       Toast.show({
         type: 'success',
-        text1: 'PDF Generated! 📄',
-        text2: 'Your profile has\nbeen exported as PDF',
+        text1: 'PDF Ready! 📄',
+        text2: downloadLocation === 'Downloads folder' 
+          ? 'Saved to Downloads folder' 
+          : downloadLocation === 'Files app'
+          ? 'Use Files app to save'
+          : 'Use share dialog to save',
         visibilityTime: 4000,
       });
 
@@ -697,13 +783,13 @@ export function ProfileScreen() {
           {/* Export PDF Section */}
           <View className="bg-[#DCFBCC] rounded-2xl p-4">
             <Text className="text-center text-black font-normal text-lg mb-3">
-              Export your free community service hours as a PDF
+              Export your community service hours as a PDF and save to your device
             </Text>
             <TouchableOpacity 
               className="bg-transparent border-2 border-[#44A27B] rounded-full py-3"
               onPress={handleShowExportModal}
             >
-              <Text className="text-center text-[#44A27B] font-semibold">Export PDF</Text>
+              <Text className="text-center text-[#44A27B] font-semibold">Export & Download PDF</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -898,9 +984,13 @@ export function ProfileScreen() {
       >
         <View className="flex-1 bg-black bg-opacity-50 justify-center items-center">
           <View className="bg-white rounded-2xl p-8 mx-8 items-center shadow-lg">
-            <ActivityIndicator size="large" color="#44A27B" />
+            {downloadProgress.includes('Saving to') || downloadProgress.includes('Downloading to') ? (
+              <Text className="text-4xl mb-2">📱</Text>
+            ) : (
+              <ActivityIndicator size="large" color="#44A27B" />
+            )}
             <Text className="text-lg font-semibold text-gray-800 mt-4 mb-2">
-              Downloading PDF
+              {downloadProgress.includes('Saving to') || downloadProgress.includes('Downloading to') ? 'Downloading to Phone' : 'Preparing PDF'}
             </Text>
             <Text className="text-sm text-gray-600 text-center">
               {downloadProgress}
@@ -909,14 +999,16 @@ export function ProfileScreen() {
               <View 
                 className="bg-[#44A27B] h-2 rounded-full transition-all duration-300"
                 style={{ 
-                  width: downloadProgress === 'Generating PDF...' ? '20%' :
-                        downloadProgress === 'Connecting to server...' ? '40%' :
-                        downloadProgress === 'Processing PDF...' ? '60%' :
-                        downloadProgress === 'Converting PDF...' ? '70%' :
-                        downloadProgress === 'Preparing download...' ? '80%' :
-                        downloadProgress === 'Saving to device...' ? '90%' :
+                  width: downloadProgress === 'Fetching export data...' ? '10%' :
+                        downloadProgress === 'Connecting to server...' ? '20%' :
+                        downloadProgress === 'Generating PDF content...' ? '40%' :
+                        downloadProgress === 'Creating PDF file...' ? '50%' :
+                        downloadProgress === 'Converting to PDF...' ? '65%' :
+                        downloadProgress === 'Downloading to device...' ? '75%' :
+                        downloadProgress === 'Saving to Downloads folder...' ? '85%' :
+                        downloadProgress === 'Saving to Files app...' ? '85%' :
                         downloadProgress === 'Opening PDF viewer...' ? '95%' :
-                        downloadProgress === 'Download complete!' ? '100%' : '10%'
+                        downloadProgress === 'Download complete!' ? '100%' : '5%'
                 }}
               />
             </View>

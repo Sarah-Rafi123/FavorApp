@@ -116,9 +116,16 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
         active_subscription: backendData.data.active_subscription
       });
 
-      // Determine subscription status from backend data
+      // Determine subscription status from backend data - backend is source of truth
       const hasBackendSubscription = backendData.data.is_certified && Boolean(backendData.data.active_subscription?.active);
-      setHasActiveSubscription(hasBackendSubscription);
+      
+      console.log('🔍 Backend subscription analysis:', {
+        is_certified: backendData.data.is_certified,
+        has_active_subscription: Boolean(backendData.data.active_subscription),
+        subscription_active: backendData.data.active_subscription?.active,
+        subscription_status: backendData.data.active_subscription?.status,
+        calculated_hasBackendSubscription: hasBackendSubscription
+      });
 
       // If user has backend subscription, get detailed info
       if (hasBackendSubscription && backendData.data.active_subscription) {
@@ -128,7 +135,15 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
           productId: backendData.data.active_subscription.plan.stripe_price_id || backendData.data.active_subscription.transaction_id
         };
         setSubscriptionDetails(backendDetails);
+        console.log('✅ Backend subscription details set:', backendDetails);
+      } else {
+        // Reset subscription details if no backend subscription
+        setSubscriptionDetails({ type: null, expirationDate: null, productId: null });
+        console.log('🔄 Subscription details reset - no backend subscription');
       }
+      
+      // Set initial subscription status based on backend
+      setHasActiveSubscription(hasBackendSubscription);
 
       // Log in user to RevenueCat with their user ID
       console.log('🔗 Logging in to RevenueCat with user ID:', user.id);
@@ -156,21 +171,32 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
         premiumExpirationDate: premiumEntitlement?.expirationDate
       });
 
-      // If RevenueCat has subscription but backend doesn't, prioritize backend
-      // This handles cases where backend is the source of truth
-      if (!hasBackendSubscription && hasRevenueCatSubscription) {
-        console.log('🔄 RevenueCat subscription found, but backend shows no active subscription');
-        // Still set as subscribed and get RevenueCat details
-        setHasActiveSubscription(hasRevenueCatSubscription);
-        const details = getSubscriptionDetails(customerInfo.customerInfo);
-        setSubscriptionDetails(details);
-      } else if (hasRevenueCatSubscription && hasBackendSubscription) {
-        // Both have subscription - get expiration date from RevenueCat
+      // RevenueCat integration - supplement backend data, don't override
+      if (hasBackendSubscription && hasRevenueCatSubscription) {
+        console.log('✅ Both backend and RevenueCat show active subscriptions - getting expiration date from RevenueCat');
+        // Both have subscription - enhance with RevenueCat expiration date
         const revenueCatDetails = getSubscriptionDetails(customerInfo.customerInfo);
         setSubscriptionDetails(prev => ({
           ...prev,
           expirationDate: revenueCatDetails.expirationDate
         }));
+      } else if (!hasBackendSubscription && hasRevenueCatSubscription) {
+        console.log('⚠️ RevenueCat subscription found but backend shows no active subscription - may be sync issue');
+        // RevenueCat shows subscription but backend doesn't - could be sync issue
+        // Use RevenueCat data as fallback but warn about potential sync issue
+        setHasActiveSubscription(true);
+        const details = getSubscriptionDetails(customerInfo.customerInfo);
+        setSubscriptionDetails(details);
+        console.log('🔄 Using RevenueCat subscription data as fallback:', details);
+      } else if (hasBackendSubscription && !hasRevenueCatSubscription) {
+        console.log('✅ Backend subscription confirmed, no RevenueCat subscription (likely Stripe-based)');
+        // Backend has subscription but RevenueCat doesn't - this is normal for Stripe subscriptions
+        // Keep backend subscription status and details as already set
+      } else {
+        console.log('ℹ️ No active subscription found in either backend or RevenueCat');
+        // Neither has subscription - ensure we're not subscribed
+        setHasActiveSubscription(false);
+        setSubscriptionDetails({ type: null, expirationDate: null, productId: null });
       }
 
       // Load offerings for potential upgrades
@@ -207,6 +233,13 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
       
     } catch (error) {
       console.error('❌ Initialization failed:', error);
+      
+      // Set a default state when initialization fails
+      setHasActiveSubscription(false);
+      setSubscriptionDetails({ type: null, expirationDate: null, productId: null });
+      setBackendSubscriptionData(null);
+      setOfferings(null);
+      
       Alert.alert(
         'Setup Error',
         'Failed to initialize subscription system. Please try again.',
@@ -214,6 +247,18 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
       );
     } finally {
       setIsInitialized(true);
+      
+      // Final state logging for debugging
+      console.log('🏁 Final subscription state:', {
+        hasActiveSubscription,
+        subscriptionDetails: subscriptionDetails,
+        backendSubscriptionData: backendSubscriptionData ? {
+          is_certified: backendSubscriptionData.is_certified,
+          subscription_source: backendSubscriptionData.subscription_source,
+          has_active_subscription: Boolean(backendSubscriptionData.active_subscription),
+          subscription_active: backendSubscriptionData.active_subscription?.active
+        } : null
+      });
     }
   };
 
@@ -570,6 +615,23 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
       return;
     }
 
+    // Show confirmation dialog before upgrading
+    Alert.alert(
+      'Upgrade to Annual Plan',
+      'This will cancel your current monthly subscription and replace it with an annual plan. You\'ll save money and get immediate access to all annual benefits. Continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Upgrade Now', 
+          style: 'default',
+          onPress: () => performUpgradeToAnnual()
+        }
+      ]
+    );
+  };
+
+  const performUpgradeToAnnual = async () => {
+
     if (!offerings || !user?.id) {
       console.log('❌ Missing offerings or user ID:', { offerings: !!offerings, userId: !!user?.id });
       Alert.alert('Error', 'Unable to load upgrade options. Please try again.');
@@ -627,8 +689,24 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
         currentPlatform: Platform.OS
       });
 
-      // Purchase the annual package (RevenueCat handles the upgrade automatically)
+      // For subscription upgrades, we need to properly handle the change
+      // RevenueCat will handle cancellation of the old subscription and upgrade to the new one
+      console.log('💳 Processing subscription upgrade from monthly to annual...');
+      
       const { customerInfo } = await Purchases.purchasePackage(annualPackage);
+      
+      // Verify the upgrade was successful by checking active subscriptions
+      const currentActiveSubscriptions = customerInfo.activeSubscriptions;
+      const hasAnnualSubscription = currentActiveSubscriptions.some(sub => 
+        sub.toLowerCase().includes('annual') || sub.toLowerCase().includes('year')
+      );
+      
+      if (!hasAnnualSubscription) {
+        console.warn('⚠️ Annual subscription not found in active subscriptions after upgrade');
+        console.log('Current active subscriptions:', currentActiveSubscriptions);
+      } else {
+        console.log('✅ Annual subscription confirmed in active subscriptions');
+      }
 
       console.log('✅ Upgrade successful:', {
         newProductId: annualPackage.product.identifier,
@@ -639,16 +717,20 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
       // Update local state with new subscription details
       const newDetails = getSubscriptionDetails(customerInfo);
       setSubscriptionDetails(newDetails);
+      
+      // Update subscription status to reflect the change
+      setHasActiveSubscription(true);
 
-      // Refresh backend data after upgrade
+      // Refresh backend data after upgrade to sync with server
       setTimeout(() => {
+        console.log('🔄 Refreshing backend data after subscription upgrade...');
         initializeRevenueCat();
       }, 2000);
 
       Alert.alert(
-        'Upgrade Successful!',
-        'You have successfully upgraded to the annual subscription. Your new billing cycle starts now.',
-        [{ text: 'OK' }]
+        'Upgrade Successful! 🎉',
+        'Your monthly subscription has been canceled and replaced with an annual subscription. Your new billing cycle starts now with significant savings!',
+        [{ text: 'Great!' }]
       );
 
     } catch (error: any) {
@@ -787,6 +869,8 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
             </View>
           </View>
 
+         
+
           {/* Lifetime Slots Scarcity Alert */}
           {!hasActiveSubscription && !lifetimeSlotsLoading && lifetimeSlots && lifetimeSlots.slots_remaining <= 20 && lifetimeSlots.slots_remaining > 0 && (
             <View className="w-full mb-4 bg-orange-50 border border-orange-200 rounded-2xl p-4">
@@ -836,14 +920,14 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
               )} */}
               
               {/* Restore Purchases Button */}
-              <TouchableOpacity 
+              {/* <TouchableOpacity 
                 className="w-full bg-gray-100 border border-gray-300 rounded-3xl py-3 shadow-sm"
                 onPress={handleRestorePurchases}
               >
                 <Text className="text-gray-700 text-center font-medium text-lg">
                   Restore Purchases
                 </Text>
-              </TouchableOpacity>
+              </TouchableOpacity> */}
             </View>
           ) : (
             <View className="w-full mb-8">
@@ -853,13 +937,13 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
                   ✅ Premium Member
                 </Text>
                 
-                {(subscriptionDetails.type || backendSubscriptionData?.active_subscription) && (
+                {(hasActiveSubscription && (subscriptionDetails.type || backendSubscriptionData?.active_subscription)) && (
                   <View className=" rounded-lg p-4 mb-3">
                     <View className="flex-row justify-between items-center mb-2">
                       <Text className="text-gray-700 font-medium text-lg">Plan:</Text>
                       <Text className="text-green-800 font-semibold capitalize text-lg">
                         {backendSubscriptionData?.active_subscription?.plan.name || 
-                         (subscriptionDetails.type === 'monthly' ? 'Monthly' : 'Annual') + ' Subscription'}
+                         (subscriptionDetails.type ? (subscriptionDetails.type === 'monthly' ? 'Monthly' : 'Annual') + ' Subscription' : 'Active Subscription')}
                       </Text>
                     </View>
                     
@@ -911,9 +995,15 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
                   </View>
                 )}
 
-                <Text className="text-center text-green-700 text-base">
-                  Enjoy all premium features and benefits
-                </Text>
+                {!hasActiveSubscription ? (
+                  <Text className="text-center text-gray-600 text-base">
+                    Loading subscription details...
+                  </Text>
+                ) : (
+                  <Text className="text-center text-green-700 text-base">
+                    Enjoy all premium features and benefits
+                  </Text>
+                )}
               </View>
 
               {/* Upgrade Section for Monthly Subscribers */}

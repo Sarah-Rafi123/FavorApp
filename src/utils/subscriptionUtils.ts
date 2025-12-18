@@ -64,18 +64,18 @@ export const navigateToGetCertifiedWithSubscriptionCheck = async (
     
     if (hasActiveSubscription) {
       console.log('✅ User has active subscription - navigating to GetCertifiedScreen');
-      navigation.navigate('Settings', { screen: 'GetCertifiedScreen' });
+      navigation.navigate('GetCertifiedScreen');
       onSubscriptionConfirmed?.();
     } else {
       console.log('⚠️ User has no active subscription - navigating to SubscriptionsScreen');
-      navigation.navigate('Settings', { screen: 'SubscriptionsScreen' });
+      navigation.navigate('SubscriptionsScreen');
     }
   } catch (error) {
     console.error('❌ Error during subscription check navigation:', error);
     
     // Check again if navigation exists before error fallback
     if (navigation) {
-      navigation.navigate('Settings', { screen: 'SubscriptionsScreen' });
+      navigation.navigate('SubscriptionsScreen');
     } else {
       console.error('❌ Cannot navigate - navigation object is null');
     }

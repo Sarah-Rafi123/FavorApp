@@ -51,6 +51,9 @@
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
+        "READ_MEDIA_IMAGES",
+        "READ_MEDIA_VIDEO", 
+        "READ_MEDIA_AUDIO",
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
       ]
@@ -62,6 +65,14 @@
     "plugins": [
       "expo-font",
       "expo-location",
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow FavorApp to access your photos to save PDF exports.",
+          "savePhotosPermission": "Allow FavorApp to save PDF exports to your photo library.",
+          "isAccessMediaLocationEnabled": true
+        }
+      ],
       [
         "expo-notifications",
         {
