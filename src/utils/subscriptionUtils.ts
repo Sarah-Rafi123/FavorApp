@@ -17,7 +17,9 @@ export const checkSubscriptionStatus = async (): Promise<SubscriptionCheckResult
     const response = await getCertificationStatus();
     const { is_certified, active_subscription } = response.data;
     
-    const hasActiveSubscription = is_certified && Boolean(active_subscription?.active);
+    // Use is_certified as the definitive subscription status check
+    // According to API: is_certified: false means no active subscription
+    const hasActiveSubscription = is_certified;
     
     console.log('✅ Subscription status checked:', {
       is_certified,
@@ -64,18 +66,20 @@ export const navigateToGetCertifiedWithSubscriptionCheck = async (
     
     if (hasActiveSubscription) {
       console.log('✅ User has active subscription - navigating to GetCertifiedScreen');
-      navigation.navigate('GetCertifiedScreen');
+      // Navigate to Settings tab first, then to GetCertifiedScreen within that stack
+      navigation.navigate('Settings', { screen: 'GetCertifiedScreen' });
       onSubscriptionConfirmed?.();
     } else {
       console.log('⚠️ User has no active subscription - navigating to SubscriptionsScreen');
-      navigation.navigate('SubscriptionsScreen');
+      // Navigate to Settings tab first, then to SubscriptionsScreen within that stack
+      navigation.navigate('Settings', { screen: 'SubscriptionsScreen' });
     }
   } catch (error) {
     console.error('❌ Error during subscription check navigation:', error);
     
     // Check again if navigation exists before error fallback
     if (navigation) {
-      navigation.navigate('SubscriptionsScreen');
+      navigation.navigate('Settings', { screen: 'SubscriptionsScreen' });
     } else {
       console.error('❌ Cannot navigate - navigation object is null');
     }

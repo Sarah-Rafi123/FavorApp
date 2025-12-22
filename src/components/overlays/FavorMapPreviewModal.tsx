@@ -84,7 +84,7 @@ export function FavorMapPreviewModal({ visible, onClose, favor, navigation }: Fa
       const isKYCVerified = certificationResponse.data.is_kyc_verified === 'verified';
       
       // Check subscription status from certification response
-      const isSubscribed = certificationResponse.data.is_certified && Boolean(certificationResponse.data.active_subscription?.active);
+      const isSubscribed = certificationResponse.data.is_certified;
       
       setVerificationStatus({
         isKYCVerified,

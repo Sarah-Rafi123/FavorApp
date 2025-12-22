@@ -145,8 +145,8 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications, navigatio
       const certificationResponse = await getCertificationStatus();
       const isKYCVerified = certificationResponse.data.is_kyc_verified === 'verified';
       
-      // Check subscription status from certification response
-      const isSubscribed = certificationResponse.data.is_certified && Boolean(certificationResponse.data.active_subscription?.active);
+      // Check subscription status from certification response - is_certified is the definitive check
+      const isSubscribed = certificationResponse.data.is_certified;
       
       setVerificationStatus({
         isKYCVerified,
@@ -302,14 +302,14 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications, navigatio
       const certificationResponse = await getCertificationStatus();
       const isKYCVerified = certificationResponse.data.is_kyc_verified === 'verified';
       
-      // For now, we'll assume subscription status based on user data
-      // In a real app, you'd have a subscription status API call
-      const isSubscribed = user?.id ? true : false; // Placeholder logic
+      // Check subscription status from certification response - is_certified is the definitive check
+      const isSubscribed = certificationResponse.data.is_certified;
       
       setVerificationStatus({
         isKYCVerified,
         isSubscribed,
-        isLoading: false
+        isLoading: false,
+        hasShownEncouragement: false
       });
       
       return { isKYCVerified, isSubscribed };

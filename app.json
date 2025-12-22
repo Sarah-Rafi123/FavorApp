@@ -2,7 +2,7 @@
   "expo": {
     "name": "FavorApp",
     "slug": "favorapp",
-    "version": "1.0.35",
+    "version": "1.0.38",
     "orientation": "portrait",
     "icon": "./assets/AppLogo.png",
     "userInterfaceStyle": "light",
@@ -52,10 +52,13 @@
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
         "READ_MEDIA_IMAGES",
-        "READ_MEDIA_VIDEO", 
+        "READ_MEDIA_VIDEO",
         "READ_MEDIA_AUDIO",
         "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION"
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.ACCESS_MEDIA_LOCATION"
       ]
     },
     "web": {
@@ -102,8 +105,8 @@
       }
     },
     "extra": {
-    "eas": {
-        "projectId": "00857594-b551-44da-b9ad-8368bfcc277a" 
+      "eas": {
+        "projectId": "7ce5bc8d-1a94-401a-9641-3f0ee27fb437"
       }
     }
   }

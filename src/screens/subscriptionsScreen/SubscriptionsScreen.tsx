@@ -116,16 +116,19 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
         active_subscription: backendData.data.active_subscription
       });
 
-      // Determine subscription status from backend data - backend is source of truth
-      const hasBackendSubscription = backendData.data.is_certified && Boolean(backendData.data.active_subscription?.active);
+      // Determine subscription status from backend data - is_certified is the definitive check
+      // According to the API: is_certified: false means no active subscription
+      const hasBackendSubscription = backendData.data.is_certified;
       
       console.log('🔍 Backend subscription analysis:', {
         is_certified: backendData.data.is_certified,
         has_active_subscription: Boolean(backendData.data.active_subscription),
         subscription_active: backendData.data.active_subscription?.active,
         subscription_status: backendData.data.active_subscription?.status,
+        subscription_source: backendData.data.subscription_source,
         calculated_hasBackendSubscription: hasBackendSubscription
       });
+
 
       // If user has backend subscription, get detailed info
       if (hasBackendSubscription && backendData.data.active_subscription) {
@@ -171,32 +174,34 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
         premiumExpirationDate: premiumEntitlement?.expirationDate
       });
 
-      // RevenueCat integration - supplement backend data, don't override
-      if (hasBackendSubscription && hasRevenueCatSubscription) {
-        console.log('✅ Both backend and RevenueCat show active subscriptions - getting expiration date from RevenueCat');
-        // Both have subscription - enhance with RevenueCat expiration date
-        const revenueCatDetails = getSubscriptionDetails(customerInfo.customerInfo);
-        setSubscriptionDetails(prev => ({
-          ...prev,
-          expirationDate: revenueCatDetails.expirationDate
-        }));
-      } else if (!hasBackendSubscription && hasRevenueCatSubscription) {
-        console.log('⚠️ RevenueCat subscription found but backend shows no active subscription - may be sync issue');
-        // RevenueCat shows subscription but backend doesn't - could be sync issue
-        // Use RevenueCat data as fallback but warn about potential sync issue
-        setHasActiveSubscription(true);
-        const details = getSubscriptionDetails(customerInfo.customerInfo);
-        setSubscriptionDetails(details);
-        console.log('🔄 Using RevenueCat subscription data as fallback:', details);
-      } else if (hasBackendSubscription && !hasRevenueCatSubscription) {
-        console.log('✅ Backend subscription confirmed, no RevenueCat subscription (likely Stripe-based)');
-        // Backend has subscription but RevenueCat doesn't - this is normal for Stripe subscriptions
-        // Keep backend subscription status and details as already set
+      // Backend is_certified is the ABSOLUTE source of truth - never override it
+      console.log('🔒 Backend is_certified is the definitive source of truth');
+      
+      if (hasBackendSubscription) {
+        console.log('✅ Backend confirms active subscription (is_certified: true)');
+        
+        if (hasRevenueCatSubscription) {
+          // Both have subscription - enhance with RevenueCat expiration date
+          const revenueCatDetails = getSubscriptionDetails(customerInfo.customerInfo);
+          setSubscriptionDetails(prev => ({
+            ...prev,
+            expirationDate: revenueCatDetails.expirationDate
+          }));
+          console.log('📅 Enhanced subscription details with RevenueCat expiration date');
+        }
+        // Keep hasActiveSubscription = true (already set above)
       } else {
-        console.log('ℹ️ No active subscription found in either backend or RevenueCat');
-        // Neither has subscription - ensure we're not subscribed
+        console.log('❌ Backend shows NO active subscription (is_certified: false)');
+        console.log('🚫 Overriding any RevenueCat data - backend is source of truth');
+        
+        // Force no subscription regardless of RevenueCat status
         setHasActiveSubscription(false);
         setSubscriptionDetails({ type: null, expirationDate: null, productId: null });
+        
+        if (hasRevenueCatSubscription) {
+          console.warn('⚠️ WARNING: RevenueCat shows subscription but backend says is_certified: false');
+          console.warn('⚠️ This indicates a sync issue - backend takes precedence');
+        }
       }
 
       // Load offerings for potential upgrades
@@ -690,10 +695,50 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
       });
 
       // For subscription upgrades, we need to properly handle the change
-      // RevenueCat will handle cancellation of the old subscription and upgrade to the new one
+      // We need to explicitly upgrade/replace the subscription, not just purchase a new one
       console.log('💳 Processing subscription upgrade from monthly to annual...');
       
+      // Get current customer info to check existing subscriptions
+      const currentCustomerInfo = await Purchases.getCustomerInfo();
+      console.log('📋 Current subscriptions before upgrade:', {
+        activeSubscriptions: currentCustomerInfo.activeSubscriptions,
+        entitlements: Object.keys(currentCustomerInfo.entitlements.active)
+      });
+      
+      // Purchase the annual package - RevenueCat should handle the subscription replacement
+      // However, if it doesn't properly cancel the old subscription, we'll detect this
       const { customerInfo } = await Purchases.purchasePackage(annualPackage);
+      
+      // Check if we still have both subscriptions (which shouldn't happen)
+      const postUpgradeSubscriptions = customerInfo.activeSubscriptions;
+      console.log('📋 Subscriptions after upgrade:', postUpgradeSubscriptions);
+      
+      // If we still have multiple subscriptions, there might be an issue
+      if (postUpgradeSubscriptions.length > 1) {
+        console.warn('⚠️ WARNING: Multiple active subscriptions detected after upgrade');
+        console.log('Active subscriptions:', postUpgradeSubscriptions);
+        
+        // Alert the user about the issue and provide next steps
+        Alert.alert(
+          'Multiple Subscriptions Detected',
+          'Your upgrade completed, but you may still have an active monthly subscription. Please check your App Store subscriptions and cancel the monthly plan if needed. Contact support if you need assistance.',
+          [
+            { text: 'OK' },
+            { 
+              text: 'Open App Store', 
+              onPress: () => {
+                if (Platform.OS === 'ios') {
+                  // Open iOS App Store subscriptions
+                  console.log('Opening iOS App Store subscriptions...');
+                } else {
+                  // Open Android Play Store subscriptions  
+                  console.log('Opening Android Play Store subscriptions...');
+                }
+              }
+            }
+          ]
+        );
+      }
       
       // Verify the upgrade was successful by checking active subscriptions
       const currentActiveSubscriptions = customerInfo.activeSubscriptions;
@@ -868,6 +913,8 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
               ))}
             </View>
           </View>
+
+        
 
          
 

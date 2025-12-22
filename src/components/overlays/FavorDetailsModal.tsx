@@ -102,8 +102,8 @@ export function FavorDetailsModal({ visible, onClose, favorId, navigation }: Fav
       const certificationResponse = await getCertificationStatus();
       const isKYCVerified = certificationResponse.data.is_kyc_verified === 'verified';
       
-      // Check subscription status from certification response
-      const isSubscribed = certificationResponse.data.is_certified && Boolean(certificationResponse.data.active_subscription?.active);
+      // Check subscription status from certification response - is_certified is the definitive check
+      const isSubscribed = certificationResponse.data.is_certified;
       
       setVerificationStatus({
         isKYCVerified,
