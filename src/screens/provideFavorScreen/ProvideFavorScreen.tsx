@@ -14,7 +14,6 @@ import {
   Modal,
   Linking,
 } from 'react-native';
-import { navigateToGetCertifiedWithSubscriptionCheck } from '../../utils/subscriptionUtils';
 import { getPriorityColor, formatPriority } from '../../utils/priorityUtils';
 import { CarouselButton } from '../../components/buttons';
 import ProvideFavorSvg from '../../assets/icons/ProvideFavor';
@@ -162,7 +161,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
       per_page: 20,
       category: selectedCategories.length > 0 ? selectedCategories : undefined,
       sort_by: 'updated_at',
-      sort_order: 'asc'
+      sort_order: 'desc'
     },
     { enabled: activeTab === 'Active' }
   );
@@ -180,7 +179,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
       per_page: 20,
       category: selectedCategories.length > 0 ? selectedCategories : undefined,
       sort_by: 'updated_at',
-      sort_order: 'asc'
+      sort_order: 'desc'
     },
     { enabled: activeTab === 'Active' }
   );
@@ -198,7 +197,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
       per_page: 20,
       category: selectedCategories.length > 0 ? selectedCategories : undefined,
       sort_by: 'updated_at',
-      sort_order: 'asc'
+      sort_order: 'desc'
     },
     { enabled: true } // Always enabled to prevent re-fetching when switching tabs
   );
@@ -216,7 +215,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
       per_page: 20,
       category: selectedCategories.length > 0 ? selectedCategories : undefined,
       sort_by: 'updated_at',
-      sort_order: 'asc'
+      sort_order: 'desc'
     },
     { enabled: true } // Always enabled to prevent re-fetching when switching tabs
   );
@@ -946,7 +945,10 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
                 {/* Category and Time row */}
                 <View className="flex-row items-center mb-1">
                   <Text className="text-sm text-gray-600" numberOfLines={1}>
-                    • {favor.title || favor.favor_subject.name}
+                    • {(() => {
+                        const title = favor.title || favor.favor_subject.name;
+                        return title.length > 20 ? `${title.substring(0, 20)}...` : title;
+                      })()}
                   </Text>
                   <Text className="text-sm text-gray-600 mx-1">|</Text>
                   <ClockSmallSvg width={12} height={12} color="#6B7280" />
@@ -1536,14 +1538,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
             </Text>
             
             <View className="mb-6">
-              {/* {!verificationStatus.isSubscribed && (
-                <View className="flex-row items-center mb-3">
-                  <View className="w-5 h-5 rounded-full mr-3 bg-blue-500">
-                    <Text className="text-white text-xs text-center leading-5">💎</Text>
-                  </View>
-                  <Text className="text-gray-700 flex-1">Premium subscription benefits</Text>
-                </View>
-              )} */}
+           
               
               {!verificationStatus.isKYCVerified && (
                 <View className="flex-row items-center mb-3">
@@ -1554,12 +1549,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
                 </View>
               )}
               
-              {/* <View className="flex-row items-center mb-3">
-                <View className="w-5 h-5 rounded-full mr-3 bg-yellow-500">
-                  <Text className="text-white text-xs text-center leading-5">⭐</Text>
-                </View>
-                <Text className="text-gray-700 flex-1">Access to premium features</Text>
-              </View> */}
+             
               
               <View className="flex-row items-center mb-3">
                 <View className="w-5 h-5 rounded-full mr-3 bg-purple-500">
@@ -1592,15 +1582,27 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
             
             <View className="space-y-3">
               
-              {!verificationStatus.isKYCVerified && (
+              {!verificationStatus.isSubscribed && (
                 <TouchableOpacity
                   className="py-3 px-4 bg-green-500 rounded-xl mb-3"
                   onPress={() => {
                     setShowEncouragementModal(false);
-                    navigateToGetCertifiedWithSubscriptionCheck(navigation);
+                    navigation?.navigate('Settings', { screen: 'SubscriptionsScreen' });
                   }}
                 >
                   <Text className="text-white text-center font-semibold">Upgrade Now</Text>
+                </TouchableOpacity>
+              )}
+              
+              {!verificationStatus.isKYCVerified && verificationStatus.isSubscribed && (
+                <TouchableOpacity
+                  className="py-3 px-4 bg-green-500 rounded-xl mb-3"
+                  onPress={() => {
+                    setShowEncouragementModal(false);
+                    navigation?.navigate('Settings', { screen: 'GetCertifiedScreen' });
+                  }}
+                >
+                  <Text className="text-white text-center font-semibold">Get Verified</Text>
                 </TouchableOpacity>
               )}
               
@@ -1661,12 +1663,24 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
                 
                 <View className="gap-y-3">
                   
-                  {!verificationStatus.isKYCVerified && (
+                  {!verificationStatus.isSubscribed && (
                     <TouchableOpacity
                       className="w-full py-3 px-4 bg-green-500 rounded-xl"
                       onPress={() => {
                         setShowVerificationModal(false);
-                        navigateToGetCertifiedWithSubscriptionCheck(navigation);
+                        navigation?.navigate('Settings', { screen: 'SubscriptionsScreen' });
+                      }}
+                    >
+                      <Text className="text-white text-center font-semibold">Get Subscription</Text>
+                    </TouchableOpacity>
+                  )}
+                  
+                  {!verificationStatus.isKYCVerified && verificationStatus.isSubscribed && (
+                    <TouchableOpacity
+                      className="w-full py-3 px-4 bg-green-500 rounded-xl"
+                      onPress={() => {
+                        setShowVerificationModal(false);
+                        navigation?.navigate('Settings', { screen: 'GetCertifiedScreen' });
                       }}
                     >
                       <Text className="text-white text-center font-semibold">Get Verified</Text>
@@ -1677,7 +1691,7 @@ export function ProvideFavorScreen({ navigation }: ProvideFavorScreenProps) {
                     className="w-full py-3 px-4 border border-gray-300 rounded-xl"
                     onPress={() => setShowVerificationModal(false)}
                   >
-                    <Text className="text-gray-600 text-center font-semibold">Cancel</Text>
+                    <Text className="text-gray-600 text-center font-semibold">Skip for now</Text>
                   </TouchableOpacity>
                 </View>
               </>

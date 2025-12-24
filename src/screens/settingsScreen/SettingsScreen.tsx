@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,10 +10,11 @@ import {
   Platform,
   Share,
   Alert,
+  Linking,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Path } from 'react-native-svg';
 import useAuthStore from '../../store/useAuthStore';
-import { navigateToGetCertifiedWithSubscriptionCheck } from '../../utils/subscriptionUtils';
 import { LogoutModal } from '../../components/overlays';
 import FilterSvg from '../../assets/icons/Filter';
 import { NotificationBell } from '../../components/notifications/NotificationBell';
@@ -40,6 +41,51 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const { removeUser } = useAuthStore();
+
+  // Load notification preference from storage
+  useEffect(() => {
+    loadNotificationPreference();
+  }, []);
+
+  const loadNotificationPreference = async () => {
+    try {
+      const preference = await AsyncStorage.getItem('notifications_enabled');
+      if (preference !== null) {
+        setNotificationsEnabled(preference === 'true');
+      }
+    } catch (error) {
+      console.error('Error loading notification preference:', error);
+    }
+  };
+
+  const handleNotificationToggle = async (value: boolean) => {
+    try {
+      // Save preference to storage
+      await AsyncStorage.setItem('notifications_enabled', value.toString());
+      setNotificationsEnabled(value);
+      
+      if (value) {
+        // User wants to enable notifications
+        console.log('Notifications enabled by user');
+        Alert.alert(
+          'Notifications Enabled',
+          'You will receive notifications about new favors, updates, and messages.',
+          [{ text: 'OK' }]
+        );
+      } else {
+        // User wants to disable notifications
+        console.log('Notifications disabled by user');
+        Alert.alert(
+          'Notifications Disabled',
+          'You will not receive push notifications. You can re-enable them anytime in Settings.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('Error saving notification preference:', error);
+      Alert.alert('Error', 'Failed to update notification settings. Please try again.');
+    }
+  };
 
   const handleLogOut = () => {
     setShowLogoutModal(true);
@@ -214,7 +260,7 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
           <SettingItem
             icon={<GetCertifiedSvg />}
             title="Get Verified"
-            onPress={() => navigateToGetCertifiedWithSubscriptionCheck(navigation)}
+            onPress={() => navigation?.navigate('GetCertifiedScreen')}
           />
 
           <SettingItem
@@ -240,7 +286,7 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
             hasChevron={false}
             hasSwitch={true}
             switchValue={notificationsEnabled}
-            onSwitchChange={setNotificationsEnabled}
+            onSwitchChange={handleNotificationToggle}
           />
 
           <SettingItem

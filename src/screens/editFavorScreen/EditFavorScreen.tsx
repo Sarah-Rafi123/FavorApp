@@ -114,7 +114,7 @@ export function EditFavorScreen({ navigation, route }: EditFavorScreenProps) {
 
       setFormData({
         priority: favor.priority || 'delayed',
-        favorSubjectId: isOtherSubject ? 11 : (favor.favor_subject?.id || null),
+        favorSubjectId: isOtherSubject ? OTHER_SUBJECT_ID : (favor.favor_subject?.id || null),
         otherSubjectName: customSubjectName || '',
         timeToComplete: favor.time_to_complete || '20 minutes',
         favorPrice: !favor.favor_pay ? 'Paid' : 'Free',
@@ -127,7 +127,7 @@ export function EditFavorScreen({ navigation, route }: EditFavorScreenProps) {
       });
 
       console.log('✅ EditFavor - Form data set:', {
-        favorSubjectId: isOtherSubject ? 11 : (favor.favor_subject?.id || null),
+        favorSubjectId: isOtherSubject ? OTHER_SUBJECT_ID : (favor.favor_subject?.id || null),
         otherSubjectName: customSubjectName || '',
         isOtherSubject,
         customSubjectName
@@ -185,9 +185,9 @@ export function EditFavorScreen({ navigation, route }: EditFavorScreenProps) {
       newErrors.favorSubjectId = 'Please select a favor type';
     }
 
-    if (formData.favorSubjectId === 11 && !formData.otherSubjectName.trim()) {
+    if (formData.favorSubjectId === OTHER_SUBJECT_ID && !formData.otherSubjectName.trim()) {
       newErrors.otherSubjectName = 'Please specify the subject name';
-    } else if (formData.favorSubjectId === 11 && formData.otherSubjectName.trim().length > 50) {
+    } else if (formData.favorSubjectId === OTHER_SUBJECT_ID && formData.otherSubjectName.trim().length > 50) {
       newErrors.otherSubjectName = 'Subject name must be 50 characters or less';
     }
 
@@ -233,7 +233,7 @@ export function EditFavorScreen({ navigation, route }: EditFavorScreenProps) {
       };
 
       // Add other subject name if "Other" is selected
-      if (formData.favorSubjectId === 11 && formData.otherSubjectName.trim()) {
+      if (formData.favorSubjectId === OTHER_SUBJECT_ID && formData.otherSubjectName.trim()) {
         (updateData as any).other_subject_name = formData.otherSubjectName.trim();
       }
 
@@ -628,14 +628,33 @@ export function EditFavorScreen({ navigation, route }: EditFavorScreenProps) {
             <Text className="text-sm font-medium text-gray-700 mb-2">
               Address
             </Text>
-            <TouchableOpacity
-              className={`px-4 py-4 rounded-xl border ${errors.address ? 'border-red-500' : 'border-gray-300'} bg-white`}
-              onPress={() => setShowAddressModal(true)}
-            >
-              <Text className={`text-base ${formData.address ? 'text-black' : 'text-gray-400'}`}>
-                {formData.address || 'Enter your address'}
-              </Text>
-            </TouchableOpacity>
+            <View className={`px-4 py-4 rounded-xl border ${errors.address ? 'border-red-500' : 'border-gray-300'} bg-white flex-row items-center justify-between`}>
+              <TouchableOpacity
+                className="flex-1"
+                onPress={() => setShowAddressModal(true)}
+              >
+                <Text className={`text-base ${formData.address ? 'text-black' : 'text-gray-400'}`}>
+                  {formData.address || 'Enter your address'}
+                </Text>
+              </TouchableOpacity>
+              {formData.address && (
+                <TouchableOpacity
+                  className="ml-2 p-1"
+                  onPress={() => {
+                    setFormData(prev => ({ 
+                      ...prev, 
+                      address: '', 
+                      city: '', 
+                      state: '', 
+                      latLng: '' 
+                    }));
+                    setErrors(prev => ({ ...prev, address: '' }));
+                  }}
+                >
+                  <Text className="text-gray-500 text-lg font-bold">✕</Text>
+                </TouchableOpacity>
+              )}
+            </View>
             {errors.address ? (
               <Text className="text-red-500 text-sm mt-1">{errors.address}</Text>
             ) : null}

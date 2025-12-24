@@ -860,14 +860,32 @@ export function CreateProfileScreen({ onProfileComplete, onNavigateToOtp, onBack
                     ⚠️ Google Places API key not configured. Autocomplete may not work.
                   </Text>
                 )}
-                <TouchableOpacity
-                  className={`px-4 py-4 rounded-xl border ${errors.fullAddress ? 'border-red-500' : 'border-gray-300'} bg-transparent`}
-                  onPress={() => setShowAddressModal(true)}
-                >
-                  <Text className={`text-base ${formData.fullAddress ? 'text-gray-800' : 'text-gray-400'}`}>
-                    {formData.fullAddress || 'Enter your address'}
-                  </Text>
-                </TouchableOpacity>
+                <View className={`px-4 py-4 rounded-xl border ${errors.fullAddress ? 'border-red-500' : 'border-gray-300'} bg-transparent flex-row items-center justify-between`}>
+                  <TouchableOpacity
+                    className="flex-1"
+                    onPress={() => setShowAddressModal(true)}
+                  >
+                    <Text className={`text-base ${formData.fullAddress ? 'text-gray-800' : 'text-gray-400'}`}>
+                      {formData.fullAddress || 'Enter your address'}
+                    </Text>
+                  </TouchableOpacity>
+                  {formData.fullAddress && (
+                    <TouchableOpacity
+                      className="ml-2 p-1"
+                      onPress={() => {
+                        setFormData(prev => ({ 
+                          ...prev, 
+                          fullAddress: '', 
+                          city: '', 
+                          state: '' 
+                        }));
+                        setErrors(prev => ({ ...prev, fullAddress: '' }));
+                      }}
+                    >
+                      <Text className="text-gray-500 text-lg font-bold">✕</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
               
               <Text className="text-xs text-gray-500 mt-1">
                 Example: 123 Main St, New York, NY

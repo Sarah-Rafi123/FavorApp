@@ -27,7 +27,6 @@ export function PaymentMethodScreen({ navigation }: PaymentMethodScreenProps) {
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentPaymentMethod, setCurrentPaymentMethod] = useState<any>(null);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
-  const [ready, setReady] = useState(false);
 
   // API hooks
   const createSetupIntentMutation = useCreateSetupIntent();
@@ -95,7 +94,6 @@ export function PaymentMethodScreen({ navigation }: PaymentMethodScreenProps) {
               // Reset form to add new payment method mode
               setIsEditMode(false);
               setCurrentPaymentMethod(null);
-              setReady(false);
               
               Toast.show({
                 type: 'success',
@@ -109,7 +107,7 @@ export function PaymentMethodScreen({ navigation }: PaymentMethodScreenProps) {
               
               // Navigate back to settings after successful deletion
               setTimeout(() => {
-                navigation?.goBack();
+                navigation?.navigate('SettingsMain');
               }, 2000);
               
             } catch (error: any) {
@@ -172,7 +170,6 @@ export function PaymentMethodScreen({ navigation }: PaymentMethodScreenProps) {
       }
       
       console.log('✅ Payment Sheet initialized successfully');
-      setReady(true);
       return setup_intent_id;
     } catch (error: any) {
       console.error('❌ Setup Intent creation error:', error);
@@ -195,16 +192,17 @@ export function PaymentMethodScreen({ navigation }: PaymentMethodScreenProps) {
     let setupIntentId = null;
 
     try {
-      // Step 1: Initialize Payment Sheet (if not already ready)
-      if (!ready) {
-        setupIntentId = await initializePaymentSheet();
-        if (!setupIntentId) {
-          setIsProcessing(false);
-          return;
-        }
+      // Step 1: Always initialize Payment Sheet fresh
+      console.log('🚀 Initializing Payment Sheet...');
+      setupIntentId = await initializePaymentSheet();
+      
+      if (!setupIntentId) {
+        console.error('❌ Failed to get setup intent ID');
+        setIsProcessing(false);
+        return;
       }
 
-      console.log('🚀 Opening Payment Sheet...');
+      console.log('🚀 Opening Payment Sheet with setup intent:', setupIntentId);
       
       // Step 2: Present Payment Sheet
       const { error } = await presentPaymentSheet();
@@ -222,13 +220,8 @@ export function PaymentMethodScreen({ navigation }: PaymentMethodScreenProps) {
 
       console.log('✅ Payment Sheet completed successfully');
 
-      // Step 3: Save payment method via API (as per documentation)
-      // The Payment Sheet confirms the SetupIntent, now we need to save it
-      console.log('📋 Saving payment method to backend...');
-      
-      if (!setupIntentId) {
-        throw new Error('No setup intent ID available');
-      }
+      // Step 3: Save payment method via API
+      console.log('📋 Saving payment method to backend with setup intent:', setupIntentId);
       
       const saveResult = await savePaymentMethodMutation.mutateAsync({
         setup_intent_id: setupIntentId
@@ -247,11 +240,10 @@ export function PaymentMethodScreen({ navigation }: PaymentMethodScreenProps) {
       });
 
       setIsProcessing(false);
-      setReady(false); // Reset for next time
       
       // Navigate back to settings after successful payment method addition
       setTimeout(() => {
-        navigation?.goBack();
+        navigation?.navigate('SettingsMain');
       }, 2000); // Wait 2 seconds to let user see the success message
 
     } catch (error: any) {
@@ -264,6 +256,8 @@ export function PaymentMethodScreen({ navigation }: PaymentMethodScreenProps) {
         errorMessage = 'Payment setup incomplete. Please try again.';
       } else if (error.message?.includes('unauthorized')) {
         errorMessage = 'Authentication error. Please log in again.';
+      } else if (error.message?.includes('No payment sheet has been initialized')) {
+        errorMessage = 'Payment setup failed. Please try again.';
       }
       
       Alert.alert(
@@ -287,7 +281,7 @@ export function PaymentMethodScreen({ navigation }: PaymentMethodScreenProps) {
         <View className="flex-row items-center">
           <TouchableOpacity 
             className="mr-4"
-            onPress={() => navigation?.goBack()}
+            onPress={() => navigation?.navigate('SettingsMain')}
           >
             <BackSvg />
           </TouchableOpacity>
@@ -389,7 +383,6 @@ export function PaymentMethodScreen({ navigation }: PaymentMethodScreenProps) {
               onPress={() => {
                 setIsEditMode(false);
                 setCurrentPaymentMethod(null);
-                setReady(false);
               }}
             >
               <Text className="text-white text-center text-lg font-semibold">

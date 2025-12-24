@@ -135,7 +135,7 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
         
       case 'tip':
         if (formData.favorPrice === 'Paid' && (value <= 0 || isNaN(value))) {
-          newErrors.tip = 'Please provide a valid tip amount greater than 0.';
+          newErrors.tip = 'Please provide a valid amount greater than 0.';
         } else {
           newErrors.tip = '';
         }
@@ -362,7 +362,7 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
     }
     
     if (formData.favorPrice === 'Paid' && (formData.tip <= 0 || isNaN(formData.tip))) {
-      newErrors.tip = 'Please provide a valid tip amount greater than 0 for paid favors.';
+      newErrors.tip = 'Please provide a valid amount greater than 0 for paid favors.';
       hasErrors = true;
     }
     
@@ -400,6 +400,10 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
 
       // Debug logging to verify request format
       console.log('🚀 Creating Favor Request:', createRequest);
+      console.log('📍 Coordinates being sent:', {
+        lat_lng: createRequest.lat_lng,
+        hasCoordinates: !!createRequest.lat_lng
+      });
       if (selectedImage) {
         console.log('📷 With Image:', {
           name: selectedImage.name,
@@ -569,9 +573,10 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
                     onChangeText={(text) => updateFormData('otherSubjectName', text)}
                     multiline
                     textAlignVertical="top"
+                    maxLength={50}
                   />
                 </View>
-                <Text className="text-gray-300 text-sm mt-2">/50 characters</Text>
+                <Text className="text-gray-300 text-sm mt-2">{formData.otherSubjectName.length}/50 characters</Text>
                 {errors.otherSubjectName ? (
                   <Text className="text-red-500 text-sm mt-1">{errors.otherSubjectName}</Text>
                 ) : null}
@@ -618,7 +623,7 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
                   <Text className="text-sm font-medium text-gray-700 mb-2">
                     Favor Amount ($) *
                   </Text>
-                  <Text className="text-xs text-gray-500 mb-3">]
+                  <Text className="text-xs text-gray-500 mb-3">
                     Favor charges 3% + $0.30 per transaction as Processing Fee. FavorApp does not make profit off of transactions.
                   </Text>
                   <TextInput
@@ -659,14 +664,33 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
             <Text className="text-sm font-medium text-gray-700 mb-2">
               Address
             </Text>
-            <TouchableOpacity
-              className={`px-4 py-4 rounded-xl border ${errors.address ? 'border-red-500' : 'border-gray-300'} bg-transparent`}
-              onPress={() => setShowAddressModal(true)}
-            >
-              <Text className={`text-base ${formData.address ? 'text-black' : 'text-gray-400'}`}>
-                {formData.address || 'Enter your address'}
-              </Text>
-            </TouchableOpacity>
+            <View className={`px-4 py-4 rounded-xl border ${errors.address ? 'border-red-500' : 'border-gray-300'} bg-transparent flex-row items-center justify-between`}>
+              <TouchableOpacity
+                className="flex-1"
+                onPress={() => setShowAddressModal(true)}
+              >
+                <Text className={`text-base ${formData.address ? 'text-black' : 'text-gray-400'}`}>
+                  {formData.address || 'Enter your address'}
+                </Text>
+              </TouchableOpacity>
+              {formData.address && (
+                <TouchableOpacity
+                  className="ml-2 p-1"
+                  onPress={() => {
+                    setFormData(prev => ({ 
+                      ...prev, 
+                      address: '', 
+                      city: '', 
+                      state: '', 
+                      latLng: '' 
+                    }));
+                    setErrors(prev => ({ ...prev, address: '' }));
+                  }}
+                >
+                  <Text className="text-gray-500 text-lg font-bold">✕</Text>
+                </TouchableOpacity>
+              )}
+            </View>
             {errors.address ? (
               <Text className="text-red-500 text-sm mt-1">{errors.address}</Text>
             ) : null}
@@ -945,6 +969,11 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
                     let city = '';
                     let state = '';
                     let fullAddress = details.formatted_address;
+                    
+                    // Extract latitude and longitude from geometry
+                    const latitude = details.geometry?.location?.lat;
+                    const longitude = details.geometry?.location?.lng;
+                    const latLng = latitude && longitude ? `${latitude},${longitude}` : '';
 
                     // Extract city and state from address components
                     addressComponents.forEach((component) => {
@@ -956,12 +985,22 @@ export function AskFavorScreen({ navigation }: AskFavorScreenProps) {
                       }
                     });
 
-                    // Update form data with complete address information
+                    console.log('📍 Address selected:', {
+                      address: fullAddress,
+                      city,
+                      state,
+                      latitude,
+                      longitude,
+                      latLng
+                    });
+
+                    // Update form data with complete address information including coordinates
                     setFormData(prev => ({
                       ...prev,
                       address: fullAddress,
                       city: city,
                       state: state,
+                      latLng: latLng,
                     }));
                     
                     // Clear any address errors

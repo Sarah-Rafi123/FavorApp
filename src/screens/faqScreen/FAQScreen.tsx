@@ -79,7 +79,7 @@ const faqData: FAQItem[] = [
   {
     id: 7,
     question: "How much will I pay in total fees for a $100 favor?",
-    answer: "For a $100 favor, you would only pay $3.30 in total fees (3% + $0.30 = $3.00 + $0.30 = $3.30). This is significantly lower than other platforms and covers secure payment processing through Stripe."
+    answer: "For a $100 favor, you would only pay $3.30 in total fees ($3.00 + $0.30 = $3.30). This is significantly lower than other platforms and covers secure payment processing through Stripe."
   },
   {
     id: 8,

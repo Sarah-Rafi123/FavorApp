@@ -611,6 +611,7 @@ export function ProfileScreen() {
         className="flex-1"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 160 }}
+        keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -623,10 +624,21 @@ export function ProfileScreen() {
         }
       >
         {/* Main Profile Card */}
-        <View className="mx-6 mb-6 bg-[#FBFFF0] rounded-3xl p-6 border-4 border-[#71DFB1]">
+        <View className="mx-6 mb-6 bg-[#FBFFF0] rounded-3xl p-6 border-4 border-[#71DFB1]" pointerEvents="box-none">
           <TouchableOpacity 
-            onPress={() => setShowUpdateModal(true)}
-            className="absolute top-6 right-6 w-8 h-8 items-center justify-center"
+            onPress={() => {
+              console.log('✏️ Edit button pressed!');
+              setShowUpdateModal(true);
+            }}
+            onPressIn={() => console.log('✏️ Edit button press IN')}
+            onPressOut={() => console.log('✏️ Edit button press OUT')}
+            className="absolute top-3 right-3 w-14 h-14 items-center justify-center"
+            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+            activeOpacity={0.5}
+            style={{
+              zIndex: 999,
+              
+            }}
           >
             <EditSvg />
           </TouchableOpacity>

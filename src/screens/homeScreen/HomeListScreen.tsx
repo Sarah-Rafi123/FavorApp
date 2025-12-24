@@ -497,7 +497,10 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications, navigatio
             {/* Category and Time row */}
             <View className="flex-row items-center mb-2">
               <Text className="text-sm text-gray-600" numberOfLines={1}>
-                • {favor.title || favor.favor_subject.name}
+                • {(() => {
+                    const title = favor.title || favor.favor_subject.name;
+                    return title.length > 20 ? `${title.substring(0, 20)}...` : title;
+                  })()}
               </Text>
               <Text className="text-sm text-gray-600 mx-1">|</Text>
               <ClockSmallSvg width={12} height={12} color="#6B7280" />
@@ -751,15 +754,27 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications, navigatio
             
             <View className="space-y-3">
               
-              {!verificationStatus.isKYCVerified && (
+              {!verificationStatus.isSubscribed && (
                 <TouchableOpacity
                   className="py-3 px-4 bg-green-500 rounded-xl mb-3"
                   onPress={() => {
                     setShowEncouragementModal(false);
-                    navigateToGetCertifiedWithSubscriptionCheck(navigation);
+                    navigation?.navigate('Settings', { screen: 'SubscriptionsScreen' });
                   }}
                 >
                   <Text className="text-white text-center font-semibold">Upgrade Now</Text>
+                </TouchableOpacity>
+              )}
+              
+              {!verificationStatus.isKYCVerified && verificationStatus.isSubscribed && (
+                <TouchableOpacity
+                  className="py-3 px-4 bg-green-500 rounded-xl mb-3"
+                  onPress={() => {
+                    setShowEncouragementModal(false);
+                    navigation?.navigate('Settings', { screen: 'GetCertifiedScreen' });
+                  }}
+                >
+                  <Text className="text-white text-center font-semibold">Get Verified</Text>
                 </TouchableOpacity>
               )}
               
@@ -820,12 +835,24 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications, navigatio
                 
                 <View className="gap-y-3">
                   
-                  {!verificationStatus.isKYCVerified && (
+                  {!verificationStatus.isSubscribed && (
                     <TouchableOpacity
                       className="w-full py-3 px-4 bg-green-500 rounded-xl"
                       onPress={() => {
                         setShowVerificationModal(false);
-                        navigateToGetCertifiedWithSubscriptionCheck(navigation);
+                        navigation?.navigate('Settings', { screen: 'SubscriptionsScreen' });
+                      }}
+                    >
+                      <Text className="text-white text-center font-semibold">Get Subscription</Text>
+                    </TouchableOpacity>
+                  )}
+                  
+                  {!verificationStatus.isKYCVerified && verificationStatus.isSubscribed && (
+                    <TouchableOpacity
+                      className="w-full py-3 px-4 bg-green-500 rounded-xl"
+                      onPress={() => {
+                        setShowVerificationModal(false);
+                        navigation?.navigate('Settings', { screen: 'GetCertifiedScreen' });
                       }}
                     >
                       <Text className="text-white text-center font-semibold">Get Verified</Text>
@@ -836,7 +863,7 @@ export function HomeListScreen({ onMapView, onFilter, onNotifications, navigatio
                     className="w-full py-3 px-4 border border-gray-300 rounded-xl"
                     onPress={() => setShowVerificationModal(false)}
                   >
-                    <Text className="text-gray-600 text-center font-semibold">Cancel</Text>
+                    <Text className="text-gray-600 text-center font-semibold">Skip for now</Text>
                   </TouchableOpacity>
                 </View>
               </>

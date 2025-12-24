@@ -1080,7 +1080,7 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
                     }
                   </Text>
                   
-                  {canUpgradeOnCurrentPlatform() ? (
+                  {/* {canUpgradeOnCurrentPlatform() && Platform.OS !== 'ios' && (
                     <TouchableOpacity 
                       className={`rounded-3xl py-3 ${isUpgrading ? 'bg-gray-400' : 'bg-green-600'}`}
                       onPress={upgradeToAnnual}
@@ -1099,7 +1099,8 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
                         </Text>
                       )}
                     </TouchableOpacity>
-                  ) : (
+                  )} */}
+                  {/* {!canUpgradeOnCurrentPlatform() && Platform.OS !== 'ios' && (
                     <TouchableOpacity 
                       className="bg-gray-300 rounded-3xl py-3"
                       onPress={() => {
@@ -1114,7 +1115,7 @@ export function SubscriptionsScreen({ navigation }: SubscriptionsScreenProps) {
                         Cannot Upgrade Here
                       </Text>
                     </TouchableOpacity>
-                  )}
+                  )} */}
                 </View>
               )}
             </View>

@@ -389,7 +389,7 @@ export function FavorMapPopup({ visible, onClose, favor, navigation }: FavorMapP
                   
                   {!verificationStatus.isSubscribed && (
                     <TouchableOpacity
-                      className="flex-1 py-3 px-4 bg-blue-500 rounded-xl"
+                      className="flex-1 py-3 px-4 bg-green-500 rounded-xl"
                       onPress={() => {
                         setShowVerificationModal(false);
                         onClose();
@@ -398,17 +398,17 @@ export function FavorMapPopup({ visible, onClose, favor, navigation }: FavorMapP
                         });
                       }}
                     >
-                      <Text className="text-white text-center font-semibold">Get Subscribed</Text>
+                      <Text className="text-white text-center font-semibold">Get Subscription</Text>
                     </TouchableOpacity>
                   )}
                   
-                  {!verificationStatus.isKYCVerified && (
+                  {!verificationStatus.isKYCVerified && verificationStatus.isSubscribed && (
                     <TouchableOpacity
                       className="flex-1 py-3 px-4 bg-green-500 rounded-xl"
                       onPress={() => {
                         setShowVerificationModal(false);
                         onClose();
-                        navigateToGetCertifiedWithSubscriptionCheck(navigation);
+                        navigation?.navigate('Settings', { screen: 'GetCertifiedScreen' });
                       }}
                     >
                       <Text className="text-white text-center font-semibold">Get Verified</Text>

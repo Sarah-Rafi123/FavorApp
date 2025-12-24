@@ -74,11 +74,12 @@ export function TermsConditionsScreen({ navigation }: TermsConditionsScreenProps
           
           <Text className="text-base font-semibold text-gray-800 mb-2">Premium Subscriptions:</Text>
           <Text className="text-sm text-gray-700 leading-6 mb-4">
-            • Monthly ($9.99/month) and annual ($99.99/year) premium plans available{'\n'}
-            • Subscriptions auto-renew unless cancelled 24 hours before renewal{'\n'}
+            • Monthly ($5.00/month), annual ($45.00/year), and lifetime ($99.99 one-time) premium plans available{'\n'}
+            • Monthly and annual subscriptions auto-renew unless cancelled 24 hours before renewal{'\n'}
+            • Lifetime subscriptions provide permanent access with no recurring charges{'\n'}
             • Payments processed through Apple App Store, Google Play, and Stripe{'\n'}
             • Free trial periods may be offered for new subscribers{'\n'}
-            • Cancellation effective at the end of the current billing period{'\n'}
+            • Cancellation effective at the end of the current billing period for recurring plans{'\n'}
             • Premium features include: priority support, enhanced matching, unlimited requests{'\n'}
             • Cross-platform subscription management via RevenueCat{'\n'}
             • Promotional pricing and discounts may apply
@@ -89,6 +90,7 @@ export function TermsConditionsScreen({ navigation }: TermsConditionsScreenProps
             • App store purchases subject to Apple/Google refund policies{'\n'}
             • Direct payments through Stripe may qualify for partial refunds{'\n'}
             • No refunds for partially used subscription periods{'\n'}
+            • Lifetime subscriptions are final sale with no refunds after 30 days{'\n'}
             • Disputed charges handled according to payment processor policies{'\n'}
             • Account termination may affect subscription refund eligibility
           </Text>

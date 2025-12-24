@@ -135,7 +135,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
     error: allFavorsError,
     refetch: refetchAllFavors,
   } = useMyFavors(
-    { type: 'requested', tab: 'active', page: currentPage, per_page, sort_by: 'updated_at', sort_order: 'asc' },
+    { type: 'requested', tab: 'active', page: currentPage, per_page, sort_by: 'updated_at', sort_order: 'desc' },
     { enabled: activeTab === 'All' && !!user && !!accessToken }
   );
 
@@ -146,7 +146,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
     error: activeFavorsError,
     refetch: refetchActiveFavors,
   } = useMyFavors(
-    { type: 'requested', tab: 'active', page, per_page, sort_by: 'updated_at', sort_order: 'asc' },
+    { type: 'requested', tab: 'active', page, per_page, sort_by: 'updated_at', sort_order: 'desc' },
     { enabled: activeTab === 'Active' && !!user && !!accessToken }
   );
 
@@ -156,7 +156,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
     error: inProgressFavorsError,
     refetch: refetchInProgressFavors,
   } = useMyFavors(
-    { type: 'requested', tab: 'in-progress', page, per_page, sort_by: 'updated_at', sort_order: 'asc' },
+    { type: 'requested', tab: 'in-progress', page, per_page, sort_by: 'updated_at', sort_order: 'desc' },
     { enabled: activeTab === 'Active' && !!user && !!accessToken }
   );
 
@@ -167,7 +167,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
     error: completedFavorsError,
     refetch: refetchCompletedFavors,
   } = useMyFavors(
-    { type: 'requested', tab: 'completed', page, per_page, sort_by: 'updated_at', sort_order: 'asc' },
+    { type: 'requested', tab: 'completed', page, per_page, sort_by: 'updated_at', sort_order: 'desc' },
     { enabled: activeTab === 'History' && !!user && !!accessToken }
   );
 
@@ -177,7 +177,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
     error: cancelledFavorsError,
     refetch: refetchCancelledFavors,
   } = useMyFavors(
-    { type: 'requested', tab: 'cancelled', page, per_page, sort_by: 'updated_at', sort_order: 'asc' },
+    { type: 'requested', tab: 'cancelled', page, per_page, sort_by: 'updated_at', sort_order: 'desc' },
     { enabled: activeTab === 'History' && !!user && !!accessToken }
   );
 
@@ -588,7 +588,9 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
           {/* Favor details */}
           <View className="bg-gray-50 rounded-xl p-3 mb-3">
             <Text className="text-gray-700 text-sm font-medium mb-1">
-              {favor.favor_subject.name} • {favor.city}, {favor.state}
+              {favor.favor_subject.name.length > 20 
+                ? `${favor.favor_subject.name.substring(0, 20)}...` 
+                : favor.favor_subject.name} • {favor.city}, {favor.state}
             </Text>
             <Text className="text-gray-600 text-xs">
               {favor.description.length > 80 ? `${favor.description.substring(0, 80)}...` : favor.description}
@@ -685,7 +687,9 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
               {/* Category and Time row */}
               <View className="flex-row items-center mb-1">
                 <Text className="text-sm text-gray-600" numberOfLines={1}>
-                  • {favor.favor_subject.name}
+                  • {favor.favor_subject.name.length > 20 
+                      ? `${favor.favor_subject.name.substring(0, 20)}...` 
+                      : favor.favor_subject.name}
                 </Text>
                 <Text className="text-sm text-gray-600 mx-1">|</Text>
                 <ClockSmallSvg width={12} height={12} color="#6B7280" />
@@ -829,7 +833,9 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
               {/* Category and Time row */}
               <View className="flex-row items-center mb-1">
                 <Text className="text-sm text-gray-600" numberOfLines={1}>
-                  • {favor.favor_subject.name}
+                  • {favor.favor_subject.name.length > 20 
+                      ? `${favor.favor_subject.name.substring(0, 20)}...` 
+                      : favor.favor_subject.name}
                 </Text>
                 <Text className="text-sm text-gray-600 mx-1">|</Text>
                 <ClockSmallSvg width={12} height={12} color="#6B7280" />
@@ -941,7 +947,9 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
               {/* Category and Time row */}
               <View className="flex-row items-center mb-1">
                 <Text className="text-sm text-gray-600" numberOfLines={1}>
-                  • {favor.favor_subject.name}
+                  • {favor.favor_subject.name.length > 20 
+                      ? `${favor.favor_subject.name.substring(0, 20)}...` 
+                      : favor.favor_subject.name}
                 </Text>
                 <Text className="text-sm text-gray-600 mx-1">|</Text>
                 <ClockSmallSvg width={12} height={12} color="#6B7280" />
@@ -1090,7 +1098,9 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
               {/* Category and Time row */}
               <View className="flex-row items-center mb-1">
                 <Text className="text-sm text-gray-600" numberOfLines={1}>
-                  • {favor.favor_subject.name}
+                  • {favor.favor_subject.name.length > 20 
+                      ? `${favor.favor_subject.name.substring(0, 20)}...` 
+                      : favor.favor_subject.name}
                 </Text>
                 <Text className="text-sm text-gray-600 mx-1">|</Text>
                 <ClockSmallSvg width={12} height={12} color="#6B7280" />
@@ -1516,9 +1526,9 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
                 </View>
                 
                 <View className="gap-y-3">
-                  {/* {!verificationStatus.isSubscribed && (
+                   {!verificationStatus.isSubscribed && (
                     <TouchableOpacity
-                      className="w-full py-3 px-4 bg-blue-500 rounded-xl"
+                      className="w-full py-3 px-4 bg-green-500 rounded-xl"
                       onPress={() => {
                         setShowVerificationModal(false);
                         navigation?.navigate('Settings', {
@@ -1528,7 +1538,7 @@ export function CreateFavorScreen({ navigation }: CreateFavorScreenProps) {
                     >
                       <Text className="text-white text-center font-semibold">Get FavorApp Pro Subscription</Text>
                     </TouchableOpacity>
-                  )} */}
+                  )} 
                   
                   {!verificationStatus.isKYCVerified && (
                     <TouchableOpacity

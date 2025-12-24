@@ -6,6 +6,7 @@ import {
   Modal,
   Alert,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { getPriorityColor, formatPriority } from '../../utils/priorityUtils';
 import { Favor } from '../../services/apis/FavorApis';
@@ -13,6 +14,8 @@ import { useApplyToFavor } from '../../services/mutations/FavorMutations';
 import { getCertificationStatus } from '../../services/apis/CertificationApis';
 import { StripeConnectManager } from '../../services/StripeConnectManager';
 import { StripeConnectWebView } from './StripeConnectWebView';
+import { usePublicUserProfileQuery } from '../../services/queries/ProfileQueries';
+import { BlurredEmail, BlurredPhone } from '../common';
 import useAuthStore from '../../store/useAuthStore';
 import { navigateToGetCertifiedWithSubscriptionCheck } from '../../utils/subscriptionUtils';
 
@@ -74,6 +77,14 @@ export function FavorMapPreviewModal({ visible, onClose, favor, navigation }: Fa
   });
   const stripeConnectManager = StripeConnectManager.getInstance();
   const { user } = useAuthStore();
+
+  // Get public user profile for additional details
+  const { data: userProfileData } = usePublicUserProfileQuery(
+    favor?.user?.id || null, 
+    { enabled: !!favor?.user?.id && visible }
+  );
+  
+  const userProfile = userProfileData?.data?.user;
 
   const checkVerificationStatus = async () => {
     try {
@@ -279,12 +290,82 @@ export function FavorMapPreviewModal({ visible, onClose, favor, navigation }: Fa
           </TouchableOpacity>
 
           {/* Favor Title */}
-          <Text className="text-xl font-bold text-gray-800 text-center mb-6 mt-4">
+          <Text className="text-xl font-bold text-gray-800 text-center mb-4 mt-4">
             {favor.title || favor.favor_subject.name}
           </Text>
 
+          {/* User Details Section */}
+          <View className="mb-6">
+            <Text className="text-lg font-bold text-gray-800 mb-3">
+              Posted by {favor.user.full_name}
+            </Text>
+            
+            {/* User Avatar and Basic Info */}
+            <View className="flex-row mb-4">
+              <View className="w-12 h-12 bg-[#44A27B] rounded-xl mr-4 items-center justify-center">
+                {userProfile?.image_url ? (
+                  <Image 
+                    source={{ uri: userProfile.image_url }}
+                    className="w-full h-full rounded-xl"
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <Text className="text-white text-lg font-bold">
+                    {favor.user.full_name?.charAt(0)?.toUpperCase() || 'U'}
+                  </Text>
+                )}
+              </View>
+              <View className="flex-1">
+                <Text className="text-gray-600 font-bold text-sm mb-1">Email</Text>
+                <BlurredEmail style={{ fontSize: 14 }}>
+                  {userProfile?.email || favor.user.email}
+                </BlurredEmail>
+              </View>
+            </View>
+
+            {/* User Details Grid */}
+            <View className="space-y-3">
+              {/* Row 1 */}
+              <View className="flex-row justify-between">
+                <View className="flex-1 mr-2">
+                  <Text className="text-gray-600 font-bold text-xs mb-1">Member Since</Text>
+                  <Text className="text-gray-800 text-sm">
+                    {userProfile?.member_since || 'July 2025'}
+                  </Text>
+                </View>
+                <View className="flex-1 ml-2">
+                  <Text className="text-gray-600 font-bold text-xs mb-1">Phone (call)</Text>
+                  <BlurredPhone style={{ fontSize: 12 }}>
+                    {userProfile?.phone_no_call || '** *** ****'}
+                  </BlurredPhone>
+                </View>
+              </View>
+              
+              {/* Row 2 */}
+              <View className="flex-row justify-between">
+                <View className="flex-1 mr-2">
+                  <Text className="text-gray-600 font-bold text-xs mb-1">Age</Text>
+                  <Text className="text-gray-800 text-sm">
+                    {userProfile?.age || 'Not specified'}
+                  </Text>
+                </View>
+                <View className="flex-1 ml-2">
+                  <Text className="text-gray-600 font-bold text-xs mb-1">Experience</Text>
+                  <Text className="text-gray-800 text-sm">
+                    {userProfile?.years_of_experience 
+                      ? `${userProfile.years_of_experience} Years`
+                      : favor.user.years_of_experience 
+                      ? `${favor.user.years_of_experience} Years`
+                      : '0 Years'}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </View>
+
           {/* Favor Details */}
           <View className="mb-6">
+            <Text className="text-lg font-bold text-gray-800 mb-3">Favor Details</Text>
             <View className="mb-3">
               <Text className="text-gray-700 text-base">
                 <Text className="font-semibold">Category:</Text> {favor.favor_subject.name}
@@ -411,12 +492,25 @@ export function FavorMapPreviewModal({ visible, onClose, favor, navigation }: Fa
                 </View>
                 
                 <View className="gap-y-3">
-                  {!verificationStatus.isKYCVerified && navigation && (
+                  
+                  {!verificationStatus.isSubscribed && navigation && (
                     <TouchableOpacity
                       className="w-full py-3 px-4 bg-green-500 rounded-xl"
                       onPress={() => {
                         setShowVerificationModal(false);
-                        navigateToGetCertifiedWithSubscriptionCheck(navigation);
+                        navigation?.navigate('Settings', { screen: 'SubscriptionsScreen' });
+                      }}
+                    >
+                      <Text className="text-white text-center font-semibold">Get Subscription</Text>
+                    </TouchableOpacity>
+                  )}
+                  
+                  {!verificationStatus.isKYCVerified && verificationStatus.isSubscribed && navigation && (
+                    <TouchableOpacity
+                      className="w-full py-3 px-4 bg-green-500 rounded-xl"
+                      onPress={() => {
+                        setShowVerificationModal(false);
+                        navigation?.navigate('Settings', { screen: 'GetCertifiedScreen' });
                       }}
                     >
                       <Text className="text-white text-center font-semibold">Get Verified</Text>

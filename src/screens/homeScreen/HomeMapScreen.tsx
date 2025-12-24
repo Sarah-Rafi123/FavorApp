@@ -33,7 +33,6 @@ interface HomeMapScreenProps {
 
 export function HomeMapScreen({ onListView, onFilter, onNotifications, navigation }: HomeMapScreenProps) {
   const [location, setLocation] = useState<any>(null);
-  const [currentPage, setCurrentPage] = useState(1);
   const [allFavors, setAllFavors] = useState<Favor[]>([]);
   
   // Get filter store state
@@ -64,24 +63,24 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications, navigatio
   // Use browseFavors when filters are active, useFavors when not
   const useFilteredData = hasActiveFilters();
 
-  // Fetch filtered favors when filters are active
+  // Fetch filtered favors when filters are active - use large page size for map
   const { 
     data: browseFavorsData, 
     isLoading: browseFavorsLoading, 
     error: browseFavorsError, 
   } = useBrowseFavors(
-    toBrowseParams(currentPage, 50), // Get more favors for map view
+    toBrowseParams(1, 500), // Single large page for map view
     { enabled: useFilteredData }
   );
 
-  // Fetch regular favors when no filters are active
+  // Fetch regular favors when no filters are active - use large page size for map
   const { 
     data: favorsData, 
     isLoading: favorsLoading, 
     error: favorsError, 
   } = useFavors(
-    currentPage, 
-    50, // Get more favors for map view
+    1, 
+    500, // Single large page for map view
     { enabled: !useFilteredData }
   );
 
@@ -113,13 +112,29 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications, navigatio
   }, [mapReady]);
 
 
-  // Update allFavors when new data arrives - prevent infinite loops
+  // Update allFavors when new data arrives - simplified for single page load
   useEffect(() => {
     if (currentData?.data?.favors && Array.isArray(currentData.data.favors)) {
       const newFavors = currentData.data.favors;
+      console.log('📍 Map: Loaded', newFavors.length, 'favors');
       setAllFavors(newFavors);
     }
   }, [currentData?.data?.favors]);
+
+  // Close popups when navigating away from this screen
+  useEffect(() => {
+    if (navigation) {
+      const unsubscribe = navigation.addListener('blur', () => {
+        // Close all modals when leaving the screen
+        setShowFavorModal(false);
+        setShowLocationPermissionModal(false);
+        setShowAddressModal(false);
+        setSelectedFavor(null);
+      });
+
+      return unsubscribe;
+    }
+  }, [navigation]);
 
   // Memoized function to parse lat_lng string into coordinates
   const parseLatLng = useCallback((latLngString?: string) => {
@@ -153,7 +168,7 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications, navigatio
       if (!coords) return null;
 
       // Determine if favor is paid
-      const isPaid = favor.favor_price === 'paid' || (favor.tip && parseFloat(favor.tip.toString()) > 0);
+      const isPaid = favor.favor_pay || (favor.tip && parseFloat(favor.tip.toString()) > 0);
       
       // Get priority-based colors
       let fillColor, strokeColor;
@@ -553,6 +568,33 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications, navigatio
     <View className="flex-1">
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       
+      {/* Loading Screen - Full Screen Overlay */}
+      {isMainLoading && (
+        <View 
+          className="absolute top-0 left-0 right-0 bottom-0 z-50 justify-center items-center"
+          style={{ 
+         
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 9999
+          }}
+        >
+          <View className="items-center justify-center px-8">
+            <View className=" rounded-full p-6 mb-6">
+              <ActivityIndicator size="large" color="#44A27B" />
+            </View>
+            <Text className="text-gray-800 text-2xl font-bold text-center mb-3">
+              Loading Map..
+            </Text>
+            
+            
+          </View>
+        </View>
+      )}
+      
       {/* Header - Hidden during main loading */}
       {!isMainLoading && (
         <View className="absolute top-16 left-6 right-6 z-10 flex-row justify-between items-center">
@@ -703,7 +745,7 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications, navigatio
       )}
 
       {/* GPS Location Button */}
-      <View className="absolute left-6 z-10" style={{ bottom: tabBarHeight + 40 }}>
+      <View className="absolute left-6 z-10" style={{ bottom: tabBarHeight + 70 }}>
         <TouchableOpacity
           onPress={async () => {
             // Return to live GPS location
@@ -755,9 +797,9 @@ export function HomeMapScreen({ onListView, onFilter, onNotifications, navigatio
 
       {/* Favor Counter */}
       {!isMainLoading && allFavors.length > 0 && (
-        <View className="absolute left-6 z-10 bg-green-500 rounded-full px-3 py-2 shadow-lg" style={{ bottom: tabBarHeight + 100 }}>
+        <View className="absolute left-6 z-10 bg-green-500 rounded-full px-3 py-2 shadow-lg" style={{ bottom: tabBarHeight + 120 }}>
           <Text className="text-white text-sm font-semibold">
-            {allFavors.filter(favor => parseLatLng(favor.lat_lng)).length} favors on map
+            {allFavors.filter(favor => parseLatLng(favor.lat_lng)).length} favors on map 
           </Text>
         </View>
       )}

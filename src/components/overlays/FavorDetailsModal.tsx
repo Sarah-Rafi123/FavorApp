@@ -412,7 +412,7 @@ export function FavorDetailsModal({ visible, onClose, favorId, navigation }: Fav
                 </View>
 
                 {/* Divider */}
-                <View className="border-t border-gray-300 my-6"></View>
+                <View className="border-t border-gray-300 my-3"></View>
 
                 {/* About User Section */}
                 <View className="mb-6">
@@ -562,12 +562,25 @@ export function FavorDetailsModal({ visible, onClose, favorId, navigation }: Fav
                 </View>
                 
                 <View className="gap-y-3">
-                  {!verificationStatus.isKYCVerified && navigation && (
+                  
+                  {!verificationStatus.isSubscribed && navigation && (
                     <TouchableOpacity
                       className="w-full py-3 px-4 bg-green-500 rounded-xl"
                       onPress={() => {
                         setShowVerificationModal(false);
-                        navigateToGetCertifiedWithSubscriptionCheck(navigation);
+                        navigation?.navigate('Settings', { screen: 'SubscriptionsScreen' });
+                      }}
+                    >
+                      <Text className="text-white text-center font-semibold">Get Subscription</Text>
+                    </TouchableOpacity>
+                  )}
+                  
+                  {!verificationStatus.isKYCVerified && verificationStatus.isSubscribed && navigation && (
+                    <TouchableOpacity
+                      className="w-full py-3 px-4 bg-green-500 rounded-xl"
+                      onPress={() => {
+                        setShowVerificationModal(false);
+                        navigation?.navigate('Settings', { screen: 'GetCertifiedScreen' });
                       }}
                     >
                       <Text className="text-white text-center font-semibold">Get Verified</Text>
@@ -578,7 +591,7 @@ export function FavorDetailsModal({ visible, onClose, favorId, navigation }: Fav
                     className="w-full py-3 px-4 border border-gray-300 rounded-xl"
                     onPress={() => setShowVerificationModal(false)}
                   >
-                    <Text className="text-gray-600 text-center font-semibold">Cancel</Text>
+                    <Text className="text-gray-600 text-center font-semibold">Skip for now</Text>
                   </TouchableOpacity>
                 </View>
               </>
